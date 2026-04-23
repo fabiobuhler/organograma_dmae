@@ -1,0 +1,45 @@
+# Governança e Diretrizes do Sistema DMAE Organograma
+
+Este documento serve como a **Bússola de Desenvolvimento** para qualquer IA ou desenvolvedor que atuar neste projeto. Ele consolida as regras de ouro, padrões visuais e o fluxo de trabalho operacional que mantém a integridade do sistema.
+
+## 1. Identidade e Elementos Essenciais (Não Alterar)
+Os elementos abaixo são a "alma" visual do sistema e só devem ser alterados sob solicitação expressa e justificada:
+
+- **Sinalização de Contingência**: Ativos ou unidades críticas DEVEM exibir a **Sirene Vermelha** (`Siren` do lucide-react) dentro de um círculo com **Borda Amarela** (`2px solid #eab308`). O preenchimento da sirene deve ter opacidade leve (`fillOpacity={0.1}`).
+- **Logotipo DMAE**: Presente no cabeçalho e favicon, vinculado dinamicamente ao nó raiz (DMAE).
+- **Rodapé e Versão**: O rodapé deve conter o nome do desenvolvedor ("Fábio Bühler"), a versão no formato `1.0.YYYY.MMDDHHmm` e o **Contador de Usuários Real-time**.
+- **Hierarquia Visual**: O sistema suporta visualização em Árvore (Tree) e Lista. No modo Lista, as bordas dos cards herdam a cor da unidade correspondente.
+
+## 2. Governança de Dados e Privacidade
+- **Privacidade Hardened**: Dados de contratos (SEI, valores, fiscais/gestores) são **SENSÍVEIS**. Eles devem ser omitidos ou protegidos por guards `(isProtected || canEdit)` em todos os modais (Pessoa, Ativo, BI) para usuários não autenticados.
+- **Online Presence**: O contador de usuários on-line utiliza **Supabase Presence**. Não utilize simulações por intervalo para este dado; ele deve refletir conexões reais via Websocket.
+- **Fonte da Verdade**: O Supabase é a única fonte oficial. O LocalStorage é usado apenas como cache de contingência.
+
+## 3. Segurança e Auditoria
+- **Imutabilidade de Logs**: O histórico de auditoria (`audit_logs`) é permanente. A interface administrativa NÃO deve permitir a exclusão de registros de log. Limpezas só devem ocorrer via console direto do banco de dados por pessoal autorizado.
+- **Níveis de Acesso (RBAC)**: 
+  - **Editores**: Podem gerenciar a estrutura, ativos, pessoas e **Tipos de Ativos**.
+  - **Administradores**: Acesso exclusivo a Gestão de Usuários, Logs e Estatísticas de Acesso.
+- **Gestão de Usuários**: 
+  - Exclusão de usuários deve ser feita via UUID (ID) para evitar erros de homônimos ou formatação.
+  - O Reset de Senha (padrão `dmae123`) deve forçar o estado `must_change_password: true`.
+
+## 4. Fluxo de Trabalho (Workflow do Agente)
+- **Interação com Usuário**: Priorize pedir ao usuário que realize ações manuais ou forneça prints em vez de tentar navegar autonomamente no browser, devido à precisão e agilidade.
+- **Navegação de Árvore (Pan/Zoom)**: Esta é uma funcionalidade **CRÍTICA**. 
+  - Utilize **Pointer Events** (`setPointerCapture`) para garantir que o arraste funcione em todos os dispositivos.
+  - O container interno (`tree-viewport-inner`) DEVE usar `transform-origin: 0 0` (top left).
+  - A centralização da árvore deve ser feita via **Safe Centering** (`margin: 0 auto` no elemento `.tree`), nunca via `justify-content: center` no container quando houver possibilidade de overflow lateral.
+  - Efeitos que interagem com o DOM da árvore (`vpRef`) devem incluir `isLoadingCloud` em suas dependências para garantir o registro após o carregamento total.
+- **Build de Produção**:
+  - **NUNCA** gere o build (`npm run build`) automaticamente sem antes validar o Pan em Hard Refresh (Ctrl+Shift+R).
+  - Antes de cada build, atualize a versão no `App.jsx`, no `README.md` e no `README.txt`.
+  - O arquivo `README.txt` deve ser **obrigatoriamente** copiado para a pasta `dist` após cada build, garantindo que o pacote de produção contenha a documentação atualizada.
+
+## 5. Estatísticas e BI
+- **Dashboard de BI**: Deve consolidar dados recursivamente (unidade + descendentes).
+- **Estatísticas de ADM**: Devem ser geradas dinamicamente a partir da tabela `audit_logs`, sem necessidade de contadores redundantes no banco de dados.
+
+---
+**Desenvolvido por:** Fábio Bühler  
+**Versão Atual:** 1.0.2026.04231811
