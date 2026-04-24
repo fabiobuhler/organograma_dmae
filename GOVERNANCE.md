@@ -36,10 +36,14 @@ Os elementos abaixo são a "alma" visual do sistema e só devem ser alterados so
   - Antes de cada build, atualize a versão no `App.jsx`, no `README.md` e no `README.txt`.
   - O arquivo `README.txt` deve ser **obrigatoriamente** copiado para a pasta `dist` após cada build, garantindo que o pacote de produção contenha a documentação atualizada.
 
+- **Sincronização de Tipos de Ativos**: Operações de persistência (INSERT/UPDATE) devem sempre verificar as restrições de RLS. Devido ao uso de chaves *anon*, as tabelas públicas de ativos devem estar com RLS desativado ou corretamente configuradas. Efetue sempre `.select()` após `insert()` ou `update()` para confirmar efetivação.
+- **Formatação e Máscaras**: Campos como telefone e CPF/CNPJ devem ser formatados e validados dinamicamente para garantir a uniformidade (ex: `maskPhone`).
+- **Integração Externa (WhatsApp)**: Sempre que houver um telefone de contato responsável, o sistema deve apresentar um atalho de redirecionamento dinâmico no formato `https://wa.me/55[numero]`.
+
 ## 5. Estatísticas e BI
 - **Dashboard de BI**: Deve consolidar dados recursivamente (unidade + descendentes).
 - **Estatísticas de ADM**: Devem ser geradas dinamicamente a partir da tabela `audit_logs`, sem necessidade de contadores redundantes no banco de dados.
 
 ---
 **Desenvolvido por:** Fábio Bühler  
-**Versão Atual:** 1.0.2026.04231811
+**Versão Atual:** 1.0.2026.04232120
