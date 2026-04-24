@@ -1,4 +1,4 @@
-@import "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap";
+﻿@import "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap";
 :root {
   --font: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   --n0: #fff;
@@ -1543,3 +1543,4 @@ li.apoio-card-box:last-child:before {
 
 .whatsapp-btn { margin-top: 4px; color: #166534 !important; border-color: #bbf7d0 !important; background: #f0fdf4 !important; }
 .whatsapp-btn:hover { color: #14532d !important; border-color: #86efac !important; background: #dcfce7 !important; }
+

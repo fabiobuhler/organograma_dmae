@@ -13,7 +13,7 @@ import { seedNodes, seedAssets, seedPersons, seedContracts, seedAssetTypes } fro
 import {
   makeId, initials, sortNodes, downloadFile, toCsv,
   getDescendantIds, getParentChain, fileToBase64,
-  normalizeHex, DEFAULT_ROOT_COLOR, computeNodeColor
+  normalizeHex, DEFAULT_ROOT_COLOR, computeNodeColor, maskPhone
 } from "./utils/helpers";
 import { supabase } from "./lib/supabase";
 
@@ -121,36 +121,225 @@ function getDashboardStats(contractList) {
     : `conic-gradient(#e5e7eb 0% 100%)`;
     
   return { active, expiring, expired, total, pieCss };
-}
-
-/* --- PDF/Print export --- */
-function exportAssetsPdf(list, label, getPath) {
+}/* --- PDF/Print export --- */
+function exportAssetsPdf(list, label, getPath, sort, nodesList) {
   const w = window.open("", "_blank");
   if (!w) { showSystemAlert("Permita pop-ups para exportar.", { title: "Atenção", type: "warning" }); return; }
-  const rows = list.map((a) =>
-    `<tr><td>${a.category}</td><td>${a.name}</td><td>${a.manufacturer || ""}</td><td>${a.model || ""}</td><td>${a.year || ""}</td><td>${a.plate || ""}</td><td>${a.patrimonio || ""}</td><td>${getPath(a.nodeId)}</td></tr>`
-  ).join("");
-  w.document.write(`<!DOCTYPE html><html><head><title>Ativos - ${label}</title>
-<style>body{font-family:Inter,sans-serif;padding:20px}h2{margin-bottom:12px}table{width:100%;border-collapse:collapse;font-size:12px}
-th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}th{background:#f1f5f9;font-weight:700}</style></head>
-<body><h2>Ativos — ${label}</h2><p>${list.length} item(ns)</p>
-<table><tr><th>Cat.</th><th>Nome</th><th>Fab.</th><th>Modelo</th><th>Ano</th><th>Placa</th><th>Pat.</th><th>Estr.</th></tr>${rows}</table>
-<script>setTimeout(()=>window.print(),400)<\/script></body></html>`);
+
+  const logoUrl = window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png";
+
+  // Sort helper — same logic as screen
+  const applySort = (arr) => [...arr].sort((a, b) => {
+    let valA = "", valB = "";
+    const s = sort || { key: "name", direction: "asc" };
+    if (s.key === "name")    { valA = a.name;                                    valB = b.name; }
+    else if (s.key === "vinculo") { valA = a.tipoVinculo;                        valB = b.tipoVinculo; }
+    else if (s.key === "node")    { valA = (nodesList||[]).find(n=>n.id===a.nodeId)?.name||""; valB = (nodesList||[]).find(n=>n.id===b.nodeId)?.name||""; }
+    else if (s.key === "contato") { valA = a.contatoResponsavel||a.contatoFone||""; valB = b.contatoResponsavel||b.contatoFone||""; }
+    valA = (valA||"").toLowerCase(); valB = (valB||"").toLowerCase();
+    if (valA < valB) return s.direction === "asc" ? -1 : 1;
+    if (valA > valB) return s.direction === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  const sortLabel = { name: "Ativo", vinculo: "Vínculo", node: "Localização", contato: "Contato" }[sort?.key || "name"];
+  const sortDir   = sort?.direction === "desc" ? "Decrescente" : "Crescente";
+
+  // Row renderer
+  const renderRow = (a) => {
+    let statusHtml = "";
+    if (a.isEmergency)  statusHtml += `<span style="display:inline-block;padding:3px 6px;background:#fee2e2;color:#b91c1c;border-radius:4px;font-size:10px;margin-right:4px;font-weight:600;">🚨 Contingência</span>`;
+    if (a.isMaintenance) statusHtml += `<span style="display:inline-block;padding:3px 6px;background:#fef3c7;color:#b45309;border-radius:4px;font-size:10px;font-weight:600;">🛠️ Manutenção</span>`;
+    return `<tr>
+      <td>${a.category}</td>
+      <td><b>${a.name}</b></td>
+      <td>${a.manufacturer || ""}</td>
+      <td>${a.model || ""}</td>
+      <td>${a.year || ""}</td>
+      <td>${a.plate || ""}</td>
+      <td>${a.os || ""}</td>
+      <td>${a.patrimonio || ""}</td>
+      <td>${getPath(a.nodeId)}</td>
+      <td style="min-width:120px">${statusHtml}</td>
+    </tr>`;
+  };
+
+  const tableHeader = `<thead>
+    <tr>
+      <th>Categoria</th><th>Identificação</th><th>Fabricante</th><th>Modelo</th>
+      <th>Ano</th><th>Placa</th><th>O.S.</th><th>Patrimônio</th><th>Localização</th><th>Status / Obs</th>
+    </tr>
+  </thead>`;
+
+  const renderTable = (items) =>
+    `<table>${tableHeader}<tbody>${applySort(items).map(renderRow).join("")}</tbody></table>`;
+
+  // ── Split: Próprios vs Contratados
+  const proprios    = list.filter(a => !a.tipoVinculo || a.tipoVinculo !== "Contratado");
+  const contratados = list.filter(a => a.tipoVinculo === "Contratado");
+
+  // Group contratados: empresa → contrato → [ativos]
+  const byEmpresa = {};
+  contratados.forEach(a => {
+    const emp = a.empresaContratada || "Empresa não informada";
+    const ctt = a.numeroContrato    || "Contrato não informado";
+    if (!byEmpresa[emp]) byEmpresa[emp] = {};
+    if (!byEmpresa[emp][ctt]) byEmpresa[emp][ctt] = [];
+    byEmpresa[emp][ctt].push(a);
+  });
+
+  // Build Próprios section
+  let propriosSection = "";
+  if (proprios.length > 0) {
+    propriosSection = `
+      <div class="section-header section-own">
+        <span>🏛️ Ativos Próprios</span>
+        <span class="badge">${proprios.length} item(ns)</span>
+      </div>
+      ${renderTable(proprios)}`;
+  }
+
+  // Build Contratados section (empresa → contrato)
+  let contratadosSection = "";
+  if (contratados.length > 0) {
+    const empresaBlocks = Object.keys(byEmpresa).sort().map(emp => {
+      const contratos = byEmpresa[emp];
+      const contratoBlocks = Object.keys(contratos).sort().map(ctt => {
+        const items = contratos[ctt];
+        return `
+          <div class="contract-block">
+            <div class="contract-header">
+              📄 Contrato: <b>${ctt}</b>
+              <span class="badge badge-ctt">${items.length} item(ns)</span>
+            </div>
+            ${renderTable(items)}
+          </div>`;
+      }).join("");
+
+      const total = Object.values(contratos).reduce((s, v) => s + v.length, 0);
+      return `
+        <div class="empresa-block">
+          <div class="empresa-header">
+            🏢 <b>${emp}</b>
+            <span class="badge">${total} item(ns) — ${Object.keys(contratos).length} contrato(s)</span>
+          </div>
+          ${contratoBlocks}
+        </div>`;
+    }).join("");
+
+    contratadosSection = `
+      <div class="section-header section-ctt">
+        <span>🤝 Ativos Contratados</span>
+        <span class="badge">${contratados.length} item(ns)</span>
+      </div>
+      ${empresaBlocks}`;
+  }
+
+  w.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<title>Relatório de Ativos - ${label}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+  body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; background: #fff; margin: 0; }
+  .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 24px; }
+  .header img { height: 55px; object-fit: contain; }
+  .header-titles h2 { margin: 0; font-size: 24px; color: #0f172a; letter-spacing: -0.5px; }
+  .header-titles p  { margin: 6px 0 0; font-size: 14px; color: #64748b; }
+  .meta { display: flex; justify-content: space-between; font-size: 13px; color: #475569; margin-bottom: 28px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; }
+  /* Section dividers */
+  .section-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-radius: 8px 8px 0 0; font-size: 15px; font-weight: 700; margin-top: 28px; margin-bottom: 0; }
+  .section-own { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+  .section-ctt { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+  .empresa-block { margin-top: 24px; }
+  .empresa-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px 6px 0 0; font-size: 13px; color: #166534; font-weight: 700; }
+  .contract-block { margin-top: 12px; margin-left: 20px; }
+  .contract-header { display: flex; align-items: center; gap: 10px; padding: 6px 12px; background: #fafafa; border: 1px solid #e2e8f0; border-bottom: none; border-radius: 6px 6px 0 0; font-size: 12px; color: #475569; }
+  .badge { font-size: 11px; font-weight: 600; background: #fff; border-radius: 20px; padding: 2px 10px; border: 1px solid currentColor; opacity: 0.85; }
+  .badge-ctt { color: #6d28d9; border-color: #c4b5fd; background: #ede9fe; }
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 4px; }
+  th, td { border-bottom: 1px solid #e2e8f0; padding: 10px 10px; text-align: left; vertical-align: middle; }
+  th { background: #f1f5f9; font-weight: 700; color: #334155; text-transform: uppercase; font-size: 10px; border-top: 1px solid #e2e8f0; }
+  tr:nth-child(even) { background: #fafaf9; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <img src="${logoUrl}" alt="DMAE Logo" />
+    <div class="header-titles" style="text-align: right;">
+      <h2>Relatório Centralizado de Ativos</h2>
+      <p>Filtro/Agrupamento: <b>${label}</b></p>
+    </div>
+  </div>
+  <div class="meta">
+    <span>Emissão: <b>${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}</b></span>
+    <span>Ordenado por: <b>${sortLabel}</b> &mdash; ${sortDir} &nbsp;|&nbsp; Total: <b>${list.length}</b> (${proprios.length} próprios / ${contratados.length} contratados)</span>
+  </div>
+
+  ${propriosSection}
+  ${contratadosSection}
+
+  <script>setTimeout(() => window.print(), 900);</script>
+</body>
+</html>`);
   w.document.close();
 }
 
 function exportLogsPdf(logsList) {
   const w = window.open("", "_blank");
   if (!w) { showSystemAlert("Permita pop-ups para exportar.", { title: "Atenção", type: "warning" }); return; }
+  
+  const logoUrl = window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png";
+
   const rows = logsList.map((lg) =>
-    `<tr><td>${lg.timestamp}</td><td><b>${lg.user}</b></td><td><span style="padding:2px 6px;background:#f1f5f9;border-radius:4px;font-size:10px">${lg.action}</span></td><td>${lg.target}</td></tr>`
+    `<tr>
+      <td style="white-space: nowrap;">${lg.timestamp}</td>
+      <td><b>${lg.user}</b></td>
+      <td><span style="padding:4px 8px;background:#e2e8f0;color:#334155;border-radius:4px;font-size:11px;font-weight:600;">${lg.action}</span></td>
+      <td>${lg.target}</td>
+    </tr>`
   ).join("");
-  w.document.write(`<!DOCTYPE html><html><head><title>Logs de Sistema - Auditoria</title>
-<style>body{font-family:Inter,sans-serif;padding:20px;color:#0f172a}h2{margin-bottom:8px}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:16px;}
-th,td{border:1px solid #cbd5e1;padding:8px 12px;text-align:left}th{background:#f8fafc;font-weight:700}</style></head>
-<body><h2>Registro de Auditoria do Sistema</h2><p style="color:#64748b;font-size:14px;margin:0;">Total de eventos arquivados: ${logsList.length}</p>
-<table><tr><th>Data/Hora</th><th>Operador</th><th>Ação do Sistema</th><th>Alvo/Detalhe</th></tr>${rows}</table>
-<script>setTimeout(()=>window.print(),400)<\/script></body></html>`);
+  
+  w.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<title>Auditoria de Sistema</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+  body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; background: #fff; margin: 0; }
+  .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 24px; }
+  .header img { height: 55px; object-fit: contain; }
+  .header-titles h2 { margin: 0; font-size: 24px; color: #0f172a; letter-spacing: -0.5px; }
+  .header-titles p { margin: 6px 0 0; font-size: 14px; color: #64748b; }
+  .meta { display: flex; justify-content: space-between; font-size: 13px; color: #475569; margin-bottom: 20px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { border-bottom: 1px solid #e2e8f0; padding: 12px 10px; text-align: left; vertical-align: middle; }
+  th { background: #f1f5f9; font-weight: 700; color: #334155; text-transform: uppercase; font-size: 11px; border-top: 1px solid #e2e8f0; }
+  tr:nth-child(even) { background: #fafaf9; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <img src="${logoUrl}" alt="DMAE Logo" />
+    <div class="header-titles" style="text-align: right;">
+      <h2>Registro de Auditoria de Sistema</h2>
+      <p>Log de eventos e operações</p>
+    </div>
+  </div>
+  <div class="meta">
+    <span>Emissão: <b>${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}</b></span>
+    <span>Total de Eventos: <b>${logsList.length}</b></span>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Data/Hora</th><th>Operador</th><th>Ação do Sistema</th><th>Alvo/Detalhe</th></tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <script>setTimeout(() => window.print(), 800);</script>
+</body>
+</html>`);
   w.document.close();
 }
 
@@ -160,25 +349,36 @@ function generateDirectPdf(logsList) {
     exportLogsPdf(logsList);
     return;
   }
+  const logoUrl = window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png";
+  
   const rows = logsList.map((lg) =>
     `<tr>
-      <td style="border:1px solid #cbd5e1;padding:8px;white-space:nowrap;">${lg.timestamp}</td>
-      <td style="border:1px solid #cbd5e1;padding:8px;"><b>${lg.user}</b></td>
-      <td style="border:1px solid #cbd5e1;padding:8px;"><span style="font-size:10px">${lg.action}</span></td>
-      <td style="border:1px solid #cbd5e1;padding:8px;width:100%">${lg.target}</td>
+      <td style="border-bottom:1px solid #e2e8f0;padding:12px 10px;white-space:nowrap;">${lg.timestamp}</td>
+      <td style="border-bottom:1px solid #e2e8f0;padding:12px 10px;"><b>${lg.user}</b></td>
+      <td style="border-bottom:1px solid #e2e8f0;padding:12px 10px;"><span style="padding:4px 8px;background:#e2e8f0;color:#334155;border-radius:4px;font-size:11px;font-weight:600;">${lg.action}</span></td>
+      <td style="border-bottom:1px solid #e2e8f0;padding:12px 10px;width:100%">${lg.target}</td>
     </tr>`
   ).join("");
   const content = document.createElement("div");
-  content.innerHTML = `<div style="font-family:Inter,sans-serif;padding:20px;">
-    <h2 style="margin-bottom:8px;color:#0f172a;">Registro de Auditoria do Sistema</h2>
-    <p style="color:#64748b;font-size:14px;margin:0;">Total de eventos apurados: ${logsList.length}</p>
-    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:16px;">
+  content.innerHTML = `<div style="font-family:Inter,sans-serif;padding:30px;color:#1e293b;background:#fff;">
+    <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #e2e8f0;padding-bottom:20px;margin-bottom:24px;">
+      <img src="${logoUrl}" alt="DMAE Logo" style="height:55px;object-fit:contain;" />
+      <div style="text-align:right;">
+        <h2 style="margin:0;font-size:24px;color:#0f172a;letter-spacing:-0.5px;">Registro de Auditoria de Sistema</h2>
+        <p style="margin:6px 0 0;font-size:14px;color:#64748b;">Log de eventos e operações</p>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:#475569;margin-bottom:20px;background:#f8fafc;padding:12px 16px;border-radius:8px;border:1px solid #e2e8f0;">
+      <span>Emissão: <b>${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}</b></span>
+      <span>Total de Eventos: <b>${logsList.length}</b></span>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
       <thead>
         <tr>
-          <th style="border:1px solid #cbd5e1;padding:8px;background:#f8fafc;text-align:left;">Data/Hora</th>
-          <th style="border:1px solid #cbd5e1;padding:8px;background:#f8fafc;text-align:left;">Operador</th>
-          <th style="border:1px solid #cbd5e1;padding:8px;background:#f8fafc;text-align:left;">Ação</th>
-          <th style="border:1px solid #cbd5e1;padding:8px;background:#f8fafc;text-align:left;">Detalhe</th>
+          <th style="border-bottom:1px solid #e2e8f0;border-top:1px solid #e2e8f0;padding:12px 10px;background:#f1f5f9;text-align:left;font-weight:700;color:#334155;text-transform:uppercase;font-size:11px;">Data/Hora</th>
+          <th style="border-bottom:1px solid #e2e8f0;border-top:1px solid #e2e8f0;padding:12px 10px;background:#f1f5f9;text-align:left;font-weight:700;color:#334155;text-transform:uppercase;font-size:11px;">Operador</th>
+          <th style="border-bottom:1px solid #e2e8f0;border-top:1px solid #e2e8f0;padding:12px 10px;background:#f1f5f9;text-align:left;font-weight:700;color:#334155;text-transform:uppercase;font-size:11px;">Ação do Sistema</th>
+          <th style="border-bottom:1px solid #e2e8f0;border-top:1px solid #e2e8f0;padding:12px 10px;background:#f1f5f9;text-align:left;font-weight:700;color:#334155;text-transform:uppercase;font-size:11px;">Detalhe</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -188,7 +388,7 @@ function generateDirectPdf(logsList) {
     margin: 10,
     filename: 'auditoria-logs.pdf',
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2 },
+    html2canvas: { scale: 2, useCORS: true },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
   };
   window.html2pdf().set(opt).from(content).save();
@@ -876,6 +1076,7 @@ export default function App() {
   const [resetConfirmUser, setResetConfirmUser] = useState(null);
   const [resetSuccessInfo, setResetSuccessInfo] = useState(null);
   const [assetRegFilter, setAssetRegFilter] = useState({ search: "", vinculo: "all", category: "all", subType: "all", nodeId: "all", emergency: false, contractSearch: "" });
+  const [assetRegSort, setAssetRegSort] = useState({ key: "name", direction: "asc" });
   const openAssetRegistry = useCallback(() => setOpenAssetRegistryDlg(true), []);
 
   // REAL-TIME PRESENCE (SUPABASE)
@@ -3247,7 +3448,7 @@ export default function App() {
                         onChange={(e) =>
                           setAssetForm((current) => ({
                             ...current,
-                            contatoAcionamento: e.target.value
+                            contatoAcionamento: maskPhone(e.target.value)
                           }))
                         }
                         placeholder="Ex.: (51) 99999-9999"
@@ -3260,6 +3461,26 @@ export default function App() {
                   </div>
                 </div>
               )}
+
+              {/* Seção de Manutenção */}
+              <div style={{ background: assetForm.isMaintenance ? "#fffbeb" : "var(--n50)", padding: 12, borderRadius: 8, border: `1px solid ${assetForm.isMaintenance ? "#fcd34d" : "var(--n200)"}`, marginBottom: 16, marginTop: 12 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none", color: assetForm.isMaintenance ? "#d97706" : "var(--n600)", fontWeight: "bold" }}>
+                  <input type="checkbox" checked={assetForm.isMaintenance} onChange={(e) => setAssetForm({ ...assetForm, isMaintenance: e.target.checked })} /> Ativo em Manutenção / Inoperante?
+                </label>
+                
+                {assetForm.isMaintenance && (
+                  <div className="fr" style={{ marginTop: 12, alignItems: "flex-start" }}>
+                    <div className="fg" style={{ flex: 1 }}>
+                      <label className="fl">Em manutenção desde:</label>
+                      <input type="date" className="fi" value={assetForm.maintenanceSince ? assetForm.maintenanceSince.substring(0, 10) : ""} onChange={(e) => setAssetForm({ ...assetForm, maintenanceSince: e.target.value ? new Date(e.target.value).toISOString() : "" })} />
+                    </div>
+                    <div className="fg" style={{ flex: 2 }}>
+                      <label className="fl">Notas da Manutenção (Defeito / Local)</label>
+                      <input className="fi" value={assetForm.maintenanceNotes || ""} onChange={(e) => setAssetForm({ ...assetForm, maintenanceNotes: e.target.value })} placeholder="Ex: Oficina central, aguardando peça..." />
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className="fr">
                 <div className="fg" style={{ flex: 1 }}><label className="fl">Grupo *</label>
@@ -3292,28 +3513,8 @@ export default function App() {
               <div className="fr" style={{ marginTop: 12 }}>
                 <div className="fg" style={{ flex: 1 }}>
                   <label className="fl">Telefone / Contato do Ativo (Geral)</label>
-                  <input className="fi" value={assetForm.contatoFone || ""} onChange={(e) => setAssetForm({ ...assetForm, contatoFone: e.target.value })} placeholder="Ex: (51) 99999-9999" />
+                  <input className="fi" value={assetForm.contatoFone || ""} onChange={(e) => setAssetForm({ ...assetForm, contatoFone: maskPhone(e.target.value) })} placeholder="Ex: (51) 99999-9999" />
                 </div>
-              </div>
-
-              {/* Seção de Manutenção */}
-              <div style={{ background: assetForm.isMaintenance ? "#fffbeb" : "var(--n50)", padding: 12, borderRadius: 8, border: `1px solid ${assetForm.isMaintenance ? "#fcd34d" : "var(--n200)"}`, marginBottom: 16, marginTop: 12 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none", color: assetForm.isMaintenance ? "#d97706" : "var(--n600)", fontWeight: "bold" }}>
-                  <input type="checkbox" checked={assetForm.isMaintenance} onChange={(e) => setAssetForm({ ...assetForm, isMaintenance: e.target.checked })} /> Ativo em Manutenção / Inoperante?
-                </label>
-                
-                {assetForm.isMaintenance && (
-                  <div className="fr" style={{ marginTop: 12, alignItems: "flex-start" }}>
-                    <div className="fg" style={{ flex: 1 }}>
-                      <label className="fl">Em manutenção desde:</label>
-                      <input type="date" className="fi" value={assetForm.maintenanceSince ? assetForm.maintenanceSince.substring(0, 10) : ""} onChange={(e) => setAssetForm({ ...assetForm, maintenanceSince: e.target.value ? new Date(e.target.value).toISOString() : "" })} />
-                    </div>
-                    <div className="fg" style={{ flex: 2 }}>
-                      <label className="fl">Notas da Manutenção (Defeito / Local)</label>
-                      <input className="fi" value={assetForm.maintenanceNotes || ""} onChange={(e) => setAssetForm({ ...assetForm, maintenanceNotes: e.target.value })} placeholder="Ex: Oficina central, aguardando peça..." />
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Conditional Contract Section */}
@@ -4461,7 +4662,7 @@ export default function App() {
               )}
             </div>
 
-            <div className="modal-body">
+            <div className="modal-body" style={{ overflow: "hidden", height: "85vh", maxHeight: "none", paddingBottom: 16 }}>
               {/* FILTERS SECTION */}
               <div style={{ 
                 background: "var(--n50)", 
@@ -4472,7 +4673,8 @@ export default function App() {
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
                 gap: 12,
-                alignItems: "end"
+                alignItems: "end",
+                flexShrink: 0
               }}>
                 <div className="fg" style={{ margin: 0 }}>
                   <label className="fl">Busca Identificação</label>
@@ -4600,7 +4802,7 @@ export default function App() {
                        const matchesContract = !assetRegFilter.contractSearch || a.numeroContrato?.toLowerCase().includes(assetRegFilter.contractSearch.toLowerCase()) || a.empresaContratada?.toLowerCase().includes(assetRegFilter.contractSearch.toLowerCase());
                        return matchesSearch && matchesVinculo && matchesCategory && matchesSubType && matchesNode && matchesEmergency && matchesContract;
                     });
-                    exportAssetsPdf(list, "Registro Centralizado", (nid) => nodes.find(n => n.id === nid)?.name || nid);
+                    exportAssetsPdf(list, "Registro Centralizado", (nid) => nodes.find(n => n.id === nid)?.name || nid, assetRegSort, nodes);
                  }}>
                    <Printer size={12} /> Imprimir / PDF
                  </button>
@@ -4624,15 +4826,23 @@ export default function App() {
               </div>
 
               {/* RESULTS TABLE */}
-              <div style={{ border: "1px solid var(--n200)", borderRadius: 12, overflow: "hidden" }}>
-                <div style={{ maxHeight: 500, overflowY: "auto" }}>
+              <div style={{ border: "1px solid var(--n200)", borderRadius: 12, overflow: "hidden", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+                <div style={{ flex: 1, overflowY: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                     <thead style={{ background: "var(--n100)", position: "sticky", top: 0, zIndex: 10 }}>
                       <tr>
-                        <th style={{ padding: "12px 16px", textAlign: "left" }}>Ativo</th>
-                        <th style={{ padding: "12px 16px", textAlign: "left" }}>Vínculo</th>
-                        <th style={{ padding: "12px 16px", textAlign: "left" }}>Localização (Unidade)</th>
-                        <th style={{ padding: "12px 16px", textAlign: "left" }}>Contato / Responsável</th>
+                        <th style={{ padding: "12px 16px", textAlign: "left", cursor: "pointer", userSelect: "none" }} onClick={() => setAssetRegSort({ key: "name", direction: assetRegSort.key === "name" && assetRegSort.direction === "asc" ? "desc" : "asc" })}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>Ativo {assetRegSort.key === "name" && (assetRegSort.direction === "asc" ? "↑" : "↓")}</div>
+                        </th>
+                        <th style={{ padding: "12px 16px", textAlign: "left", cursor: "pointer", userSelect: "none" }} onClick={() => setAssetRegSort({ key: "vinculo", direction: assetRegSort.key === "vinculo" && assetRegSort.direction === "asc" ? "desc" : "asc" })}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>Vínculo {assetRegSort.key === "vinculo" && (assetRegSort.direction === "asc" ? "↑" : "↓")}</div>
+                        </th>
+                        <th style={{ padding: "12px 16px", textAlign: "left", cursor: "pointer", userSelect: "none" }} onClick={() => setAssetRegSort({ key: "node", direction: assetRegSort.key === "node" && assetRegSort.direction === "asc" ? "desc" : "asc" })}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>Localização (Unidade) {assetRegSort.key === "node" && (assetRegSort.direction === "asc" ? "↑" : "↓")}</div>
+                        </th>
+                        <th style={{ padding: "12px 16px", textAlign: "left", cursor: "pointer", userSelect: "none" }} onClick={() => setAssetRegSort({ key: "contato", direction: assetRegSort.key === "contato" && assetRegSort.direction === "asc" ? "desc" : "asc" })}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>Contato / Responsável {assetRegSort.key === "contato" && (assetRegSort.direction === "asc" ? "↑" : "↓")}</div>
+                        </th>
                         <th style={{ padding: "12px 16px", textAlign: "right" }}>Ações</th>
                       </tr>
                     </thead>
@@ -4657,6 +4867,20 @@ export default function App() {
                             a.empresaContratada?.toLowerCase().includes(assetRegFilter.contractSearch.toLowerCase());
 
                           return matchesSearch && matchesVinculo && matchesCategory && matchesSubType && matchesNode && matchesEmergency && matchesContract;
+                        });
+
+                        filtered.sort((a, b) => {
+                          let valA = "", valB = "";
+                          if (assetRegSort.key === "name") { valA = a.name; valB = b.name; }
+                          else if (assetRegSort.key === "vinculo") { valA = a.tipoVinculo; valB = b.tipoVinculo; }
+                          else if (assetRegSort.key === "node") { valA = nodes.find(n=>n.id===a.nodeId)?.name || ""; valB = nodes.find(n=>n.id===b.nodeId)?.name || ""; }
+                          else if (assetRegSort.key === "contato") { valA = a.contatoResponsavel || a.contatoFone || ""; valB = b.contatoResponsavel || b.contatoFone || ""; }
+                          
+                          valA = (valA || "").toLowerCase();
+                          valB = (valB || "").toLowerCase();
+                          if (valA < valB) return assetRegSort.direction === "asc" ? -1 : 1;
+                          if (valA > valB) return assetRegSort.direction === "asc" ? 1 : -1;
+                          return 0;
                         });
 
                         if (filtered.length === 0) return (
@@ -4715,6 +4939,9 @@ export default function App() {
                                 <span className={`badge ${a.tipoVinculo === "Contratado" ? "badge-sec" : "badge-out"}`}>
                                   {a.tipoVinculo || "Próprio"}
                                 </span>
+                                {a.tipoVinculo === "Contratado" && a.empresaContratada && (
+                                  <div style={{ fontSize: 10, marginTop: 4, fontWeight: 600, color: "var(--n600)" }}>🏢 {a.empresaContratada}</div>
+                                )}
                                 {a.plate && <div style={{ fontSize: 10, marginTop: 4, fontWeight: 600 }}>Placa: {a.plate}</div>}
                               </td>
                               <td style={{ padding: "12px 16px" }}>
