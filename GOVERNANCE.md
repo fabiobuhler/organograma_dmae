@@ -9,6 +9,7 @@ Os elementos abaixo são a "alma" visual do sistema e só devem ser alterados so
 - **Logotipo DMAE**: Presente no cabeçalho e favicon, vinculado dinamicamente ao nó raiz (DMAE).
 - **Rodapé e Versão**: O rodapé deve conter o nome do desenvolvedor ("Fábio Bühler"), a versão no formato `1.0.YYYY.MMDDHHmm` e o **Contador de Usuários Real-time**.
 - **Hierarquia Visual**: O sistema suporta visualização em Árvore (Tree) e Lista. No modo Lista, as bordas dos cards herdam a cor da unidade correspondente.
+- **Governança de Ativos de Contingência**: Ativos de contingência (is_emergency) EXIGEM preenchimento obrigatório de **Responsável pela Contingência** e **Telefone de Acionamento**. A visualização deve priorizar o contato direto via WhatsApp.
 
 ## 2. Governança de Dados e Privacidade
 - **Privacidade Hardened**: Dados de contratos (SEI, valores, fiscais/gestores) são **SENSÍVEIS**. Eles devem ser omitidos ou protegidos por guards `(isProtected || canEdit)` em todos os modais (Pessoa, Ativo, BI) para usuários não autenticados.
@@ -46,4 +47,4 @@ Os elementos abaixo são a "alma" visual do sistema e só devem ser alterados so
 
 ---
 **Desenvolvido por:** Fábio Bühler  
-**Versão Atual:** 1.0.2026.04232120
+**Versão Atual:** 1.0.2026.04241445

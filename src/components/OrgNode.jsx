@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { ChevronDown, ChevronUp, ChevronsDown, Plus, Pencil, Undo2, PieChart, Siren } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronsDown, Plus, Pencil, Undo2, PieChart, Siren, AlertTriangle } from "lucide-react";
 import { initials, computeNodeColor, connectorColor } from "../utils/helpers";
 
 /* ──── Individual Card ──── */
 const OrgNodeCard = ({
-  node, person, selected, childCount, assetCount, emergencyCount,
+  node, person, selected, childCount, assetCount, emergencyCount, maintenanceCount, emergencyMaintenanceCount,
   onSelect, onAddChild, onEditNode, onShowPerson, canEdit, isProtected,
   bgColor, borderColor, collapsed, onToggleCollapse, onExpand, onExpandAll, onOpenDashboard,
 }) => {
@@ -62,7 +62,9 @@ const OrgNodeCard = ({
         {showSensitive && (
           <div className="oc-badges">
             <span className={`badge ${isApoio ? "badge-apoio" : "badge-sec"}`}>{isApoio ? "apoio" : node.tipo}</span>
-            {emergencyCount > 0 && <span className="badge" style={{ background: "rgba(0,0,0,0.05)", color: "#ef4444", border: "2px solid #fbbf24", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: "50%", boxShadow: "0 2px 4px rgba(0,0,0,0.1)", position: "relative" }} title="Ativo de Emergência disponível"><Siren size={24} strokeWidth={3} fill="#ef4444" fillOpacity={0.1} style={{ transform: "scale(1.8)", transformOrigin: "center" }} /></span>}
+            {emergencyCount > 0 && <span className="badge" style={{ background: "rgba(0,0,0,0.05)", color: "#ef4444", border: "2px solid #fbbf24", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: "50%", boxShadow: "0 2px 4px rgba(0,0,0,0.1)", position: "relative" }} title="Ativos de Contingência disponíveis"><Siren size={24} strokeWidth={3} fill="#ef4444" fillOpacity={0.1} style={{ transform: "scale(1.8)", transformOrigin: "center" }} /></span>}
+            {maintenanceCount > 0 && <span className="badge badge-maintenance" style={{ background: "rgba(0,0,0,0.05)", color: "#d97706", border: "2px solid #d97706", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: "50%", boxShadow: "0 2px 4px rgba(217,119,6,0.1)", position: "relative" }} title="Ativos em Manutenção/Inoperantes"><AlertTriangle size={18} strokeWidth={3} color="#d97706" /></span>}
+            {emergencyMaintenanceCount > 0 && <span className="badge badge-emergency-maintenance" style={{ background: "#fee2e2", color: "#ef4444", border: "2px solid #ef4444", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: "50%", boxShadow: "0 2px 8px rgba(239, 68, 68, 0.3)", position: "relative" }} title="CONTINGÊNCIA INOPERANTE!"><Siren size={20} strokeWidth={3} fill="#ef4444" fillOpacity={0.2} /></span>}
             {assetCount > 0 && <span className="badge badge-out">{assetCount} ativos</span>}
           </div>
         )}
@@ -117,7 +119,7 @@ const OrgNodeCard = ({
 /* ─€─€─€ Apoio Branch (recursive) ─€─€─€ */
 const ApoioBranch = ({
   node, getChildren, personMap, selectedId, onSelect, onAddChild, onEditNode,
-  onShowPerson, onExpand, onExpandAll, canEdit, isProtected, directAssetCount, directEmergencyCount, parentHex, depth = 0, expandedSet, onOpenDashboard
+  onShowPerson, onExpand, onExpandAll, canEdit, isProtected, directAssetCount, directEmergencyCount, directMaintenanceCount, directEmergencyMaintenanceCount, parentHex, depth = 0, expandedSet, onOpenDashboard
 }) => {
   const [collapsed, setCollapsed] = useState(depth >= 1);
   const childCh = getChildren(node.id);
@@ -138,6 +140,8 @@ const ApoioBranch = ({
           childCount={childCh.length}
           assetCount={directAssetCount(node.id)}
           emergencyCount={directEmergencyCount(node.id)}
+          maintenanceCount={directMaintenanceCount ? directMaintenanceCount(node.id) : 0}
+          emergencyMaintenanceCount={directEmergencyMaintenanceCount ? directEmergencyMaintenanceCount(node.id) : 0}
           onSelect={onSelect} onAddChild={onAddChild} onEditNode={onEditNode}
           onShowPerson={onShowPerson} canEdit={canEdit} isProtected={isProtected}
           bgColor={nodeColor.bg} borderColor={nodeColor.baseHex}
@@ -156,6 +160,8 @@ const ApoioBranch = ({
               depth={depth + 1} canEdit={canEdit} isProtected={isProtected}
               directAssetCount={directAssetCount} 
               directEmergencyCount={directEmergencyCount}
+              directMaintenanceCount={directMaintenanceCount}
+              directEmergencyMaintenanceCount={directEmergencyMaintenanceCount}
               parentHex={nodeColor.hex}
               expandedSet={expandedSet} onOpenDashboard={onOpenDashboard}
             />
@@ -169,7 +175,7 @@ const ApoioBranch = ({
 /* ─€─€─€ Main Branch (recursive) ─€─€─€ */
 const OrgBranch = ({
   node, getChildren, personMap, selectedId, onSelect, onAddChild, onEditNode,
-  onExpand, onExpandAll, onShowPerson, directAssetCount, directEmergencyCount, canEdit, isProtected, parentHex,
+  onExpand, onExpandAll, onShowPerson, directAssetCount, directEmergencyCount, directMaintenanceCount, directEmergencyMaintenanceCount, canEdit, isProtected, parentHex,
   depth = 0, isFocusRoot, onReturnFromFocus, expandedSet, onOpenDashboard
 }) => {
   const [collapsed, setCollapsed] = useState(depth >= 3
@@ -195,6 +201,8 @@ const OrgBranch = ({
           childCount={allChildren.length}
           assetCount={directAssetCount(node.id)}
           emergencyCount={directEmergencyCount(node.id)}
+          maintenanceCount={directMaintenanceCount ? directMaintenanceCount(node.id) : 0}
+          emergencyMaintenanceCount={directEmergencyMaintenanceCount ? directEmergencyMaintenanceCount(node.id) : 0}
           onSelect={onSelect} onAddChild={onAddChild} onEditNode={onEditNode}
           onShowPerson={onShowPerson} canEdit={canEdit} isProtected={isProtected}
           bgColor={nodeColor.bg} borderColor={nodeColor.baseHex}
@@ -221,6 +229,8 @@ const OrgBranch = ({
                     depth={depth + 1} canEdit={canEdit} isProtected={isProtected}
                     directAssetCount={directAssetCount} 
                     directEmergencyCount={directEmergencyCount}
+                    directMaintenanceCount={directMaintenanceCount}
+                    directEmergencyMaintenanceCount={directEmergencyMaintenanceCount}
                     parentHex={nodeColor.hex}
                     expandedSet={expandedSet} onOpenDashboard={onOpenDashboard}
                   />
@@ -241,6 +251,8 @@ const OrgBranch = ({
               onShowPerson={onShowPerson} depth={depth + 1}
               directAssetCount={directAssetCount} 
               directEmergencyCount={directEmergencyCount}
+              directMaintenanceCount={directMaintenanceCount}
+              directEmergencyMaintenanceCount={directEmergencyMaintenanceCount}
               canEdit={canEdit} isProtected={isProtected} parentHex={nodeColor.hex}
               expandedSet={expandedSet} onOpenDashboard={onOpenDashboard}
             />

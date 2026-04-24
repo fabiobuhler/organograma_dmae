@@ -25,4 +25,4 @@ DESENVOLVIMENTO
 3. npm run build (Gerar Pacote de Producao)
 
 Desenvolvido por: Fabio Buhler
-Versao Atual: 1.0.2026.04232120
+Versao Atual: 1.0.2026.04241445

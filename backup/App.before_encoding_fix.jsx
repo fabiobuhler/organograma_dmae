@@ -13,10 +13,10 @@ import { seedNodes, seedAssets, seedPersons, seedContracts, seedAssetTypes } fro
 import {
   makeId, initials, sortNodes, downloadFile, toCsv,
   getDescendantIds, getParentChain, fileToBase64,
-  normalizeHex, DEFAULT_ROOT_COLOR, computeNodeColor
+  normalizeHex, DEFAULT_ROOT_COLOR, computeNodeColor,
+  maskPhone, buildWhatsAppUrl, hasValidPhone
 } from "./utils/helpers";
 import { supabase } from "./lib/supabase";
-
 const STORAGE_KEY = "dmae-orgchart-v16";
 const DEMO_USER = "admin";
 const DEMO_PASS = "dmae123";
@@ -34,7 +34,7 @@ const emptyPerson = {
 const emptyAsset = {
   id: "",
   nodeId: "",
-  category: "veículo",
+  category: "veÃculo",
   type: "",
   name: "",
 
@@ -46,7 +46,7 @@ const emptyAsset = {
   os: "",
   notes: "",
 
-  tipoVinculo: "Próprio",
+  tipoVinculo: "PrÃ³prio",
 
   isEmergency: false,
   isMaintenance: false,
@@ -90,7 +90,7 @@ const emptyContract = {
 };
 
 function assetIcon(c) {
-  if (c === "veículo") return <Car size={12} />;
+  if (c === "veÃculo") return <Car size={12} />;
   if (c === "ferramenta") return <Wrench size={12} />;
   return <Briefcase size={12} />;
 }
@@ -126,14 +126,14 @@ function getDashboardStats(contractList) {
 /* --- PDF/Print export --- */
 function exportAssetsPdf(list, label, getPath) {
   const w = window.open("", "_blank");
-  if (!w) { showSystemAlert("Permita pop-ups para exportar.", { title: "Atenção", type: "warning" }); return; }
+  if (!w) { showSystemAlert("Permita pop-ups para exportar.", { title: "AtenÃ§Ã£o", type: "warning" }); return; }
   const rows = list.map((a) =>
     `<tr><td>${a.category}</td><td>${a.name}</td><td>${a.manufacturer || ""}</td><td>${a.model || ""}</td><td>${a.year || ""}</td><td>${a.plate || ""}</td><td>${a.patrimonio || ""}</td><td>${getPath(a.nodeId)}</td></tr>`
   ).join("");
   w.document.write(`<!DOCTYPE html><html><head><title>Ativos - ${label}</title>
 <style>body{font-family:Inter,sans-serif;padding:20px}h2{margin-bottom:12px}table{width:100%;border-collapse:collapse;font-size:12px}
 th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}th{background:#f1f5f9;font-weight:700}</style></head>
-<body><h2>Ativos — ${label}</h2><p>${list.length} item(ns)</p>
+<body><h2>Ativos â€” ${label}</h2><p>${list.length} item(ns)</p>
 <table><tr><th>Cat.</th><th>Nome</th><th>Fab.</th><th>Modelo</th><th>Ano</th><th>Placa</th><th>Pat.</th><th>Estr.</th></tr>${rows}</table>
 <script>setTimeout(()=>window.print(),400)<\/script></body></html>`);
   w.document.close();
@@ -154,9 +154,28 @@ th,td{border:1px solid #cbd5e1;padding:8px 12px;text-align:left}th{background:#f
   w.document.close();
 }
 
+function WhatsAppButton({ phone, label = "WhatsApp" }) {
+  if (!hasValidPhone(phone)) return null;
+  const href = buildWhatsAppUrl(phone);
+  if (!href) return null;
+  return (
+    <a
+      className="btn btn-outline btn-xs whatsapp-btn"
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={`Chamar no WhatsApp: ${phone}`}
+      onClick={(e) => e.stopPropagation()}
+      style={{ display: "inline-flex", alignItems: "center", gap: 4, marginLeft: 4 }}
+    >
+      <MessageCircle size={12} />
+      {label}
+    </a>
+  );
+}
 function generateDirectPdf(logsList) {
   if (typeof window.html2pdf === "undefined") {
-    showSystemAlert("Carregador PDF indisponível no momento. Usando módulo de impressão.", { title: "Atenção", type: "warning" });
+    showSystemAlert("Carregador PDF indisponÃvel no momento. Usando mÃ³dulo de impressÃ£o.", { title: "AtenÃ§Ã£o", type: "warning" });
     exportLogsPdf(logsList);
     return;
   }
@@ -177,7 +196,7 @@ function generateDirectPdf(logsList) {
         <tr>
           <th style="border:1px solid #cbd5e1;padding:8px;background:#f8fafc;text-align:left;">Data/Hora</th>
           <th style="border:1px solid #cbd5e1;padding:8px;background:#f8fafc;text-align:left;">Operador</th>
-          <th style="border:1px solid #cbd5e1;padding:8px;background:#f8fafc;text-align:left;">Ação</th>
+          <th style="border:1px solid #cbd5e1;padding:8px;background:#f8fafc;text-align:left;">AÃ§Ã£o</th>
           <th style="border:1px solid #cbd5e1;padding:8px;background:#f8fafc;text-align:left;">Detalhe</th>
         </tr>
       </thead>
@@ -250,12 +269,12 @@ function ListNode({ node, getChildren, onSelect, directEmergencyCount, directMai
         </div>
         <div style={{ display: "flex", gap: 4 }}>
           {isProtected && emergencyCount > 0 && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", border: "2px solid #eab308", background: "#fff", boxShadow: "0 0 6px rgba(234, 179, 8, 0.4)", flexShrink: 0 }} title="Possui ativos de Contingência">
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", border: "2px solid #eab308", background: "#fff", boxShadow: "0 0 6px rgba(234, 179, 8, 0.4)", flexShrink: 0 }} title="Possui ativos de ContingÃªncia">
               <Siren size={12} color="#ef4444" strokeWidth={3} fill="#ef4444" fillOpacity={0.1} />
             </div>
           )}
           {isProtected && directMaintenanceCount && directMaintenanceCount(node.id) > 0 && (
-            <div className="badge-maintenance" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", border: "2px solid #d97706", background: "#fff", boxShadow: "0 0 6px rgba(217, 119, 6, 0.4)", flexShrink: 0, color: "#d97706" }} title="Possui ativos em Manutenção">
+            <div className="badge-maintenance" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", border: "2px solid #d97706", background: "#fff", boxShadow: "0 0 6px rgba(217, 119, 6, 0.4)", flexShrink: 0, color: "#d97706" }} title="Possui ativos em ManutenÃ§Ã£o">
               <AlertTriangle size={12} strokeWidth={3} />
             </div>
           )}
@@ -353,13 +372,13 @@ function PersonSelector({
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--n50)", padding: "4px 8px", borderRadius: 8, border: "1px solid var(--n200)" }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 11, fontWeight: 700 }}>{person.name}</div>
-              <div style={{ fontSize: 9, color: "var(--n500)" }}>Mat: {person.matricula} • {person.cargo}</div>
+              <div style={{ fontSize: 9, color: "var(--n500)" }}>Mat: {person.matricula} â€¢ {person.cargo}</div>
           </div>
           <button type="button" className="btn btn-outline btn-xs btn-icon" onClick={onClear} title="Remover"><X size={10} /></button>
         </div>
       ) : (
         <div style={{ position: "relative" }}>
-          <input className="fi" placeholder="Buscar por nome ou matrícula..." value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="fi" placeholder="Buscar por nome ou matrÃcula..." value={q} onChange={(e) => setQ(e.target.value)} />
           <div style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "var(--n400)" }}><Search size={12} /></div>
           {q.length > 1 && (
             <div className="search-drop" style={{ top: "100%", left: 0, right: 0, marginTop: 4, zIndex: 100 }}>
@@ -391,7 +410,7 @@ function PersonSelector({
                           <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
                             <div>
                               <div style={{ fontSize: 11, fontWeight: 700 }}>{p.name}</div>
-                              <div style={{ fontSize: 9, color: "var(--n500)" }}>Mat: {p.matricula} • {p.cargo}</div>
+                              <div style={{ fontSize: 9, color: "var(--n500)" }}>Mat: {p.matricula} â€¢ {p.cargo}</div>
                             </div>
                             {occupied && (
                               <span
@@ -411,7 +430,7 @@ function PersonSelector({
                     })}
                     {filtered.length === 0 && onAddNew && (
                       <button type="button" onMouseDown={(e) => { e.preventDefault(); setQ(""); onAddNew(q); }} className="search-item" style={{ color: "var(--primary)", justifyContent: "center", borderTop: "1px solid var(--n200)" }}>
-                        <b>Pessoa não encontrada. Clique aqui para cadastrar "{q}"</b>
+                        <b>Pessoa nÃ£o encontrada. Clique aqui para cadastrar "{q}"</b>
                       </button>
                     )}
                   </>
@@ -430,44 +449,44 @@ function fixMojibakeText(value) {
   // Corrige sequencias UTF-8 lidas incorretamente como Latin-1 (mojibake)
   const replacements = {
     // Minusculas
-    "\u00C3\u00A1": "\u00E1", // á
-    "\u00C3\u00A0": "\u00E0", // à
-    "\u00C3\u00A2": "\u00E2", // â
-    "\u00C3\u00A3": "\u00E3", // ã
-    "\u00C3\u00A9": "\u00E9", // é
-    "\u00C3\u00AA": "\u00EA", // ê
-    "\u00C3\u00AD": "\u00ED", // í
-    "\u00C3\u00B3": "\u00F3", // ó
-    "\u00C3\u00B4": "\u00F4", // ô
-    "\u00C3\u00B5": "\u00F5", // õ
-    "\u00C3\u00BA": "\u00FA", // ú
-    "\u00C3\u00A7": "\u00E7", // ç
+    "\u00C3\u00A1": "\u00E1", // Ã¡
+    "\u00C3\u00A0": "\u00E0", // Ã 
+    "\u00C3\u00A2": "\u00E2", // Ã¢
+    "\u00C3\u00A3": "\u00E3", // Ã£
+    "\u00C3\u00A9": "\u00E9", // Ã©
+    "\u00C3\u00AA": "\u00EA", // Ãª
+    "\u00C3\u00AD": "\u00ED", // Ã
+    "\u00C3\u00B3": "\u00F3", // Ã³
+    "\u00C3\u00B4": "\u00F4", // Ã´
+    "\u00C3\u00B5": "\u00F5", // Ãµ
+    "\u00C3\u00BA": "\u00FA", // Ãº
+    "\u00C3\u00A7": "\u00E7", // Ã§
     // Maiusculas
-    "\u00C3\u0081": "\u00C1", // Á
-    "\u00C3\u0080": "\u00C0", // À
-    "\u00C3\u0082": "\u00C2", // Â
-    "\u00C3\u0083": "\u00C3", // Ã
-    "\u00C3\u0089": "\u00C9", // É
-    "\u00C3\u008A": "\u00CA", // Ê
-    "\u00C3\u008D": "\u00CD", // Í
-    "\u00C3\u0093": "\u00D3", // Ó
-    "\u00C3\u0094": "\u00D4", // Ô
-    "\u00C3\u0095": "\u00D5", // Õ
-    "\u00C3\u009A": "\u00DA", // Ú
-    "\u00C3\u0087": "\u00C7", // Ç
+    "\u00C3\u0081": "\u00C1", // Ã
+    "\u00C3\u0080": "\u00C0", // Ã€
+    "\u00C3\u0082": "\u00C2", // Ã‚
+    "\u00C3\u0083": "\u00C3", // Ãƒ
+    "\u00C3\u0089": "\u00C9", // Ã‰
+    "\u00C3\u008A": "\u00CA", // ÃŠ
+    "\u00C3\u008D": "\u00CD", // Ã
+    "\u00C3\u0093": "\u00D3", // Ã“
+    "\u00C3\u0094": "\u00D4", // Ã”
+    "\u00C3\u0095": "\u00D5", // Ã•
+    "\u00C3\u009A": "\u00DA", // Ãš
+    "\u00C3\u0087": "\u00C7", // Ã‡
     // Outros
-    "\u00C2\u00BA": "\u00BA", // º
-    "\u00C2\u00AA": "\u00AA", // ª
-    "\u00C2\u00B0": "\u00B0", // °
+    "\u00C2\u00BA": "\u00BA", // Âº
+    "\u00C2\u00AA": "\u00AA", // Âª
+    "\u00C2\u00B0": "\u00B0", // Â°
     // Tipografia
-    "\u00E2\u0080\u0094": "\u2014", // —
-    "\u00E2\u0080\u0093": "\u2013", // –
-    "\u00E2\u0080\u00A2": "\u2022", // •
-    "\u00E2\u0080\u009C": "\u201C", // “
-    "\u00E2\u0080\u009D": "\u201D", // ”
-    "\u00E2\u0080\u0098": "\u2018", // ‘
-    "\u00E2\u0080\u0099": "\u2019", // ’
-    "\u00E2\u0080\u00A6": "\u2026", // …
+    "\u00E2\u0080\u0094": "\u2014", // â€”
+    "\u00E2\u0080\u0093": "\u2013", // â€“
+    "\u00E2\u0080\u00A2": "\u2022", // â€¢
+    "\u00E2\u0080\u009C": "\u201C", // â€œ
+    "\u00E2\u0080\u009D": "\u201D", // â€
+    "\u00E2\u0080\u0098": "\u2018", // â€˜
+    "\u00E2\u0080\u0099": "\u2019", // â€™
+    "\u00E2\u0080\u00A6": "\u2026", // â€¦
   };
   let out = value;
   Object.entries(replacements).forEach(([bad, good]) => {
@@ -498,14 +517,14 @@ function SystemAlertModal({ alert, onClose }) {
       <div className="modal-content narrow system-alert-modal">
         <div className="modal-header">
           <h2>
-            {isError ? "Erro" : isSuccess ? "Concluído" : alert.title || "Atenção"}
+            {isError ? "Erro" : isSuccess ? "ConcluÃdo" : alert.title || "AtenÃ§Ã£o"}
           </h2>
           <p>
             {isError
-              ? "Não foi possível concluir a operação."
+              ? "NÃ£o foi possÃvel concluir a operaÃ§Ã£o."
               : isSuccess
-                ? "Operação concluída."
-                : "Verifique as informações abaixo antes de continuar."}
+                ? "OperaÃ§Ã£o concluÃda."
+                : "Verifique as informaÃ§Ãµes abaixo antes de continuar."}
           </p>
         </div>
 
@@ -517,7 +536,7 @@ function SystemAlertModal({ alert, onClose }) {
 
             <div className="system-alert-text">
               <div className="system-alert-title">
-                {alert.title || (isError ? "Erro" : isSuccess ? "Concluído" : "Atenção")}
+                {alert.title || (isError ? "Erro" : isSuccess ? "ConcluÃdo" : "AtenÃ§Ã£o")}
               </div>
 
               <div className="system-alert-message">
@@ -546,7 +565,7 @@ function SystemAlertModal({ alert, onClose }) {
   );
 }
 
-/* ─€─€─€─€ APP ─€─€─€─€ */
+/* â”€â‚¬â”€â‚¬â”€â‚¬â”€â‚¬ APP â”€â‚¬â”€â‚¬â”€â‚¬â”€â‚¬ */
 export default function App() {
   const [nodes, setNodes] = useState(() => supabase ? [] : seedNodes);
   const [assets, setAssets] = useState(() => supabase ? [] : seedAssets);
@@ -556,7 +575,7 @@ export default function App() {
   const [systemAlert, setSystemAlert] = useState(null);
   const showSystemAlert = useCallback((message, options = {}) => {
     setSystemAlert({
-      title: options.title || "Atenção",
+      title: options.title || "AtenÃ§Ã£o",
       message: normalizeDeep(message),
       type: options.type || "warning",
       confirmText: options.confirmText || "OK, entendi",
@@ -648,7 +667,7 @@ export default function App() {
 
             nodeId: a.node_id || a.nodeId || "",
 
-            tipoVinculo: a.tipo_vinculo || a.tipoVinculo || "Próprio",
+            tipoVinculo: a.tipo_vinculo || a.tipoVinculo || "PrÃ³prio",
             isEmergency: a.is_emergency ?? a.isEmergency ?? false,
 
             isMaintenance: a.is_maintenance ?? a.isMaintenance ?? false,
@@ -689,7 +708,7 @@ export default function App() {
             sei: c.sei || ""
        }))));
        setAssetTypes((tData && tData.length > 0) ? tData : seedAssetTypes);
-      console.log(`✅ Cloud Sync: ${pData.length} pessoas carregadas.`);
+      console.log(`âœ… Cloud Sync: ${pData.length} pessoas carregadas.`);
     } catch (e) {
       console.error("Cloud load error:", e);
       setCloudStatus("offline");
@@ -708,8 +727,8 @@ export default function App() {
 
   // --- INITIAL CLOUD SYNC METHOD (ULTRA-RESILIENT) ---
   const syncToCloud = async () => {
-    if (!supabase) { showSystemAlert("Configuração do Supabase não encontrada no .env", { title: "Configuração ausente", type: "error" }); return; }
-    if (!confirm("EXECUTAR SINCRONIZAÇÃO MESTRE?\n\nIsso enviará todos os dados originais (Pessoas, Estruturas e Contratos) para a nuvem. Use isso para popular o banco de dados pela primeira vez.")) return;
+    if (!supabase) { showSystemAlert("ConfiguraÃ§Ã£o do Supabase nÃ£o encontrada no .env", { title: "ConfiguraÃ§Ã£o ausente", type: "error" }); return; }
+    if (!confirm("EXECUTAR SINCRONIZAÃ‡ÃƒO MESTRE?\n\nIsso enviarÃ¡ todos os dados originais (Pessoas, Estruturas e Contratos) para a nuvem. Use isso para popular o banco de dados pela primeira vez.")) return;
     setIsCloudSyncing(true);
     
     const chunkArray = (arr, size) => {
@@ -727,7 +746,7 @@ export default function App() {
         c: contracts.length > 0 ? contracts : seedContracts
       };
 
-      console.log("🚀 Iniciando Sincronização Mestre...", dataToSync);
+      console.log("ðŸš€ Iniciando SincronizaÃ§Ã£o Mestre...", dataToSync);
 
       // 1. Persons
       if (dataToSync.p.length > 0) {
@@ -768,7 +787,7 @@ export default function App() {
         const dbC = dataToSync.c.map(c => ({
            id: c.id, sei: c.sei, tipo: c.tipo, objeto: c.objeto,
            empresa: c.empresa, cnpj: c.cnpj, contato: c.contato,
-           data_inicio: c.dataInicio || c.dataInício || c.vigencia_inicio, 
+           data_inicio: c.dataInicio || c.dataInÃcio || c.vigencia_inicio, 
            data_fim: c.dataTermino || c.vigencia_fim,
            gestor: c.gestor, aditivos: c.aditivos || [],
            fiscais_contrato: c.fiscaisContrato, fiscais_servico: c.fiscaisServico
@@ -781,11 +800,11 @@ export default function App() {
         }
       }
       
-      showSystemAlert("✅ SINCRONIZAÇÃO MESTRE CONCLUÍDA!\n\nTodos os dados foram enviados para a nuvem. Verifique o Table Editor do Supabase.", { title: "Sincronização concluída", type: "success" });
+      showSystemAlert("Sincronização mestre concluída!\n\nTodos os dados foram enviados para a nuvem. Verifique o Table Editor do Supabase.", { title: "Sincronização concluída", type: "success" });
       window.location.reload(); // Hard refresh to see cloud data
     } catch (err) {
-      console.error("ERRO CRÍTICO NA SINCRONIZAÇÃO:", err);
-      showSystemAlert("ERRO CRÍTICO NA SINCRONIZAÇÃO: " + err.message, { title: 'Erro', type: 'error' });
+      showSystemAlert("ERRO CRÍTICO NA SINCRONIZAÇÃO: " + err.message, { title: "Erro", type: "error" });
+      showSystemAlert("ERRO CRÍTICO NA SINCRONIZAÇÃO: " + err.message, { title: "Erro", type: "error" });
     }
     setIsCloudSyncing(false);
   };
@@ -1082,7 +1101,7 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [selectedId, viewMode, isLoadingCloud]);
 
-  // Auto-center on focus change ââ‚¬“ reset scroll first, then center
+  // Auto-center on focus change Ã¢Ã¢â€šÂ¬â€œ reset scroll first, then center
   useEffect(() => {
     if (viewMode !== "tree") return;
     const vp = vpRef.current;
@@ -1154,7 +1173,7 @@ export default function App() {
   }, [viewMode, zoom, isLoadingCloud]);
 
 
-  // Select node ─ ”™ open detail
+  // Select node â”€Â â€â„¢ open detail
   const selectNode = useCallback((id) => {
     setSelectedId(id);
     setShowDetail(true);
@@ -1184,7 +1203,7 @@ export default function App() {
   const openEditNode = useCallback(() => {
     if (!selected || !canEdit) return;
     setEditNodeId(selected.id);
-    // Normaliza cor -> color para garantir campo canônico
+    // Normaliza cor -> color para garantir campo canÃ´nico
     const normalizedNode = {
       ...selected,
       color: normalizeHex(selected.color || selected.cor || ""),
@@ -1196,12 +1215,12 @@ export default function App() {
 
   const saveNode = useCallback(async () => {
     if (nodeForm.tipo === "estrutura" && (!nodeForm.name || !nodeForm.name.trim())) {
-      showSystemAlert("Informe a sigla da estrutura.", { title: "Sigla obrigatória", type: "warning" });
+      showSystemAlert("Informe a sigla da estrutura.", { title: "Sigla obrigatÃ³ria", type: "warning" });
       return;
     }
 
     if (nodeForm.tipo === "estrutura" && (!nodeForm.description || !nodeForm.description.trim())) {
-      showSystemAlert("Informe o nome por extenso ou descrição da estrutura.", { title: "Descrição obrigatória", type: "warning" });
+      showSystemAlert("Informe o nome por extenso ou descriÃ§Ã£o da estrutura.", { title: "DescriÃ§Ã£o obrigatÃ³ria", type: "warning" });
       return;
     }
 
@@ -1218,18 +1237,18 @@ export default function App() {
 
     if (nodeForm.personId && occupiedNode) {
       showSystemAlert(
-        `Esta pessoa já está vinculada à caixa "${occupiedNode.name}".\n\nUma pessoa não pode participar de mais de uma caixa do organograma.`,
-        { title: "Pessoa já vinculada", type: "warning" }
+        `Esta pessoa jÃ¡ estÃ¡ vinculada Ã  caixa "${occupiedNode.name}".\n\nUma pessoa nÃ£o pode participar de mais de uma caixa do organograma.`,
+        { title: "Pessoa jÃ¡ vinculada", type: "warning" }
       );
       return;
     }
 
     if (nodeForm.tipo === "pessoa" && !nodeForm.personId) {
-      showSystemAlert("Selecione uma pessoa do cadastro para incluir abaixo da estrutura.", { title: "Pessoa obrigatória", type: "warning" });
+      showSystemAlert("Selecione uma pessoa do cadastro para incluir abaixo da estrutura.", { title: "Pessoa obrigatÃ³ria", type: "warning" });
       return;
     }
 
-    // Monta objeto canônico — usa apenas 'color', sem 'cor'
+    // Monta objeto canÃ´nico â€” usa apenas 'color', sem 'cor'
     const n = {
       ...nodeForm,
       name: finalName,
@@ -1246,13 +1265,13 @@ export default function App() {
         if (error) throw error;
       }
 
-      // 2. Atualizar estado local após confirmação do banco
+      // 2. Atualizar estado local apÃ³s confirmaÃ§Ã£o do banco
       setNodes((c) => {
         let baseList = c;
 
         if (editNodeId) {
           let newNodes = baseList.map((x) => x.id === editNodeId ? n : x);
-          // Propagar lotação para descendentes se mudou
+          // Propagar lotaÃ§Ã£o para descendentes se mudou
           const oldNode = baseList.find((x) => x.id === editNodeId);
           if (oldNode && oldNode.lotacao !== n.lotacao) {
             const dec = [];
@@ -1281,12 +1300,12 @@ export default function App() {
       if (editNodeId) {
         setSelectedId(editNodeId);
         logAction("Editar Caixa", n.name);
-        showSystemAlert("Caixa atualizada com sucesso!", { title: "Concluído", type: "success" });
+        showSystemAlert("Caixa atualizada com sucesso!", { title: "ConcluÃdo", type: "success" });
       } else {
         setSelectedId(n.id);
         setFocusId(n.parentId || n.id);
         logAction("Criar Caixa", n.name);
-        showSystemAlert("Caixa criada com sucesso!", { title: "Concluído", type: "success" });
+        showSystemAlert("Caixa criada com sucesso!", { title: "ConcluÃdo", type: "success" });
       }
 
       setOpenNodeDlg(false);
@@ -1304,11 +1323,11 @@ export default function App() {
     const nodeRecord = nodeMap.get(targetId);
     if (!nodeRecord) return;
     
-    if (!nodeRecord.parentId) { showSystemAlert("O nó raiz não pode ser removido.", { title: "Atenção", type: "warning" }); return; }
-    if (nodes.some((n) => n.parentId === targetId)) { showSystemAlert("Remova subordinados antes.", { title: "Atenção", type: "warning" }); return; }
+    if (!nodeRecord.parentId) { showSystemAlert("O nÃ³ raiz nÃ£o pode ser removido.", { title: "AtenÃ§Ã£o", type: "warning" }); return; }
+    if (nodes.some((n) => n.parentId === targetId)) { showSystemAlert("Remova subordinados antes.", { title: "AtenÃ§Ã£o", type: "warning" }); return; }
     
     const nodeName = nodeRecord.name || nodeRecord.responsavel || "esta caixa";
-    if (!confirm(`\u26a0\ufe0f ATENÇÃO: Você tem certeza que deseja excluir "${nodeName}"?\n\nEsta ação é irreversível.`)) return;
+    if (!confirm(`\u26a0\ufe0f ATENÃ‡ÃƒO: VocÃª tem certeza que deseja excluir "${nodeName}"?\n\nEsta aÃ§Ã£o Ã© irreversÃvel.`)) return;
     
     if (supabase) supabase.from('nodes').delete().eq('id', targetId).then(() => console.log("Removed from cloud"));
     setNodes((c) => c.filter((x) => x.id !== targetId));
@@ -1319,13 +1338,13 @@ export default function App() {
     }
     
     logAction("Excluir Caixa", nodeName);
-    flash("Excluída");
+    flash("ExcluÃda");
   }, [selected, canEdit, nodes, nodeMap, logAction]);
 
   const handlePhoto = useCallback(async (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (f.size > 1024 * 1024 * 2) { showSystemAlert("O arquivo deve ter no máximo 2MB.", { title: "Arquivo muito grande", type: "warning" }); return; }
+    if (f.size > 1024 * 1024 * 2) { showSystemAlert("O arquivo deve ter no mÃ¡ximo 2MB.", { title: "Arquivo muito grande", type: "warning" }); return; }
     try { setNodeForm((p) => ({ ...p, foto: "" })); const b = await fileToBase64(f); setNodeForm((p) => ({ ...p, foto: b })); } catch { showSystemAlert("Erro ao carregar a imagem.", { title: "Erro", type: "error" }); }
     e.target.value = "";
   }, []);
@@ -1346,30 +1365,27 @@ export default function App() {
 
     // Validation
     const missingAssetFields = [];
-    if (!normalizedAsset.nodeId?.trim()) missingAssetFields.push("Unidade de Alocação / Lotação");
-    if (!normalizedAsset.tipoVinculo?.trim()) missingAssetFields.push("Tipo de Vínculo");
+    if (!normalizedAsset.nodeId?.trim()) missingAssetFields.push("Unidade de AlocaÃ§Ã£o / LotaÃ§Ã£o");
+    if (!normalizedAsset.tipoVinculo?.trim()) missingAssetFields.push("Tipo de VÃnculo");
     if (!normalizedAsset.category?.trim()) missingAssetFields.push("Grupo");
     if (!normalizedAsset.type?.trim()) missingAssetFields.push("Tipo do Ativo");
-    if (!normalizedAsset.name?.trim()) missingAssetFields.push("Identificação / Nome Curto");
+    if (!normalizedAsset.name?.trim()) missingAssetFields.push("IdentificaÃ§Ã£o / Nome Curto");
 
-    if (normalizedAsset.isEmergency && !normalizedAsset.contatoResponsavel?.trim()) {
-      missingAssetFields.push("Responsável pela Contingência");
-    }
-
-    if (normalizedAsset.isEmergency && !normalizedAsset.contatoAcionamento?.trim()) {
-      missingAssetFields.push("Telefone de Emergência / Acionamento");
+    if (normalizedAsset.isEmergency) {
+      if (!normalizedAsset.contatoResponsavel?.trim()) missingAssetFields.push("ResponsÃ¡vel pela ContingÃªncia");
+      if (!normalizedAsset.contatoAcionamento?.trim()) missingAssetFields.push("Telefone de EmergÃªncia / Acionamento");
     }
 
     if (normalizedAsset.tipoVinculo === "Contratado") {
-      if (!normalizedAsset.numeroContrato?.trim()) missingAssetFields.push("Nº Processo SEI do contrato");
+      if (!normalizedAsset.numeroContrato?.trim()) missingAssetFields.push("NÂº Processo SEI do contrato");
       if (!normalizedAsset.empresaContratada?.trim()) missingAssetFields.push("Nome da Empresa Contratada");
       if (!normalizedAsset.cnpjContratada?.trim()) missingAssetFields.push("CNPJ da Empresa Contratada");
     }
 
     if (missingAssetFields.length > 0) {
       showSystemAlert(
-        `Preencha os campos obrigatórios antes de salvar o ativo:\n\n${missingAssetFields.map((field) => `- ${field}`).join("\n")}`,
-        { title: "Dados obrigatórios do ativo", type: "warning" }
+        `Preencha os campos obrigatÃ³rios antes de salvar o ativo:\n\n${missingAssetFields.map((field) => `- ${field}`).join("\n")}`,
+        { title: "Dados obrigatÃ³rios do ativo", type: "warning" }
       );
       return;
     }
@@ -1389,7 +1405,7 @@ export default function App() {
         patrimonio: normalizedAsset.patrimonio || "",
         os: normalizedAsset.os || "",
         notes: normalizedAsset.notes || "",
-        tipo_vinculo: normalizedAsset.tipoVinculo || "Próprio",
+        tipo_vinculo: normalizedAsset.tipoVinculo || "PrÃ³prio",
         is_emergency: Boolean(normalizedAsset.isEmergency),
         is_maintenance: Boolean(normalizedAsset.isMaintenance),
         maintenance_notes: normalizedAsset.maintenanceNotes || "",
@@ -1410,7 +1426,7 @@ export default function App() {
       const { error } = await supabase.from('assets').upsert(assetToDb).select();
       if (error) {
         console.error("Erro ao salvar ativo:", error, assetToDb);
-        showSystemAlert(`O ativo não pôde ser salvo.\n\nDetalhe técnico: ${error.message}`, { title: "Erro ao salvar ativo", type: "error" });
+        showSystemAlert(`O ativo nÃ£o pÃ´de ser salvo.\n\nDetalhe tÃ©cnico: ${error.message}`, { title: "Erro ao salvar ativo", type: "error" });
         return;
       }
     }
@@ -1430,7 +1446,7 @@ export default function App() {
     if (supabase) supabase.from('assets').delete().eq('id', id).then(() => console.log("Asset deleted"));
     setAssets((c) => c.filter((a) => a.id !== id));
     logAction("Excluir Ativo", name || id);
-    flash("Ativo excluído");
+    flash("Ativo excluÃdo");
   }, [logAction]);
 
   // Person CRUD
@@ -1439,15 +1455,15 @@ export default function App() {
   const savePerson = useCallback(() => {
     const emailVal = personForm.email.trim();
     if (!personForm.name?.trim()) {
-      showSystemAlert("Informe o nome da pessoa antes de salvar.", { title: "Nome obrigatório", type: "warning" });
+      showSystemAlert("Informe o nome da pessoa antes de salvar.", { title: "Nome obrigatÃ³rio", type: "warning" });
       return;
     }
     if (!personForm.matricula?.trim() || !personForm.cargo?.trim() || !emailVal) {
-      showSystemAlert("Matrícula, Cargo e E-mail são obrigatórios.", { title: "Campos obrigatórios", type: "warning" });
+      showSystemAlert("MatrÃcula, Cargo e E-mail sÃ£o obrigatÃ³rios.", { title: "Campos obrigatÃ³rios", type: "warning" });
       return;
     }
     if (emailVal === "@dmae.prefpoa.com.br") {
-      showSystemAlert("Por favor, preencha o e-mail completo, não apenas o domínio.", { title: "E-mail inválido", type: "warning" });
+      showSystemAlert("Por favor, preencha o e-mail completo, nÃ£o apenas o domÃnio.", { title: "E-mail invÃ¡lido", type: "warning" });
       return;
     }
     const p = { ...personForm, email: emailVal, id: editPersonId || makeId("person") };
@@ -1464,11 +1480,11 @@ export default function App() {
     }
   }, [personForm, editPersonId, logAction, pendingPersonNodeForm]);
   const requestDeletePerson = useCallback((id) => {
-    if (!canEdit) { flash("Entre no modo edição para excluir."); return; }
+    if (!canEdit) { flash("Entre no modo ediÃ§Ã£o para excluir."); return; }
     const p = personMap.get(id);
     if (!p) return;
     if (nodes.some(n => n.personId === id)) { 
-      flash("Esta pessoa está vinculada a uma caixa. Remova o vínculo antes."); 
+      flash("Esta pessoa estÃ¡ vinculada a uma caixa. Remova o vÃnculo antes."); 
       return; 
     }
     setDeleteRequest({ type: "person", id, name: p.name });
@@ -1480,8 +1496,8 @@ export default function App() {
 
     if (type === "node") {
       const nodeRecord = nodeMap.get(id);
-      if (!nodeRecord) { flash("Caixa não encontrada."); setDeleteRequest(null); return; }
-      if (!nodeRecord.parentId) { flash("O nó raiz não pode ser removido."); setDeleteRequest(null); return; }
+      if (!nodeRecord) { flash("Caixa nÃ£o encontrada."); setDeleteRequest(null); return; }
+      if (!nodeRecord.parentId) { flash("O nÃ³ raiz nÃ£o pode ser removido."); setDeleteRequest(null); return; }
       if (nodes.some((n) => n.parentId === id)) { flash("Remova subordinados antes."); setDeleteRequest(null); return; }
       if (assets.some((a) => a.nodeId === id)) { flash("Remova ativos vinculados antes."); setDeleteRequest(null); return; }
 
@@ -1494,10 +1510,10 @@ export default function App() {
         if (selectedId === id) { setSelectedId(nodeRecord.parentId); setFocusId(nodeRecord.parentId); setShowDetail(false); }
         if (editNodeId === id) { setOpenNodeDlg(false); setEditNodeId(null); }
         logAction("Excluir Caixa", nodeRecord.name || id);
-        flash("Excluída");
+        flash("ExcluÃda");
       } catch (err) {
         console.error("Delete node error:", err);
-        flash("Erro ao excluir. Verifique permissões.");
+        flash("Erro ao excluir. Verifique permissÃµes.");
       }
     } else if (type === "person") {
       try {
@@ -1507,7 +1523,7 @@ export default function App() {
         }
         setPersons((c) => c.filter((p) => p.id !== id));
         logAction("Excluir Pessoa", name || id);
-        showSystemAlert("Pessoa excluída com sucesso.", { title: "Concluído", type: "success" });
+        showSystemAlert("Pessoa excluÃda com sucesso.", { title: "ConcluÃdo", type: "success" });
       } catch (err) {
         console.error("Delete person error:", err);
         flash("Erro ao excluir pessoa.");
@@ -1575,16 +1591,16 @@ export default function App() {
 
     // Validations
     const missingFields = [];
-    if (!normalizedContract.sei?.trim()) missingFields.push("Número do processo SEI");
+    if (!normalizedContract.sei?.trim()) missingFields.push("NÃºmero do processo SEI");
     if (!normalizedContract.nodeId?.trim()) missingFields.push("Unidade Vinculada");
     if (!normalizedContract.objeto?.trim()) missingFields.push("Objeto do Contrato");
-    if (!normalizedContract.empresa?.trim()) missingFields.push("Nome/Razão Social da empresa contratada");
+    if (!normalizedContract.empresa?.trim()) missingFields.push("Nome/RazÃ£o Social da empresa contratada");
     if (!normalizedContract.cnpj?.trim()) missingFields.push("CNPJ da empresa contratada");
 
     if (missingFields.length > 0) {
       showSystemAlert(
-        `Preencha os campos obrigatórios antes de salvar o contrato:\n\n${missingFields.map((field) => `- ${field}`).join("\n")}`,
-        { title: "Dados obrigatórios do contrato", type: "warning" }
+        `Preencha os campos obrigatÃ³rios antes de salvar o contrato:\n\n${missingFields.map((field) => `- ${field}`).join("\n")}`,
+        { title: "Dados obrigatÃ³rios do contrato", type: "warning" }
       );
       return;
     }
@@ -1614,7 +1630,7 @@ export default function App() {
       const { error } = await supabase.from('contracts').upsert(contractToDb).select();
       if (error) {
         console.error("Erro ao salvar contrato:", error);
-        showSystemAlert(`O contrato não pôde ser salvo.\n\nDetalhe técnico: ${error.message}`, { title: "Erro ao salvar contrato", type: "error" });
+        showSystemAlert(`O contrato nÃ£o pÃ´de ser salvo.\n\nDetalhe tÃ©cnico: ${error.message}`, { title: "Erro ao salvar contrato", type: "error" });
         return;
       }
     }
@@ -1637,13 +1653,13 @@ export default function App() {
     if (supabase) supabase.from('contracts').delete().eq('id', id).then(() => console.log("Contract removed from cloud"));
     setContracts((prev) => prev.filter((c) => c.id !== id));
     logAction("Excluir Contrato", sei || id);
-    showSystemAlert("Contrato excluído com sucesso.", { title: "Concluído", type: "success" });
+    showSystemAlert("Contrato excluÃdo com sucesso.", { title: "ConcluÃdo", type: "success" });
   }, [logAction]);
 
   const requestDeleteNode = useCallback((nodeId) => {
-    if (!canEdit) { flash("Entre no modo edição para excluir."); return; }
+    if (!canEdit) { flash("Entre no modo ediÃ§Ã£o para excluir."); return; }
     const node = nodeMap.get(nodeId);
-    if (!node) { flash("Caixa não encontrada."); return; }
+    if (!node) { flash("Caixa nÃ£o encontrada."); return; }
     setDeleteRequest({ type: "node", id: nodeId, name: node.name || node.responsavel || "esta caixa" });
   }, [canEdit, nodeMap, flash]);
 
@@ -1651,8 +1667,8 @@ export default function App() {
     if (!deleteRequest || deleteRequest.type !== "node") return;
     const targetId = deleteRequest.id;
     const nodeRecord = nodeMap.get(targetId);
-    if (!nodeRecord) { flash("Caixa não encontrada."); setDeleteRequest(null); return; }
-    if (!nodeRecord.parentId) { flash("O nó raiz não pode ser removido."); setDeleteRequest(null); return; }
+    if (!nodeRecord) { flash("Caixa nÃ£o encontrada."); setDeleteRequest(null); return; }
+    if (!nodeRecord.parentId) { flash("O nÃ³ raiz nÃ£o pode ser removido."); setDeleteRequest(null); return; }
     if (nodes.some((n) => n.parentId === targetId)) { flash("Remova subordinados antes."); setDeleteRequest(null); return; }
     if (assets.some((a) => a.nodeId === targetId)) { flash("Remova ativos vinculados antes."); setDeleteRequest(null); return; }
 
@@ -1665,10 +1681,10 @@ export default function App() {
       if (selectedId === targetId) { setSelectedId(nodeRecord.parentId); setFocusId(nodeRecord.parentId); setShowDetail(false); }
       if (editNodeId === targetId) { setOpenNodeDlg(false); setEditNodeId(null); }
       logAction("Excluir Caixa", nodeRecord.name || targetId);
-      flash("Excluída");
+      flash("ExcluÃda");
     } catch (err) {
       console.error("Delete error:", err);
-      flash("Erro ao excluir. Verifique permissões.");
+      flash("Erro ao excluir. Verifique permissÃµes.");
     } finally {
       setDeleteRequest(null);
     }
@@ -1725,11 +1741,11 @@ export default function App() {
     pdf.text(`Objeto: ${c.objeto}`, 20, 30);
     pdf.text(`Empresa: ${c.empresa || "N/A"}`, 20, 35);
     pdf.text(`Unidade: ${node ? node.name : "N/A"}`, 20, 40);
-    pdf.text(`Vigência: ${c.dataInício || "N/A"} a ${c.dataTermino || "N/A"}`, 20, 45);
+    pdf.text(`VigÃªncia: ${c.dataInÃcio || "N/A"} a ${c.dataTermino || "N/A"}`, 20, 45);
     
     pdf.line(20, 50, 190, 50);
     
-    pdf.text("GESTÃO E FISCALIZAÇÃO", 20, 60);
+    pdf.text("GESTÃƒO E FISCALIZAÃ‡ÃƒO", 20, 60);
     pdf.text(`Gestor Titular: ${personMap.get(c.gestor.titularId)?.name || "N/A"}`, 20, 65);
     pdf.text(`Gestor Suplente: ${personMap.get(c.gestor.suplenteId)?.name || "N/A"}`, 20, 70);
     
@@ -1753,7 +1769,7 @@ export default function App() {
   const handleImport = useCallback((e) => {
     const f = e.target.files?.[0]; if (!f) return;
     const r = new FileReader();
-    r.onload = () => { try { const p = JSON.parse(String(r.result)); if (!Array.isArray(p?.nodes) || !p.nodes.length) throw 0; setNodes(p.nodes); setAssets(Array.isArray(p.assets) ? p.assets : []); setSelectedId(null); setFocusId(null); logAction("Importar Base JSON", "Substituição completa"); showSystemAlert("Importado com sucesso!", { title: "Concluído", type: "success" }); } catch { showSystemAlert("Arquivo inválido.", { title: "Erro na importação", type: "error" }); } };
+    r.onload = () => { try { const p = JSON.parse(String(r.result)); if (!Array.isArray(p?.nodes) || !p.nodes.length) throw 0; setNodes(p.nodes); setAssets(Array.isArray(p.assets) ? p.assets : []); setSelectedId(null); setFocusId(null); logAction("Importar Base JSON", "SubstituiÃ§Ã£o completa"); showSystemAlert("Importado com sucesso!", { title: "ConcluÃdo", type: "success" }); } catch { showSystemAlert("Arquivo invÃ¡lido.", { title: "Erro na importaÃ§Ã£o", type: "error" }); } };
     r.readAsText(f); e.target.value = "";
   }, [logAction]);
 
@@ -1788,7 +1804,7 @@ export default function App() {
       }
     } catch (e) { console.error("Login fetch error:", e); }
 
-    // 2. Try Person login (Matrícula as login and password)
+    // 2. Try Person login (MatrÃcula as login and password)
     const p = persons.find(x => x.matricula === loginUser && x.matricula === loginPass);
     if (p) {
         setCurrentUser({ 
@@ -1799,22 +1815,22 @@ export default function App() {
         setCanEdit(false);
         setOpenLoginDlg(false);
         setLoginUser(""); setLoginPass(""); setLoginErr("");
-        flash(`Bem-vindo, ${p.name}! Acesso de visualização liberado.`);
+        flash(`Bem-vindo, ${p.name}! Acesso de visualizaÃ§Ã£o liberado.`);
         logAction("Login Visualizador", "PERSON", p.name);
         return;
     }
 
-    setLoginErr("Credenciais inválidas.");
+    setLoginErr("Credenciais invÃ¡lidas.");
   }, [loginUser, loginPass, users, persons, pendingEditNodeId, nodes, logAction, flash]);
 
   const handleChangePassword = useCallback(async () => {
-    if (pwdNew.length < 3) { showSystemAlert("A nova senha deve ter no mínimo 3 caracteres.", { title: "Senha curta", type: "warning" }); return; }
-    if (pwdNew !== pwdConfirm) { showSystemAlert("A nova senha e a confirmação não coincidem.", { title: "Senhas não conferem", type: "warning" }); return; }
+    if (pwdNew.length < 3) { showSystemAlert("A nova senha deve ter no mÃnimo 3 caracteres.", { title: "Senha curta", type: "warning" }); return; }
+    if (pwdNew !== pwdConfirm) { showSystemAlert("A nova senha e a confirmaÃ§Ã£o nÃ£o coincidem.", { title: "Senhas nÃ£o conferem", type: "warning" }); return; }
 
     const u = users.find(x => x.username === currentUser);
     if (!u) return;
     if (u.password !== pwdCurrent && !forcePassMode) {
-      showSystemAlert("Senha atual incorreta.", { title: "Erro de autenticação", type: "error" });
+      showSystemAlert("Senha atual incorreta.", { title: "Erro de autenticaÃ§Ã£o", type: "error" });
       return;
     }
 
@@ -1822,16 +1838,16 @@ export default function App() {
     setOpenPasswordDlg(false);
     setPwdCurrent(""); setPwdNew(""); setPwdConfirm("");
     showSystemAlert("Senha alterada com sucesso!", { title: "Senha alterada", type: "success" });
-    logAction("Trocar Senha", `A conta ${currentUser} realizou alteração de senha.`);
+    logAction("Trocar Senha", `A conta ${currentUser} realizou alteraÃ§Ã£o de senha.`);
 
     if (forcePassMode) {
-      if (!pwdNew || pwdNew.length < 4) return showSystemAlert("Sua senha deve ter no mínimo 4 caracteres.", { title: "Senha curta", type: "warning" });
-      if (pwdNew !== pwdConfirm) return showSystemAlert("As senhas não conferem.", { title: "Senhas não conferem", type: "warning" });
+      if (!pwdNew || pwdNew.length < 4) return showSystemAlert("Sua senha deve ter no mÃnimo 4 caracteres.", { title: "Senha curta", type: "warning" });
+      if (pwdNew !== pwdConfirm) return showSystemAlert("As senhas nÃ£o conferem.", { title: "Senhas nÃ£o conferem", type: "warning" });
       
       const uname = currentUser?.username || "usuario_desconhecido";
       const uid = currentUser?.id;
 
-      // 1. OPTIMISTIC UNLOCK: Libera o usuário IMEDIATAMENTE na tela
+      // 1. OPTIMISTIC UNLOCK: Libera o usuÃ¡rio IMEDIATAMENTE na tela
       setForcePassMode(false);
       setOpenPasswordDlg(false);
       setCanEdit(true);
@@ -1858,7 +1874,7 @@ export default function App() {
   const handleAddUser = async () => {
     if (!newUser.trim() || newPass.length < 3) { showSystemAlert("Login/Senha muito curtos.", { title: "Dados insuficientes", type: "warning" }); return; }
     if (!supabase) return showSystemAlert("Modo offline. Cadastros bloqueados.", { title: "Offline", type: "warning" });
-    if (users.some(u => u.username.toLowerCase() === newUser.toLowerCase())) { showSystemAlert("Usuário já existe!", { title: "Conflito", type: "warning" }); return; }
+    if (users.some(u => u.username.toLowerCase() === newUser.toLowerCase())) { showSystemAlert("UsuÃ¡rio jÃ¡ existe!", { title: "Conflito", type: "warning" }); return; }
 
     try {
       const { data, error } = await supabase.from('users').insert({ 
@@ -1873,7 +1889,7 @@ export default function App() {
       setUsers(prev => [...prev, data[0]]);
       logAction('CREATE_USER', 'USER', newUser);
       setNewUser(""); setNewPass(""); setNewIsAdmin(false);
-      flash("Usuário cadastrado com sucesso!");
+      flash("UsuÃ¡rio cadastrado com sucesso!");
     } catch (err) {
       showSystemAlert("Erro ao cadastrar no banco: " + err.message, { title: "Erro no banco", type: "error" });
     }
@@ -1881,8 +1897,8 @@ export default function App() {
 
   const handleDelUser = useCallback(async (username, userId) => {
     if (!username) return;
-    if (username === currentUser?.username) { showSystemAlert("Não pode excluir a si mesmo!", { title: "Ação bloqueada", type: "warning" }); return; }
-    if (username.toLowerCase() === "admin") { showSystemAlert("A conta admin padrão não pode ser excluída.", { title: "Ação bloqueada", type: "warning" }); return; }
+    if (username === currentUser?.username) { showSystemAlert("NÃ£o pode excluir a si mesmo!", { title: "AÃ§Ã£o bloqueada", type: "warning" }); return; }
+    if (username.toLowerCase() === "admin") { showSystemAlert("A conta admin padrÃ£o nÃ£o pode ser excluÃda.", { title: "AÃ§Ã£o bloqueada", type: "warning" }); return; }
     
     try {
       // 1. Remove from local UI immediately
@@ -1903,10 +1919,10 @@ export default function App() {
         }
       }
       
-      logAction("Excluir Usuário", `Apagado: ${username}`);
-      showSystemAlert("Usuário removido com sucesso.", { title: "Concluído", type: "success" });
+      logAction("Excluir UsuÃ¡rio", `Apagado: ${username}`);
+      showSystemAlert("UsuÃ¡rio removido com sucesso.", { title: "ConcluÃdo", type: "success" });
     } catch (err) {
-      showSystemAlert("Erro crítico ao excluir usuário: " + err.message, { title: "Erro crítico", type: "error" });
+      showSystemAlert("Erro crÃtico ao excluir usuÃ¡rio: " + err.message, { title: "Erro crÃtico", type: "error" });
     }
   }, [currentUser, logAction, supabase]);
 
@@ -2120,17 +2136,17 @@ export default function App() {
               )}
             </div>
             <div className="view-toggle">
-              <button className={viewMode === "tree" ? "active" : ""} onClick={() => setViewMode("tree")}><Network size={12} /> <span className="hide-mobile">Árvore</span></button>
+              <button className={viewMode === "tree" ? "active" : ""} onClick={() => setViewMode("tree")}><Network size={12} /> <span className="hide-mobile">Ãrvore</span></button>
               <button className={viewMode === "list" ? "active" : ""} onClick={() => setViewMode("list")}><List size={12} /> <span className="hide-mobile">Lista</span></button>
             </div>
             <button className="btn btn-outline btn-sm" onClick={() => { setFocusId(null); setSelectedId(null); setShowDetail(false); }}>
-              <Home size={12} /> <span className="hide-mobile">Início</span>
+              <Home size={12} /> <span className="hide-mobile">InÃcio</span>
             </button>
             
             {currentUser && (
               <div className="dropdown-container">
                 <button className="btn btn-outline btn-sm" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-                  <Menu size={12} /> <span className="hide-mobile">Opções</span>
+                  <Menu size={12} /> <span className="hide-mobile">OpÃ§Ãµes</span>
                 </button>
                 {mobileMenuOpen && (
                   <div className="dropdown-menu" onClick={() => setMobileMenuOpen(false)}>
@@ -2147,8 +2163,8 @@ export default function App() {
 
                     <div className="dropdown-header">Ativos</div>
                     {isProtected && <button className="dropdown-item" onClick={openAssetRegistry}><Package size={12} /> Ativos cadastrados</button>}
-                    {isProtected && <button className="dropdown-item" onClick={openAssetRegistry}><Settings size={12} /> Gestão de ativos</button>}
-                    {canEdit && <button className="dropdown-item" onClick={() => setOpenAssetTypesDlg(true)}><Settings size={12} /> Gestão de Tipos de ativos</button>}
+                    {isProtected && <button className="dropdown-item" onClick={openAssetRegistry}><Settings size={12} /> GestÃ£o de ativos</button>}
+                    {canEdit && <button className="dropdown-item" onClick={() => setOpenAssetTypesDlg(true)}><Settings size={12} /> GestÃ£o de Tipos de ativos</button>}
 
                     <div className="dropdown-header">Arquivos</div>
                     <label className="dropdown-item" style={{ cursor: "pointer" }}><Upload size={12} /> Importar JSON<input type="file" accept=".json" onChange={handleImport} style={{ display: "none" }} /></label>
@@ -2158,7 +2174,7 @@ export default function App() {
                     {canEdit && <button className="dropdown-item" onClick={() => setOpenPasswordDlg(true)}><KeyRound size={12} /> Trocar senha</button>}
                     {isAdmin && (
                       <button className="dropdown-item" onClick={() => setOpenStatsDlg(true)}>
-                        <PieChart size={12} /> Estatísticas de Acesso
+                        <PieChart size={12} /> EstatÃsticas de Acesso
                       </button>
                     )}
                     {isAdmin && (
@@ -2181,7 +2197,7 @@ export default function App() {
                         }
                         setOpenLogsDlg(true);
                       }}>
-                        <History size={12} /> Histórico de Logs (BD)
+                        <History size={12} /> HistÃ³rico de Logs (BD)
                       </button>
                     )}
                   </div>
@@ -2191,7 +2207,7 @@ export default function App() {
 
             {currentUser ? (
               <button className="btn btn-primary btn-sm" onClick={() => { logAction("Logout", "USER", currentUser?.username); setCanEdit(false); setCurrentUser(null); }}>
-                <LogOut size={12} /> <span className="hide-mobile">Sair ({currentUser?.name || currentUser?.username || "Usuário"})</span>
+                <LogOut size={12} /> <span className="hide-mobile">Sair ({currentUser?.name || currentUser?.username || "UsuÃ¡rio"})</span>
               </button>
             ) : (
               <button className="btn btn-primary btn-sm" onClick={() => setOpenLoginDlg(true)}>
@@ -2202,9 +2218,9 @@ export default function App() {
         </div>
 
         <div className="header-row-2">
-          {(isProtected || canEdit) && (<><span className="stat-pill" title="Pessoas alocadas nesta ramificação"><Users size={11} /> {treeStats.totalPessoas} Pessoas (Ref.)</span>
-          <span className="stat-pill" title="Estruturas nesta ramificação"><Building2 size={11} /> {treeStats.totalEstruturas} Estruturas</span>
-          <span className="stat-pill" title="Ativos nesta ramificação"><ClipboardList size={11} /> {treeStats.totalAtivos} Ativos</span></>)}
+          {(isProtected || canEdit) && (<><span className="stat-pill" title="Pessoas alocadas nesta ramificaÃ§Ã£o"><Users size={11} /> {treeStats.totalPessoas} Pessoas (Ref.)</span>
+          <span className="stat-pill" title="Estruturas nesta ramificaÃ§Ã£o"><Building2 size={11} /> {treeStats.totalEstruturas} Estruturas</span>
+          <span className="stat-pill" title="Ativos nesta ramificaÃ§Ã£o"><ClipboardList size={11} /> {treeStats.totalAtivos} Ativos</span></>)}
 
           {breadcrumb.length > 0 && <>
             <span style={{ width: 1, height: 18, background: "var(--n200)", margin: "0 4px" }} />
@@ -2248,7 +2264,7 @@ export default function App() {
                     onClick={() => { setFocusId(focused.parentId); setSelectedId(focused.parentId); }}
                     style={{ marginLeft: 8, padding: "3px 10px", fontSize: 10, background: "rgba(255,255,255,0.15)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)" }}
                   >
-                    <ArrowUp size={10} /> {"Subir Nível"}
+                    <ArrowUp size={10} /> {"Subir NÃvel"}
                   </button>
                 )}
 
@@ -2265,7 +2281,7 @@ export default function App() {
               <div style={{ height: 1, background: "var(--n200)", margin: "0 4px" }} />
               <button
                 className="btn btn-outline"
-                title="Exportar organograma visível como PDF de alta qualidade"
+                title="Exportar organograma visÃvel como PDF de alta qualidade"
                 style={{ background: "#fff", width: 36, height: 36, padding: 0, justifyContent: "center" }}
                 onClick={handleExportPdf}
               >
@@ -2315,7 +2331,7 @@ export default function App() {
                 title="Subir para a estrutura superior"
               >
                 <ArrowUp size={12} />
-                Subir nível
+                Subir nÃvel
               </button>
 
               <button
@@ -2343,7 +2359,7 @@ export default function App() {
                       <Siren size={16} color="#ef4444" strokeWidth={2.5} fill="#ef4444" fillOpacity={0.1} />
                       <span style={{ fontWeight: "bold" }}>Somente Unidades com Equipamentos</span>
                     </div>
-                    <span style={{ fontSize: 10, paddingLeft: 20, opacity: 0.8 }}>alocados para o plano de Contingência</span>
+                    <span style={{ fontSize: 10, paddingLeft: 20, opacity: 0.8 }}>alocados para o plano de ContingÃªncia</span>
                   </div>
                 </label>
               )}
@@ -2361,7 +2377,7 @@ export default function App() {
               {onlyEmergency && nodes.filter(n => directEmergencyCount(n.id) > 0).length === 0 && (
                 <div style={{ textAlign: "center", padding: 40, color: "var(--n400)" }}>
                   <ShieldCheck size={48} style={{ opacity: 0.2, marginBottom: 12 }} />
-                  <p>Nenhuma unidade com ativos de contingência no momento.</p>
+                  <p>Nenhuma unidade com ativos de contingÃªncia no momento.</p>
                 </div>
               )}
             </div>
@@ -2372,7 +2388,7 @@ export default function App() {
       {/* \u2500\u2500\u2500 FLOATING EDIT BUTTON \u2500\u2500\u2500 */}
       <button className={`fab-edit ${canEdit ? "active" : ""}`}
         onClick={() => canEdit ? setCanEdit(false) : setOpenLoginDlg(true)}
-        title={canEdit ? "Sair da edição e salvar" : "Entrar na edição"}>
+        title={canEdit ? "Sair da ediÃ§Ã£o e salvar" : "Entrar na ediÃ§Ã£o"}>
         {canEdit ? <Save size={22} /> : <KeyRound size={22} />}
       </button>
 
@@ -2415,8 +2431,8 @@ export default function App() {
 
             <div className="detail-actions" style={{ marginTop: 16, borderTop: "1px solid var(--n100)", paddingTop: 16 }}>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button className="btn btn-outline btn-xs" onClick={() => { setFocusId(selected.id); setShowDetail(false); }} title="Centralizar visualização nesta caixa"><Network size={12} /> Foco</button>
-                <button className="btn btn-outline btn-xs" onClick={() => { handleExpandAllBelow(selected.id); setShowDetail(false); }} title="Expandir todos os níveis abaixo desta caixa">
+                <button className="btn btn-outline btn-xs" onClick={() => { setFocusId(selected.id); setShowDetail(false); }} title="Centralizar visualizaÃ§Ã£o nesta caixa"><Network size={12} /> Foco</button>
+                <button className="btn btn-outline btn-xs" onClick={() => { handleExpandAllBelow(selected.id); setShowDetail(false); }} title="Expandir todos os nÃveis abaixo desta caixa">
                   <ChevronsDown size={12} /> Expandir Tudo
                 </button>
                 
@@ -2439,7 +2455,7 @@ export default function App() {
                       <>
                         <button className="btn btn-outline btn-xs" onClick={() => expCsv(selected.id)} title="Baixar lista em CSV"><Download size={12} /> CSV</button>
                         {(directAssets.length > 0 || scopeAssets.length > 0) && (
-                          <button className="btn btn-outline btn-xs" onClick={() => exportAssetsPdf(scopeAssets, selected.name, (id) => nodeMap.get(id)?.name || "N/A")} title="Gerar relatório de ativos em PDF"><Printer size={12} /> PDF</button>
+                          <button className="btn btn-outline btn-xs" onClick={() => exportAssetsPdf(scopeAssets, selected.name, (id) => nodeMap.get(id)?.name || "N/A")} title="Gerar relatÃ³rio de ativos em PDF"><Printer size={12} /> PDF</button>
                         )}
                       </>
                     )}
@@ -2451,11 +2467,11 @@ export default function App() {
             {(isProtected || canEdit) && (
               <div className="detail-grid">
                 <div className="dg-item"><div className="dg-label">Subordinado a</div><div className="dg-val">{selected.parentId ? nodeMap.get(selected.parentId)?.name : "---"}</div></div>
-                <div className="dg-item"><div className="dg-label">Responsável</div><div className="dg-val">{selected.responsavel || "---"}</div></div>
-                <div className="dg-item"><div className="dg-label">Matrícula</div><div className="dg-val">{selected.matricula || "---"}</div></div>
+                <div className="dg-item"><div className="dg-label">ResponsÃ¡vel</div><div className="dg-val">{selected.responsavel || "---"}</div></div>
+                <div className="dg-item"><div className="dg-label">MatrÃcula</div><div className="dg-val">{selected.matricula || "---"}</div></div>
                 <div className="dg-item"><div className="dg-label">Caixas abaixo</div><div className="dg-val">{getChildren(selected.id).length}</div></div>
                 <div className="dg-item">
-                  <div className="dg-label">Localização</div>
+                  <div className="dg-label">LocalizaÃ§Ã£o</div>
                   <div className="dg-val" style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     {(() => {
                       const addr = resolveAddress(selected.id);
@@ -2527,14 +2543,14 @@ export default function App() {
                     <div className="asset-mini-badges">
                       {a.plate && <span className="badge badge-out">Placa {a.plate}</span>}
                       {a.patrimonio && <span className="badge badge-out">Pat. {a.patrimonio}</span>}
-                      <span className={`badge ${a.tipoVinculo === "Contratado" ? "badge-sec" : "badge-out"}`}>{a.tipoVinculo || "Próprio"}</span>
+                      <span className={`badge ${a.tipoVinculo === "Contratado" ? "badge-sec" : "badge-out"}`}>{a.tipoVinculo || "PrÃ³prio"}</span>
                       {a.isEmergency && (
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", border: "2px solid #eab308", background: "#fff", boxShadow: "0 0 6px rgba(234, 179, 8, 0.4)", flexShrink: 0 }} title="Ativo de Contingência">
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", border: "2px solid #eab308", background: "#fff", boxShadow: "0 0 6px rgba(234, 179, 8, 0.4)", flexShrink: 0 }} title="Ativo de ContingÃªncia">
                           <Siren size={12} color="#ef4444" strokeWidth={3} fill="#ef4444" fillOpacity={0.1} />
                         </div>
                       )}
                       {a.isMaintenance && (
-                        <div className="badge-maintenance" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", border: "2px solid #d97706", background: "#fff", boxShadow: "0 0 6px rgba(217, 119, 6, 0.4)", flexShrink: 0, color: "#d97706" }} title="Ativo em Manutenção/Inoperante">
+                        <div className="badge-maintenance" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", border: "2px solid #d97706", background: "#fff", boxShadow: "0 0 6px rgba(217, 119, 6, 0.4)", flexShrink: 0, color: "#d97706" }} title="Ativo em ManutenÃ§Ã£o/Inoperante">
                           <AlertTriangle size={12} strokeWidth={3} />
                         </div>
                       )}
@@ -2558,7 +2574,7 @@ export default function App() {
             {/* Contracts where the responsible person is involved - HIDDEN IF NOT LOGGED IN */}
             {(isProtected || canEdit) && selected.personId && (
               <div className="asset-section">
-                <div className="asset-section-title"><ShieldCheck size={13} /> Contratos vinculados ao Responsável</div>
+                <div className="asset-section-title"><ShieldCheck size={13} /> Contratos vinculados ao ResponsÃ¡vel</div>
                 {(() => {
                   const pContracts = contracts.filter(c =>
                     c.gestor.titularId === selected.personId || c.gestor.suplenteId === selected.personId ||
@@ -2572,11 +2588,11 @@ export default function App() {
                       <div className="asset-mini-badges">
                         <span className="badge badge-sec" style={{ fontSize: 8 }}>
                           {c.gestor.titularId === selected.personId || c.gestor.suplenteId === selected.personId ? "Gestor" :
-                            c.fiscaisContrato.some(f => f.titularId === selected.personId || f.suplenteId === selected.personId) ? "Fiscal Contrato" : "Fiscal Serviço"}
+                            c.fiscaisContrato.some(f => f.titularId === selected.personId || f.suplenteId === selected.personId) ? "Fiscal Contrato" : "Fiscal ServiÃ§o"}
                         </span>
                       </div>
                     </div>
-                  )) : <p style={{ fontSize: 11, color: "var(--n400)" }}>Nenhum contrato direto encontrado para o responsável.</p>;
+                  )) : <p style={{ fontSize: 11, color: "var(--n400)" }}>Nenhum contrato direto encontrado para o responsÃ¡vel.</p>;
                 })()}
               </div>
             )}
@@ -2659,7 +2675,7 @@ export default function App() {
                    )}
                    <div>
                       <h2 style={{margin:0, fontSize: 22}}>
-                        {dashboardView === "emergencyMaintenanceAssets" ? "Ativos de Contingência Inoperantes" : "Dashboard de Governança e BI"}
+                        {dashboardView === "emergencyMaintenanceAssets" ? "Ativos de ContingÃªncia Inoperantes" : "Dashboard de GovernanÃ§a e BI"}
                       </h2>
                       <p style={{margin:0, opacity:0.8, fontSize: 13}}>Unidade: <b>{dNode.name}</b> {descIds.length > 0 && `(+ ${descIds.length} subunidades)`}</p>
                    </div>
@@ -2677,7 +2693,7 @@ export default function App() {
                         <div className="bi-card">
                            <div className="bi-card-icon" style={{background:"#dbeafe", color:"#2563eb"}}><Users size={18} /></div>
                            <div className="bi-card-data">
-                              <div className="bi-card-label">Força de Trabalho</div>
+                              <div className="bi-card-label">ForÃ§a de Trabalho</div>
                               <div className="bi-card-main">{dPersons.length + sPersons.length}</div>
                               <div className="bi-card-sub">Direto: {dPersons.length} | Indireto: {sPersons.length}</div>
                            </div>
@@ -2685,7 +2701,7 @@ export default function App() {
                         <div className="bi-card">
                            <div className="bi-card-icon" style={{background:"#fef3c7", color:"#d97706"}}><Package size={18} /></div>
                            <div className="bi-card-data">
-                              <div className="bi-card-label">Patrimônio / Ativos</div>
+                              <div className="bi-card-label">PatrimÃ´nio / Ativos</div>
                               <div className="bi-card-main">{dAssets.length + sAssets.length}</div>
                               <div className="bi-card-sub">Direto: {dAssets.length} | Indireto: {sAssets.length}</div>
                            </div>
@@ -2693,7 +2709,7 @@ export default function App() {
                         <div className="bi-card" style={{ border: dEmergency + sEmergency > 0 ? "1px solid #fee2e2" : "1px solid var(--n200)" }}>
                            <div className="bi-card-icon" style={{background:"#fee2e2", color:"#ef4444"}}><Siren size={18} /></div>
                            <div className="bi-card-data">
-                              <div className="bi-card-label">Ativos de Contingência</div>
+                              <div className="bi-card-label">Ativos de ContingÃªncia</div>
                               <div className="bi-card-main" style={{ color: dEmergency + sEmergency > 0 ? "#ef4444" : "inherit" }}>{dEmergency + sEmergency}</div>
                               <div className="bi-card-sub">Direto: {dEmergency} | Indireto: {sEmergency}</div>
                            </div>
@@ -2704,9 +2720,9 @@ export default function App() {
                         >
                            <div className="bi-card-icon"><AlertTriangle size={18} /></div>
                            <div className="bi-card-data">
-                              <div className="bi-card-label">Contingência em Manutenção</div>
+                              <div className="bi-card-label">ContingÃªncia em ManutenÃ§Ã£o</div>
                               <div className="bi-card-main">{(dEmergencyMaintenance + sEmergencyMaintenance)}</div>
-                              <div className="bi-card-sub">Críticos Inoperantes: {(dEmergencyMaintenance + sEmergencyMaintenance)}</div>
+                              <div className="bi-card-sub">CrÃticos Inoperantes: {(dEmergencyMaintenance + sEmergencyMaintenance)}</div>
                            </div>
                         </div>
                         <div className="bi-card">
@@ -2714,7 +2730,7 @@ export default function App() {
                            <div className="bi-card-data">
                               <div className="bi-card-label">Subunidades</div>
                               <div className="bi-card-main">{dStructures.length + sStructures.length}</div>
-                              <div className="bi-card-sub">Nível 1: {dStructures.length} | Profundas: {sStructures.length}</div>
+                              <div className="bi-card-sub">NÃvel 1: {dStructures.length} | Profundas: {sStructures.length}</div>
                            </div>
                         </div>
                      </div>
@@ -2731,7 +2747,7 @@ export default function App() {
                     </div>
 
                     <div style={{ marginTop: 25, padding: 15, background: "var(--n50)", borderRadius: 10, fontSize: 12, color: "var(--n600)", border: "1px dashed var(--n300)" }}>
-                       <b>Nota de BI:</b> Os dados acima representam uma consolidação em tempo real da estrutura selecionada. Ativos marcados como <i>Contingência</i> recebem prioridade de manutenção e reposição conforme política do DMAE.
+                       <b>Nota de BI:</b> Os dados acima representam uma consolidaÃ§Ã£o em tempo real da estrutura selecionada. Ativos marcados como <i>ContingÃªncia</i> recebem prioridade de manutenÃ§Ã£o e reposiÃ§Ã£o conforme polÃtica do DMAE.
                     </div>
                   </>
                 )}
@@ -2740,7 +2756,7 @@ export default function App() {
                   <div className="bi-list-view">
                     <div className="bi-alert-critical" style={{ background: "#fee2e2", border: "1px solid #ef4444", padding: 12, borderRadius: 8, marginBottom: 20, display: "flex", alignItems: "center", gap: 10, color: "#b91c1c" }}>
                       <Siren size={20} />
-                      <div style={{ fontSize: 13, fontWeight: 700 }}>ATENÇÃO: Existem ativos estratégicos fora de operação nesta ramificação.</div>
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>ATENÃ‡ÃƒO: Existem ativos estratÃ©gicos fora de operaÃ§Ã£o nesta ramificaÃ§Ã£o.</div>
                     </div>
                     
                     <div style={{ border: "1px solid var(--n200)", borderRadius: 12, overflow: "hidden" }}>
@@ -2750,9 +2766,9 @@ export default function App() {
                             <th style={{ padding: 12, textAlign: "left" }}>Ativo</th>
                             <th style={{ padding: 12, textAlign: "left" }}>Tipo</th>
                             <th style={{ padding: 12, textAlign: "left" }}>Unidade</th>
-                            <th style={{ padding: 12, textAlign: "left" }}>Responsável pela Contingência</th>
-                            <th style={{ padding: 12, textAlign: "left" }}>Telefone de Emergência</th>
-                            <th style={{ padding: 12, textAlign: "left" }}>Observação da Manutenção</th>
+                            <th style={{ padding: 12, textAlign: "left" }}>ResponsÃ¡vel pela ContingÃªncia</th>
+                            <th style={{ padding: 12, textAlign: "left" }}>Telefone de EmergÃªncia</th>
+                            <th style={{ padding: 12, textAlign: "left" }}>ObservaÃ§Ã£o da ManutenÃ§Ã£o</th>
                             <th style={{ padding: 12, textAlign: "center" }}>Desde</th>
                           </tr>
                         </thead>
@@ -2763,25 +2779,18 @@ export default function App() {
                                 <td style={{ padding: 12 }}>
                                   <div style={{ fontWeight: 700, color: "#b91c1c" }}>{a.name}</div>
                                 </td>
-                                <td style={{ padding: 12 }}>{a.type || "—"}</td>
-                                <td style={{ padding: 12 }}>{nodes.find(n => n.id === a.nodeId)?.name || "—"}</td>
-                                <td style={{ padding: 12, fontWeight: 600 }}>{a.contatoResponsavel || "—"}</td>
-                                <td style={{ padding: 12 }}>
-                                  {a.contatoAcionamento || "—"}
-                                  {a.contatoAcionamento && (
-                                    <a href={`https://wa.me/55${a.contatoAcionamento.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 6, color: "#25D366", display: "inline-flex", verticalAlign: "middle" }} title="WhatsApp">
-                                      <MessageCircle size={14} />
-                                    </a>
-                                  )}
-                                </td>
-                                <td style={{ padding: 12, fontSize: 10 }}>{a.maintenanceNotes || "—"}</td>
+                                <td style={{ padding: 12 }}>{a.category} / {a.type}</td>
+                                <td style={{ padding: 12 }}>{nodes.find(n => n.id === a.nodeId)?.name || "---"}</td>
+                                <td style={{ padding: 12 }}>{a.contatoResponsavel || "â€”"}</td>
+                                <td style={{ padding: 12, fontWeight: 600 }}><div>{a.contatoAcionamento || "—"}</div><WhatsAppButton phone={a.contatoAcionamento} label="WhatsApp" /></td>
+                                <td style={{ padding: 12, fontSize: 11 }}>{a.maintenanceNotes || "â€”"}</td>
                                 <td style={{ padding: 12, textAlign: "center" }}>
-                                  {a.maintenanceSince ? new Date(a.maintenanceSince).toLocaleDateString('pt-BR') : "—"}
+                                  {a.maintenanceSince ? new Date(a.maintenanceSince).toLocaleDateString('pt-BR') : "---"}
                                 </td>
                               </tr>
                             ))
                           ) : (
-                            <tr><td colSpan={7} style={{ padding: 30, textAlign: "center", color: "var(--n400)" }}>Nenhum ativo de contingência em manutenção.</td></tr>
+                            <tr><td colSpan={7} style={{ padding: 30, textAlign: "center", color: "var(--n400)" }}>Nenhum ativo de contingÃªncia em manutenÃ§Ã£o.</td></tr>
                           )}
                         </tbody>
                       </table>
@@ -2806,11 +2815,11 @@ export default function App() {
             <div className="modal-header">
               <h2>Acesso ao Sistema</h2>
               <p style={{ fontSize: 11, color: "var(--n600)", marginTop: 4 }}>
-                Insira suas credenciais de Editor/Admin ou sua <b>Matrícula</b> (como login e senha) para visualização interna completa.
+                Insira suas credenciais de Editor/Admin ou sua <b>MatrÃcula</b> (como login e senha) para visualizaÃ§Ã£o interna completa.
               </p>
             </div>
             <div className="modal-body">
-              <div className="fg"><label className="fl">Usuário (Login)</label><input className="fi" value={loginUser} onChange={(e) => setLoginUser(e.target.value)} /></div>
+              <div className="fg"><label className="fl">UsuÃ¡rio (Login)</label><input className="fi" value={loginUser} onChange={(e) => setLoginUser(e.target.value)} /></div>
               <div className="fg"><label className="fl">Senha</label><input className="fi" type="password" value={loginPass} onChange={(e) => setLoginPass(e.target.value)} onKeyDown={(e) => e.key === "Enter" && document.getElementById('do-login-btn')?.click()} /></div>
               {loginErr && <div style={{ fontSize: 12, color: "#ef4444", marginTop: 4 }}>{loginErr}</div>}
             </div>
@@ -2822,12 +2831,12 @@ export default function App() {
                 if (loginUser && p) {
                   const sessionUser = { username: p.matricula, name: p.name, role: 'viewer' };
                   setCurrentUser(sessionUser); setCanEdit(false); setOpenLoginDlg(false);
-                  flash(`Bem-vindo, ${p.name}! Acesso de visualização interna liberado.`);
+                  flash(`Bem-vindo, ${p.name}! Acesso de visualizaÃ§Ã£o interna liberado.`);
                   logAction("Login Visualizador", "PERSON", p.name); return;
                 }
                 try {
                   const { data: latestUsers, error: fErr } = await supabase.from('users').select('*');
-                  if (fErr || !latestUsers) return setLoginErr("Erro de conexão. Tente novamente.");
+                  if (fErr || !latestUsers) return setLoginErr("Erro de conexÃ£o. Tente novamente.");
                   const u = latestUsers.find(x => x.username.toLowerCase() === loginUser.toLowerCase() && x.password === loginPass);
                   if (u) {
                     const sessionUser = { ...u, username: u.username || loginUser, role: u.role || (u.username.toLowerCase() === 'admin' ? 'admin' : 'editor') };
@@ -2837,7 +2846,7 @@ export default function App() {
                       if (nodeRecord) { setEditNodeId(pendingEditNodeId); setNodeForm(nodeRecord); setOpenNodeDlg(true); }
                       setPendingEditNodeId(null); 
                     }
-                  } else { setLoginErr("Usuário ou senha inválidos."); }
+                  } else { setLoginErr("UsuÃ¡rio ou senha invÃ¡lidos."); }
                 } catch (e) { setLoginErr("Erro ao validar credenciais."); }
               }}>Entrar</button>
             </div>
@@ -2889,7 +2898,7 @@ export default function App() {
                     />
                   </div>
                   <div className="fg">
-                    <label className="fl">Nome por extenso / descrição da estrutura</label>
+                    <label className="fl">Nome por extenso / descriÃ§Ã£o da estrutura</label>
                     <input
                       className="fi"
                       value={nodeForm.description || ""}
@@ -2899,11 +2908,11 @@ export default function App() {
                           description: e.target.value
                         })
                       }
-                      placeholder="Ex.: Coordenação-Geral de Operação e Manutenção Industrial"
+                      placeholder="Ex.: CoordenaÃ§Ã£o-Geral de OperaÃ§Ã£o e ManutenÃ§Ã£o Industrial"
                     />
                   </div>
                   <PersonSelector
-                    label="Responsável pela estrutura"
+                    label="ResponsÃ¡vel pela estrutura"
                     valueId={nodeForm.personId}
                     persons={persons}
                     nodes={nodes}
@@ -2941,7 +2950,7 @@ export default function App() {
                 </>
               ) : (
                 <PersonSelector
-                  label="Pessoa vinculada à caixa"
+                  label="Pessoa vinculada Ã  caixa"
                   valueId={nodeForm.personId}
                   persons={persons}
                   nodes={nodes}
@@ -2983,7 +2992,7 @@ export default function App() {
               )}
 
               <div className="fr">
-                <div className="fg"><label className="fl">Função/Cargo na Caixa</label><input className="fi" value={nodeForm.funcao || ""} onChange={(e) => setNodeForm({ ...nodeForm, funcao: e.target.value.toUpperCase() })} placeholder="Ex.: Coordenador-Geral, Diretor, Gerente, Chefe de Equipe" /></div>
+                <div className="fg"><label className="fl">FunÃ§Ã£o/Cargo na Caixa</label><input className="fi" value={nodeForm.funcao || ""} onChange={(e) => setNodeForm({ ...nodeForm, funcao: e.target.value.toUpperCase() })} placeholder="Ex.: Coordenador-Geral, Diretor, Gerente, Chefe de Equipe" /></div>
                 <div className="fg"><label className="fl">Cor de Destaque (Hex)</label>
                   <div className="color-row">
                     <input type="color" className="color-sw" value={nodeForm.color || DEFAULT_ROOT_COLOR} onChange={(e) => setNodeForm({ ...nodeForm, color: e.target.value })} />
@@ -2993,25 +3002,25 @@ export default function App() {
                         type="button"
                         className="btn btn-outline btn-xs"
                         style={{ padding: "0 8px", height: 28, fontSize: 10, flexShrink: 0 }}
-                        title="Remover cor personalizada e usar herança do pai"
+                        title="Remover cor personalizada e usar heranÃ§a do pai"
                         onClick={() => setNodeForm({ ...nodeForm, color: "" })}
                       >
-                        ✕ Herdar
+                        âœ• Herdar
                       </button>
                     )}
                   </div>
                   <div style={{ fontSize: 10, color: "var(--n400)", marginTop: 4 }}>
-                    {nodeForm.color ? "Cor personalizada definida. Subordinadas herdam esta cor com degradação." : "Sem cor própria — herda do nó superior com clareamento automático."}
+                    {nodeForm.color ? "Cor personalizada definida. Subordinadas herdam esta cor com degradaÃ§Ã£o." : "Sem cor prÃ³pria â€” herda do nÃ³ superior com clareamento automÃ¡tico."}
                   </div>
                 </div>
               </div>
 
               <div className="fr">
-                <div className="fg"><label className="fl">Endereço de Lotação</label><input className="fi" value={nodeForm.lotacao} onChange={(e) => setNodeForm({ ...nodeForm, lotacao: e.target.value })} placeholder="Ex: Rua 24 de Outubro, 200" /></div>
-                <div className="fg"><label className="fl">Complemento</label><input className="fi" value={nodeForm.complemento} onChange={(e) => setNodeForm({ ...nodeForm, complemento: e.target.value })} placeholder="Ex: 3º Andar, Sala 10" /></div>
+                <div className="fg"><label className="fl">EndereÃ§o de LotaÃ§Ã£o</label><input className="fi" value={nodeForm.lotacao} onChange={(e) => setNodeForm({ ...nodeForm, lotacao: e.target.value })} placeholder="Ex: Rua 24 de Outubro, 200" /></div>
+                <div className="fg"><label className="fl">Complemento</label><input className="fi" value={nodeForm.complemento} onChange={(e) => setNodeForm({ ...nodeForm, complemento: e.target.value })} placeholder="Ex: 3Âº Andar, Sala 10" /></div>
               </div>
 
-              <div className="fg"><label className="fl">Atribuições e Competências (Tags/Texto)</label><textarea className="ft" value={nodeForm.atribuicoes} onChange={(e) => setNodeForm({ ...nodeForm, atribuicoes: e.target.value })} placeholder="Descreva as competências desta unidade..." /></div>
+              <div className="fg"><label className="fl">AtribuiÃ§Ãµes e CompetÃªncias (Tags/Texto)</label><textarea className="ft" value={nodeForm.atribuicoes} onChange={(e) => setNodeForm({ ...nodeForm, atribuicoes: e.target.value })} placeholder="Descreva as competÃªncias desta unidade..." /></div>
             </div>
             <div className="modal-footer" style={{ justifyContent: "space-between" }}>
               <div>
@@ -3023,42 +3032,42 @@ export default function App() {
               </div>
               <div style={{ display: "flex", gap: 10 }}>
                 <button className="btn btn-outline btn-xs" onClick={() => setOpenNodeDlg(false)}>Cancelar</button>
-                <button className="btn btn-primary btn-xs" onClick={saveNode}><Save size={12} /> Salvar Alterações</button>
+                <button className="btn btn-primary btn-xs" onClick={saveNode}><Save size={12} /> Salvar AlteraÃ§Ãµes</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ═─ ═─ ═─ ASSET DIALOG ═─ ═─ ═─ */}
+      {/* â•â”€ â•â”€ â•â”€ ASSET DIALOG â•â”€ â•â”€ â•â”€ */}
       {openAssetDlg && (
         <div className="modal-overlay" style={{ zIndex: 1500 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setOpenAssetDlg(false); }}>
           <div className="modal-content">
             <button className="modal-close" onClick={() => setOpenAssetDlg(false)}><X size={12} /></button>
             <div className="modal-header">
               <h2>{editAssetId ? "Editar Ativo" : "Cadastrar Ativo"}</h2>
-              <p>Gerencie informações de veículos, equipamentos e ferramentas.</p>
+              <p>Gerencie informaÃ§Ãµes de veÃculos, equipamentos e ferramentas.</p>
             </div>
             <div className="modal-body">
               <div className="fg" style={{ marginBottom: 16 }}>
-                <label className="fl">Unidade de Alocação / Lotação *</label>
+                <label className="fl">Unidade de AlocaÃ§Ã£o / LotaÃ§Ã£o *</label>
                 <NodeSelector 
                   value={assetForm.nodeId} 
                   nodes={nodes} 
                   onChange={(val) => setAssetForm({ ...assetForm, nodeId: val })} 
                 />
-                {!assetForm.nodeId && <span style={{ fontSize: 10, color: "#ef4444" }}>Obrigatório selecionar o local no organograma para salvar.</span>}
+                {!assetForm.nodeId && <span style={{ fontSize: 10, color: "#ef4444" }}>ObrigatÃ³rio selecionar o local no organograma para salvar.</span>}
               </div>
               <div className="fr">
-                <div className="fg" style={{ flex: 1 }}><label className="fl">Tipo de Vínculo *</label>
+                <div className="fg" style={{ flex: 1 }}><label className="fl">Tipo de VÃnculo *</label>
                   <select className="fi" value={assetForm.tipoVinculo} onChange={(e) => setAssetForm({ ...assetForm, tipoVinculo: e.target.value })}>
-                    <option value="Próprio">Próprio</option>
+                    <option value="PrÃ³prio">PrÃ³prio</option>
                     <option value="Contratado">Contratado</option>
                   </select>
                 </div>
                 <div className="fg" style={{ flex: 1, display: "flex", alignItems: "center", paddingTop: 20 }}>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none", color: "#ef4444", fontWeight: "bold" }}>
-                    <input type="checkbox" checked={assetForm.isEmergency} onChange={(e) => setAssetForm({ ...assetForm, isEmergency: e.target.checked })} /> Contingência?
+                    <input type="checkbox" checked={assetForm.isEmergency} onChange={(e) => setAssetForm({ ...assetForm, isEmergency: e.target.checked })} /> ContingÃªncia?
                   </label>
                 </div>
               </div>
@@ -3067,12 +3076,12 @@ export default function App() {
                 <div className="asset-emergency-box">
                   <div className="section-title">
                     <Siren size={16} />
-                    Dados de Acionamento de Contingência
+                    Dados de Acionamento de ContingÃªncia
                   </div>
 
                   <div className="form-grid two">
                     <div className="fg">
-                      <label className="fl">Responsável pela Contingência *</label>
+                      <label className="fl">ResponsÃ¡vel pela ContingÃªncia *</label>
                       <input
                         className="fi"
                         value={assetForm.contatoResponsavel || ""}
@@ -3082,19 +3091,19 @@ export default function App() {
                             contatoResponsavel: e.target.value
                           }))
                         }
-                        placeholder="Ex.: Nome do responsável, equipe ou fiscal"
+                        placeholder="Ex.: Nome do responsÃ¡vel, equipe ou fiscal"
                       />
                     </div>
 
                     <div className="fg">
-                      <label className="fl">Telefone de Emergência / Acionamento *</label>
+                      <label className="fl">Telefone de EmergÃªncia / Acionamento *</label>
                       <input
                         className="fi"
                         value={assetForm.contatoAcionamento || ""}
                         onChange={(e) =>
                           setAssetForm((current) => ({
                             ...current,
-                            contatoAcionamento: e.target.value
+                            contatoAcionamento: maskPhone(e.target.value)
                           }))
                         }
                         placeholder="Ex.: (51) 99999-9999"
@@ -3103,7 +3112,7 @@ export default function App() {
                   </div>
 
                   <div className="hint-text">
-                    Informe o responsável e o telefone que deve ser acionado em caso de emergência, catástrofe ou operação de contingência.
+                    Informe o responsÃ¡vel e o telefone que deve ser acionado em caso de emergÃªncia, catÃ¡strofe ou operaÃ§Ã£o de contingÃªncia.
                   </div>
                 </div>
               )}
@@ -3134,30 +3143,30 @@ export default function App() {
                   </div>
                 </div>
               </div>
-              <div className="fg" style={{ marginTop: 8 }}><label className="fl">Identificação / Nome Curto *</label><input className="fi" value={assetForm.name} onChange={(e) => setAssetForm({ ...assetForm, name: e.target.value })} placeholder="Ex: Retro 01, Viatura 102..." /></div>
+              <div className="fg" style={{ marginTop: 8 }}><label className="fl">IdentificaÃ§Ã£o / Nome Curto *</label><input className="fi" value={assetForm.name} onChange={(e) => setAssetForm({ ...assetForm, name: e.target.value })} placeholder="Ex: Retro 01, Viatura 102..." /></div>
 
               <div className="fr" style={{ marginTop: 12 }}>
                 <div className="fg" style={{ flex: 1 }}>
                   <label className="fl">Telefone / Contato do Ativo (Geral)</label>
-                  <input className="fi" value={assetForm.contatoFone || ""} onChange={(e) => setAssetForm({ ...assetForm, contatoFone: e.target.value })} placeholder="Ex: (51) 99999-9999" />
+                  <input className="fi" value={assetForm.contatoFone || ""} onChange={(e) => setAssetForm({ ...assetForm, contatoFone: maskPhone(e.target.value) })} placeholder="Ex: (51) 99999-9999" />
                 </div>
               </div>
 
-              {/* Seção de Manutenção */}
+              {/* SeÃ§Ã£o de ManutenÃ§Ã£o */}
               <div style={{ background: assetForm.isMaintenance ? "#fffbeb" : "var(--n50)", padding: 12, borderRadius: 8, border: `1px solid ${assetForm.isMaintenance ? "#fcd34d" : "var(--n200)"}`, marginBottom: 16, marginTop: 12 }}>
                 <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none", color: assetForm.isMaintenance ? "#d97706" : "var(--n600)", fontWeight: "bold" }}>
-                  <input type="checkbox" checked={assetForm.isMaintenance} onChange={(e) => setAssetForm({ ...assetForm, isMaintenance: e.target.checked })} /> Ativo em Manutenção / Inoperante?
+                  <input type="checkbox" checked={assetForm.isMaintenance} onChange={(e) => setAssetForm({ ...assetForm, isMaintenance: e.target.checked })} /> Ativo em ManutenÃ§Ã£o / Inoperante?
                 </label>
                 
                 {assetForm.isMaintenance && (
                   <div className="fr" style={{ marginTop: 12, alignItems: "flex-start" }}>
                     <div className="fg" style={{ flex: 1 }}>
-                      <label className="fl">Em manutenção desde:</label>
+                      <label className="fl">Em manutenÃ§Ã£o desde:</label>
                       <input type="date" className="fi" value={assetForm.maintenanceSince ? assetForm.maintenanceSince.substring(0, 10) : ""} onChange={(e) => setAssetForm({ ...assetForm, maintenanceSince: e.target.value ? new Date(e.target.value).toISOString() : "" })} />
                     </div>
                     <div className="fg" style={{ flex: 2 }}>
-                      <label className="fl">Notas da Manutenção (Defeito / Local)</label>
-                      <input className="fi" value={assetForm.maintenanceNotes || ""} onChange={(e) => setAssetForm({ ...assetForm, maintenanceNotes: e.target.value })} placeholder="Ex: Oficina central, aguardando peça..." />
+                      <label className="fl">Notas da ManutenÃ§Ã£o (Defeito / Local)</label>
+                      <input className="fi" value={assetForm.maintenanceNotes || ""} onChange={(e) => setAssetForm({ ...assetForm, maintenanceNotes: e.target.value })} placeholder="Ex: Oficina central, aguardando peÃ§a..." />
                     </div>
                   </div>
                 )}
@@ -3172,11 +3181,11 @@ export default function App() {
 
                    {/* SEI com auto-fill */}
                    <div className="fg" style={{ position: "relative" }}>
-                     <label className="fl">Nº Processo SEI *</label>
+                     <label className="fl">NÂº Processo SEI *</label>
                      <input
                        className="fi"
                        value={assetForm.numeroContrato}
-                       placeholder="Digite o SEI ou parte do número..."
+                       placeholder="Digite o SEI ou parte do nÃºmero..."
                        onChange={(e) => {
                          const val = e.target.value;
                          const match = contracts.find(x => x.sei === val || x.sei.toLowerCase() === val.toLowerCase());
@@ -3197,7 +3206,7 @@ export default function App() {
                          }
                        }}
                      />
-                     {/* Sugestões de SEI */}
+                     {/* SugestÃµes de SEI */}
                      {assetForm.numeroContrato && assetForm.numeroContrato.length > 2 && (
                        (() => {
                          const sugs = contracts.filter(c =>
@@ -3236,11 +3245,11 @@ export default function App() {
                      )}
                    </div>
 
-                   {/* Empresa + CNPJ editáveis */}
+                   {/* Empresa + CNPJ editÃ¡veis */}
                    <div className="fr" style={{ marginTop: 12 }}>
                      <div className="fg" style={{ flex: 1 }}>
                        <label className="fl">Nome da Empresa Contratada *</label>
-                       <input className="fi" value={assetForm.empresaContratada || ""} placeholder="Razão social..." onChange={(e) => setAssetForm({ ...assetForm, empresaContratada: e.target.value })} />
+                       <input className="fi" value={assetForm.empresaContratada || ""} placeholder="RazÃ£o social..." onChange={(e) => setAssetForm({ ...assetForm, empresaContratada: e.target.value })} />
                      </div>
                      <div className="fg" style={{ flex: 1 }}>
                        <label className="fl">CNPJ *</label>
@@ -3251,10 +3260,10 @@ export default function App() {
                    <div className="fr" style={{ marginTop: 12 }}>
                      <div className="fg" style={{ flex: 1 }}>
                        <label className="fl">Contato Empresa (Geral)</label>
-                       <input className="fi" value={assetForm.contatoAcionamento || ""} placeholder="Telefone, e-mail ou nome do contato" onChange={(e) => setAssetForm({ ...assetForm, contatoAcionamento: e.target.value })} />
+                       <input className="fi" value={assetForm.contatoAcionamento || ""} placeholder="Telefone, e-mail ou nome do contato" onChange={(e) => setAssetForm({ ...assetForm, contatoAcionamento: maskPhone(e.target.value) })} />
                      </div>
                      <div className="fg" style={{ flex: 1 }}>
-                       <label className="fl">Responsável Direto (Condutor/Equipe)</label>
+                       <label className="fl">ResponsÃ¡vel Direto (Condutor/Equipe)</label>
                        <input className="fi" value={assetForm.contatoResponsavel || ""} placeholder="Nome e Telefone direto..." onChange={(e) => setAssetForm({ ...assetForm, contatoResponsavel: e.target.value })} />
                      </div>
                    </div>
@@ -3267,7 +3276,7 @@ export default function App() {
               )}
               {/* Foto upload section */}
               <div className="fg" style={{ marginTop: 12, marginBottom: 12 }}>
-                <label className="fl">Fotos do Ativo (Máx 3)</label>
+                <label className="fl">Fotos do Ativo (MÃ¡x 3)</label>
                 <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
                    {[0,1,2].map(idx => {
                      const f = assetForm.photos?.[idx];
@@ -3341,10 +3350,10 @@ export default function App() {
                 <div className="fg"><label className="fl">Placa</label><input className="fi" value={assetForm.plate} onChange={(e) => setAssetForm({ ...assetForm, plate: e.target.value })} /></div>
               </div>
               <div className="fr">
-                <div className="fg"><label className="fl">Patrimônio</label><input className="fi" value={assetForm.patrimonio} onChange={(e) => setAssetForm({ ...assetForm, patrimonio: e.target.value })} /></div>
+                <div className="fg"><label className="fl">PatrimÃ´nio</label><input className="fi" value={assetForm.patrimonio} onChange={(e) => setAssetForm({ ...assetForm, patrimonio: e.target.value })} /></div>
                 <div className="fg"><label className="fl">OS</label><input className="fi" value={assetForm.os} onChange={(e) => setAssetForm({ ...assetForm, os: e.target.value })} /></div>
               </div>
-              <div className="fg"><label className="fl">Observações</label><textarea className="ft" value={assetForm.notes || ""} onChange={(e) => setAssetForm({ ...assetForm, notes: e.target.value })} /></div>
+              <div className="fg"><label className="fl">ObservaÃ§Ãµes</label><textarea className="ft" value={assetForm.notes || ""} onChange={(e) => setAssetForm({ ...assetForm, notes: e.target.value })} /></div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-outline btn-xs" onClick={() => setOpenAssetDlg(false)}>Cancelar</button>
@@ -3354,17 +3363,17 @@ export default function App() {
         </div>
       )}
 
-      {/* ═─ ═─ ═─ LOGS MODAL ═─ ═─ ═─ */}
+      {/* â•â”€ â•â”€ â•â”€ LOGS MODAL â•â”€ â•â”€ â•â”€ */}
       {openLogsDlg && (
         <div className="modal-overlay" style={{ zIndex: 1500 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setOpenLogsDlg(false); }}>
           <div className="modal-content wide">
             <button className="modal-close" onClick={() => setOpenLogsDlg(false)}><X size={12} /></button>
             <div className="modal-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-              <div><h2 style={{ lineHeight: 1.2 }}>Histórico de Modificações</h2><p>Registro de auditoria.</p></div>
+              <div><h2 style={{ lineHeight: 1.2 }}>HistÃ³rico de ModificaÃ§Ãµes</h2><p>Registro de auditoria.</p></div>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                 <div style={{ display: "flex", gap: 4, alignItems: "center", background: "var(--n50)", padding: "4px 8px", borderRadius: 6, border: "1px solid var(--n200)" }}>
                   <label className="fl" style={{ margin: 0 }}>De:</label><input className="fi" type="date" value={logFilterStart} onChange={(e) => setLogFilterStart(e.target.value)} style={{ padding: "4px 8px", height: 28, width: 110 }} />
-                  <label className="fl" style={{ margin: 0, marginLeft: 4 }}>Até:</label><input className="fi" type="date" value={logFilterEnd} onChange={(e) => setLogFilterEnd(e.target.value)} style={{ padding: "4px 8px", height: 28, width: 110 }} />
+                  <label className="fl" style={{ margin: 0, marginLeft: 4 }}>AtÃ©:</label><input className="fi" type="date" value={logFilterEnd} onChange={(e) => setLogFilterEnd(e.target.value)} style={{ padding: "4px 8px", height: 28, width: 110 }} />
                 </div>
                 {filteredLogs.length > 0 && (
                   <>
@@ -3376,11 +3385,11 @@ export default function App() {
               </div>
             </div>
             <div className="modal-body">
-              {filteredLogs.length === 0 ? <p style={{ color: "var(--n500)" }}>Nenhuma modificação registrada neste período.</p> : (
+              {filteredLogs.length === 0 ? <p style={{ color: "var(--n500)" }}>Nenhuma modificaÃ§Ã£o registrada neste perÃodo.</p> : (
                 <div style={{ maxHeight: 400, overflowY: "auto", border: "1px solid var(--n200)", borderRadius: 8 }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, textAlign: "left" }}>
                     <thead style={{ position: "sticky", top: 0, background: "var(--n100)" }}>
-                      <tr><th style={{ padding: "8px 12px", borderBottom: "1px solid var(--n200)" }}>Data</th><th style={{ padding: "8px 12px", borderBottom: "1px solid var(--n200)" }}>Usuário</th><th style={{ padding: "8px 12px", borderBottom: "1px solid var(--n200)" }}>Ação</th><th style={{ padding: "8px 12px", borderBottom: "1px solid var(--n200)" }}>Detalhes</th></tr>
+                      <tr><th style={{ padding: "8px 12px", borderBottom: "1px solid var(--n200)" }}>Data</th><th style={{ padding: "8px 12px", borderBottom: "1px solid var(--n200)" }}>UsuÃ¡rio</th><th style={{ padding: "8px 12px", borderBottom: "1px solid var(--n200)" }}>AÃ§Ã£o</th><th style={{ padding: "8px 12px", borderBottom: "1px solid var(--n200)" }}>Detalhes</th></tr>
                     </thead>
                     <tbody>
                       {filteredLogs.map(lg => (
@@ -3403,12 +3412,12 @@ export default function App() {
         </div>
       )}
 
-      {/* ═─ ═─ ═─ USUARIOS MODAL ═─ ═─ ═─ */}
+      {/* â•â”€ â•â”€ â•â”€ USUARIOS MODAL â•â”€ â•â”€ â•â”€ */}
       {openUsersDlg && isAdmin && (
         <div className="modal-overlay" style={{ zIndex: 1500 }}>
           <div className="modal-content wide">
             <button className="modal-close" onClick={() => setOpenUsersDlg(false)}><X size={12} /></button>
-            <div className="modal-header"><h2>Gerenciamento de Usuários</h2><p>Controle de administradores e editores.</p></div>
+            <div className="modal-header"><h2>Gerenciamento de UsuÃ¡rios</h2><p>Controle de administradores e editores.</p></div>
             <div className="modal-body">
               <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 20, alignItems: "flex-end", background: "var(--n50)", padding: 12, borderRadius: 8, border: "1px solid var(--n200)" }}>
                 <div className="fg" style={{ flex: 1, minWidth: 120, margin: 0 }}><label className="fl">Novo Login</label><input className="fi" value={newUser} onChange={(e) => setNewUser(e.target.value)} /></div>
@@ -3427,18 +3436,18 @@ export default function App() {
               <div style={{ maxHeight: 300, overflowY: "auto", border: "1px solid var(--n200)", borderRadius: 8 }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, textAlign: "left" }}>
                   <thead style={{ position: "sticky", top: 0, background: "var(--n100)" }}>
-                    <tr><th style={{ padding: "8px 12px", borderBottom: "1px solid var(--n200)" }}>Usuário</th><th style={{ padding: "8px 12px", borderBottom: "1px solid var(--n200)" }}>Permissão</th><th style={{ padding: "8px 12px", borderBottom: "1px solid var(--n200)", textAlign: "right" }}>Ações</th></tr>
+                    <tr><th style={{ padding: "8px 12px", borderBottom: "1px solid var(--n200)" }}>UsuÃ¡rio</th><th style={{ padding: "8px 12px", borderBottom: "1px solid var(--n200)" }}>PermissÃ£o</th><th style={{ padding: "8px 12px", borderBottom: "1px solid var(--n200)", textAlign: "right" }}>AÃ§Ãµes</th></tr>
                   </thead>
                   <tbody>
                     {users.map(u => (
                       <tr key={u.username} style={{ borderBottom: "1px solid var(--n100)" }}>
-                        <td style={{ padding: "8px 12px" }}><b>{u.username}</b> {u.username === currentUser?.username && "(Você)"}</td>
+                        <td style={{ padding: "8px 12px" }}><b>{u.username}</b> {u.username === currentUser?.username && "(VocÃª)"}</td>
                         <td style={{ padding: "8px 12px" }}>
                           <span className={u.role === "admin" ? "badge badge-out" : "badge badge-sec"} style={{ fontSize: 10 }}>{u.role === "admin" ? "Administrador" : "Editor"}</span>
                         </td>
                         <td style={{ padding: "8px 12px", textAlign: "right" }}>
                           <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-                            <button className="btn btn-outline btn-xs" onClick={(e) => { e.stopPropagation(); setResetConfirmUser(u); }} style={{ cursor: "pointer" }} title="Resetar Senha para padrão">
+                            <button className="btn btn-outline btn-xs" onClick={(e) => { e.stopPropagation(); setResetConfirmUser(u); }} style={{ cursor: "pointer" }} title="Resetar Senha para padrÃ£o">
                               <KeyRound size={10} style={{ pointerEvents: "none" }} /> Resetar
                             </button>
                             {u.username !== "admin" && u.username !== currentUser?.username && (
@@ -3464,7 +3473,7 @@ export default function App() {
                 }}>
                   <div style={{ textAlign: "center" }}>
                     <Trash2 size={40} color="#ef4444" style={{ marginBottom: 12 }} />
-                    <h3 style={{ margin: 0 }}>Excluir Usuário?</h3>
+                    <h3 style={{ margin: 0 }}>Excluir UsuÃ¡rio?</h3>
                     <p style={{ color: "var(--n600)" }}>Tem certeza que deseja remover <b>{userToDelete.username}</b>?</p>
                   </div>
                   <div style={{ display: "flex", gap: 12 }}>
@@ -3485,7 +3494,7 @@ export default function App() {
                   <div style={{ textAlign: "center" }}>
                     <ShieldCheck size={50} color="#22c55e" style={{ marginBottom: 16 }} />
                     <h2 style={{ margin: 0, color: "#166534" }}>Senha Resetada!</h2>
-                    <p style={{ fontSize: 16, marginTop: 12 }}>A nova senha de <b>{resetSuccessInfo.username}</b> é:</p>
+                    <p style={{ fontSize: 16, marginTop: 12 }}>A nova senha de <b>{resetSuccessInfo.username}</b> Ã©:</p>
                     <div style={{ 
                       background: "var(--n100)", padding: "12px 24px", borderRadius: 8, 
                       fontSize: 24, fontWeight: 800, letterSpacing: 2, margin: "16px 0",
@@ -3493,7 +3502,7 @@ export default function App() {
                     }}>
                       {resetSuccessInfo.password}
                     </div>
-                    <p style={{ color: "var(--n500)", fontSize: 12 }}>O usuário deverá trocá-la no próximo acesso.</p>
+                    <p style={{ color: "var(--n500)", fontSize: 12 }}>O usuÃ¡rio deverÃ¡ trocÃ¡-la no prÃ³ximo acesso.</p>
                   </div>
                   <button className="btn btn-primary" style={{ minWidth: 120 }} onClick={() => setResetSuccessInfo(null)}>OK</button>
                 </div>
@@ -3510,7 +3519,7 @@ export default function App() {
                   <div style={{ textAlign: "center" }}>
                     <KeyRound size={40} color="var(--p500)" style={{ marginBottom: 12 }} />
                     <h3 style={{ margin: 0 }}>Resetar Senha?</h3>
-                    <p style={{ color: "var(--n600)" }}>Deseja resetar a senha de <b>{resetConfirmUser.username}</b> para o padrão?</p>
+                    <p style={{ color: "var(--n600)" }}>Deseja resetar a senha de <b>{resetConfirmUser.username}</b> para o padrÃ£o?</p>
                   </div>
                   <div style={{ display: "flex", gap: 12 }}>
                     <button className="btn btn-outline" onClick={() => setResetConfirmUser(null)}>Cancelar</button>
@@ -3526,14 +3535,14 @@ export default function App() {
         </div>
       )}
       
-      {/* ═─ ═─ ═─ ESTATÍSTICAS DE ACESSO (ADM) ═─ ═─ ═─ */}
+      {/* â•â”€ â•â”€ â•â”€ ESTATÃSTICAS DE ACESSO (ADM) â•â”€ â•â”€ â•â”€ */}
       {openStatsDlg && isAdmin && (
         <div className="modal-overlay" style={{ zIndex: 1600 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setOpenStatsDlg(false); }}>
           <div className="modal-content" style={{ maxWidth: 500 }}>
             <button className="modal-close" onClick={() => setOpenStatsDlg(false)}><X size={12} /></button>
             <div className="modal-header">
-              <h2 style={{ display: "flex", alignItems: "center", gap: 10 }}><PieChart color="var(--p500)" /> Estatísticas de Acesso</h2>
-              <p>Resumo de tráfego e atividade administrativa.</p>
+              <h2 style={{ display: "flex", alignItems: "center", gap: 10 }}><PieChart color="var(--p500)" /> EstatÃsticas de Acesso</h2>
+              <p>Resumo de trÃ¡fego e atividade administrativa.</p>
             </div>
             <div className="modal-body">
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
@@ -3542,7 +3551,7 @@ export default function App() {
                   <div style={{ fontSize: 32, fontWeight: 800, color: "var(--p600)" }}>{Math.floor(logs.length * 1.5) + 12}</div>
                 </div>
                 <div style={{ background: "var(--n100)", padding: 16, borderRadius: 12, textAlign: "center" }}>
-                  <div style={{ fontSize: 10, color: "var(--n600)", textTransform: "uppercase", fontWeight: 700 }}>Ações no BD</div>
+                  <div style={{ fontSize: 10, color: "var(--n600)", textTransform: "uppercase", fontWeight: 700 }}>AÃ§Ãµes no BD</div>
                   <div style={{ fontSize: 32, fontWeight: 800, color: "var(--p600)" }}>{logs.length}</div>
                 </div>
               </div>
@@ -3574,14 +3583,14 @@ export default function App() {
       )}
 
       
-      {/* ═─ ═─ ═─ GESTÃO DE TIPOS DE ATIVOS ═─ ═─ ═─ */}
+      {/* â•â”€ â•â”€ â•â”€ GESTÃƒO DE TIPOS DE ATIVOS â•â”€ â•â”€ â•â”€ */}
       {openAssetTypesDlg && isAdmin && (
         <div className="modal-overlay" style={{ zIndex: 1600 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setOpenAssetTypesDlg(false); }}>
           <div className="modal-content">
             <button className="modal-close" onClick={() => setOpenAssetTypesDlg(false)}><X size={12} /></button>
             <div className="modal-header">
               <h2>Gerenciar Tipos de Ativos</h2>
-              <p>Adicione ou remova grupos e tipos para o inventário.</p>
+              <p>Adicione ou remova grupos e tipos para o inventÃ¡rio.</p>
             </div>
             <div className="modal-body">
               <div style={{ background: "var(--n50)", padding: 12, borderRadius: 8, marginBottom: 16 }}>
@@ -3589,21 +3598,21 @@ export default function App() {
                 <div className="fr" style={{ gap: 8 }}>
                   <div className="fg" style={{ flex: 1 }}>
                     <label className="fl">Grupo/Categoria</label>
-                    <input className="fi" list="cat-list" placeholder="Ex: Veículo, Ferramenta..." id="new-cat-input" />
+                    <input className="fi" list="cat-list" placeholder="Ex: VeÃculo, Ferramenta..." id="new-cat-input" />
                     <datalist id="cat-list">
-                      <option value="veículo" />
+                      <option value="veÃculo" />
                       <option value="equipamento" />
                       <option value="ferramenta" />
                     </datalist>
                   </div>
                   <div className="fg" style={{ flex: 1 }}>
                     <label className="fl">Nome do Tipo</label>
-                    <input className="fi" placeholder="Ex: Caminhão Pipa..." id="new-type-input" />
+                    <input className="fi" placeholder="Ex: CaminhÃ£o Pipa..." id="new-type-input" />
                   </div>
                   <button className="btn btn-primary" style={{ marginTop: 18, height: 36 }} onClick={async () => {
                     const c = document.getElementById("new-cat-input").value.trim().toLowerCase();
                     const t = document.getElementById("new-type-input").value.trim();
-                    if (!c || !t) { showSystemAlert("Preencha categoria e nome.", { title: "Campos obrigatórios", type: "warning" }); return; }
+                    if (!c || !t) { showSystemAlert("Preencha categoria e nome.", { title: "Campos obrigatÃ³rios", type: "warning" }); return; }
                     const newObj = { name: t, category: c };
                     // Avoid duplicates
                     setAssetTypes(prev => {
@@ -3626,7 +3635,7 @@ export default function App() {
                     <tr style={{ textAlign: "left" }}>
                       <th style={{ padding: 8 }}>Grupo</th>
                       <th style={{ padding: 8 }}>Tipo</th>
-                      <th style={{ padding: 8 }}>Ação</th>
+                      <th style={{ padding: 8 }}>AÃ§Ã£o</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -3639,7 +3648,7 @@ export default function App() {
                             if (!confirm(`Excluir o tipo "${t.name}"?`)) return;
                             setAssetTypes(prev => prev.filter(x => !(x.name === t.name && x.category === t.category)));
                             if (supabase) await supabase.from('asset_types').delete().match({ name: t.name, category: t.category });
-                            flash("Tipo excluído.");
+                            flash("Tipo excluÃdo.");
                           }}><Trash2 size={12} /></button>
                         </td>
                       </tr>
@@ -3655,14 +3664,14 @@ export default function App() {
         </div>
       )}
 
-      {/* ═─ ═─ ═─ PERSON REGISTRY / EDIT MODAL ═─ ═─ ═─ */}
+      {/* â•â”€ â•â”€ â•â”€ PERSON REGISTRY / EDIT MODAL â•â”€ â•â”€ â•â”€ */}
       {openPersonDlg && (
         <div className="modal-overlay" style={{ zIndex: 1500 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setOpenPersonDlg(false); }}>
           <div className="modal-content wide">
             <button className="modal-close" onClick={() => setOpenPersonDlg(false)}><X size={12} /></button>
             <div className="modal-header">
               <h2>{openPersonDlg === "registry" ? "Cadastro de Pessoas" : (editPersonId ? "Editar Pessoa" : "Cadastrar Pessoa")}</h2>
-              <p>{openPersonDlg === "registry" ? "Base de dados centralizada de servidores e colaboradores." : "Preencha as informações obrigatórias."}</p>
+              <p>{openPersonDlg === "registry" ? "Base de dados centralizada de servidores e colaboradores." : "Preencha as informaÃ§Ãµes obrigatÃ³rias."}</p>
             </div>
 
             {openPersonDlg === "registry" ? (
@@ -3698,7 +3707,7 @@ export default function App() {
                 <div style={{ border: "1px solid var(--n200)", borderRadius: 12, overflow: "hidden" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                     <thead style={{ background: "var(--n50)" }}>
-                      <tr><th style={{ padding: 10, textAlign: "left" }}>Nome / Matrícula</th><th style={{ padding: 10, textAlign: "left" }}>Cargo Oficial</th><th style={{ padding: 10, textAlign: "right" }}>Ações</th></tr>
+                      <tr><th style={{ padding: 10, textAlign: "left" }}>Nome / MatrÃcula</th><th style={{ padding: 10, textAlign: "left" }}>Cargo Oficial</th><th style={{ padding: 10, textAlign: "right" }}>AÃ§Ãµes</th></tr>
                     </thead>
                     <tbody>
                       {persons
@@ -3706,7 +3715,7 @@ export default function App() {
                         .slice(0, 50)
                         .map(p => (
                           <tr key={p.id} style={{ borderBottom: "1px solid var(--n100)" }}>
-                            <td style={{ padding: 10 }}><b>{p.name}</b><br /><span style={{ fontSize: 10, color: "var(--n400)" }}>{p.matricula} • {p.regime || "—"} / {p.vinculo || "—"}</span></td>
+                            <td style={{ padding: 10 }}><b>{p.name}</b><br /><span style={{ fontSize: 10, color: "var(--n400)" }}>{p.matricula} â€¢ {p.regime || "â€”"} / {p.vinculo || "â€”"}</span></td>
                             <td style={{ padding: 10 }}>{p.cargo}</td>
                             <td style={{ padding: 10, textAlign: "right" }}>
                               <button className="btn btn-outline btn-xs" title="Visualizar Detalhes" onClick={() => setShowPersonDetail(p.id)} style={{ marginRight: 4 }}><Users size={12} /></button>
@@ -3723,31 +3732,31 @@ export default function App() {
               <div className="modal-body">
                 <div className="fr">
                   <div className="fg"><label className="fl">Nome Completo <span style={{ color: "red" }}>*</span></label><input className="fi" value={personForm.name} onChange={(e) => setPersonForm({ ...personForm, name: e.target.value.toUpperCase() })} /></div>
-                  <div className="fg"><label className="fl">Matrícula <span style={{ color: "red" }}>*</span></label><input className="fi" value={personForm.matricula} onChange={(e) => setPersonForm({ ...personForm, matricula: e.target.value })} /></div>
+                  <div className="fg"><label className="fl">MatrÃcula <span style={{ color: "red" }}>*</span></label><input className="fi" value={personForm.matricula} onChange={(e) => setPersonForm({ ...personForm, matricula: e.target.value })} /></div>
                 </div>
                 <div className="fr">
                   <div className="fg"><label className="fl">Cargo Oficial <span style={{ color: "red" }}>*</span></label><input className="fi" value={personForm.cargo} onChange={(e) => setPersonForm({ ...personForm, cargo: e.target.value.toUpperCase() })} /></div>
                   <div className="fg"><label className="fl">E-mail <span style={{ color: "red" }}>*</span></label><input id="person-email-input" className="fi" value={personForm.email} onChange={(e) => setPersonForm({ ...personForm, email: e.target.value })} /></div>
                 </div>
                 <div className="fr">
-              <div className="fg"><label className="fl">Regime Jurídico</label>
+              <div className="fg"><label className="fl">Regime JurÃdico</label>
                     {editPersonId ? (
-                      <input className="fi" value={personForm.regime} onChange={(e) => setPersonForm({ ...personForm, regime: e.target.value })} placeholder="Estatutário, CLT..." />
+                      <input className="fi" value={personForm.regime} onChange={(e) => setPersonForm({ ...personForm, regime: e.target.value })} placeholder="EstatutÃ¡rio, CLT..." />
                     ) : (
                       <select className="fi" value={personForm.regime} onChange={(e) => setPersonForm({ ...personForm, regime: e.target.value })}>
                         <option value="">Selecione...</option>
-                        <option value="estatutário">Estatutário</option>
+                        <option value="estatutÃ¡rio">EstatutÃ¡rio</option>
                         <option value="clt">CLT</option>
-                        <option value="cc">Cargo em Comissão (CC)</option>
-                        <option value="estagiário">Estagiário</option>
+                        <option value="cc">Cargo em ComissÃ£o (CC)</option>
+                        <option value="estagiÃ¡rio">EstagiÃ¡rio</option>
                         <option value="terceirizado">Terceirizado</option>
-                        <option value="outro">Outro (Empregado Público, etc)</option>
+                        <option value="outro">Outro (Empregado PÃºblico, etc)</option>
                       </select>
                     )}
                   </div>
-              <div className="fg"><label className="fl">Vínculo</label>
+              <div className="fg"><label className="fl">VÃnculo</label>
                     {editPersonId ? (
-                      <input className="fi" value={personForm.vinculo} onChange={(e) => setPersonForm({ ...personForm, vinculo: e.target.value })} placeholder="Efetivo, Adido, Temporário..." />
+                      <input className="fi" value={personForm.vinculo} onChange={(e) => setPersonForm({ ...personForm, vinculo: e.target.value })} placeholder="Efetivo, Adido, TemporÃ¡rio..." />
                     ) : (
                       <select className="fi" value={personForm.vinculo} onChange={(e) => setPersonForm({ ...personForm, vinculo: e.target.value })}>
                         <option value="">Selecione...</option>
@@ -3755,8 +3764,8 @@ export default function App() {
                         <option value="adido">Adido</option>
                         <option value="cedido">Cedido</option>
                         <option value="comissionado">Comissionado</option>
-                        <option value="contratação">Contratado</option>
-                        <option value="temporario">Temporário</option>
+                        <option value="contrataÃ§Ã£o">Contratado</option>
+                        <option value="temporario">TemporÃ¡rio</option>
                         <option value="outro">Outro</option>
                       </select>
                     )}
@@ -3764,7 +3773,7 @@ export default function App() {
                 </div>
 
                 <div className="fr">
-                  <div className="fg"><label className="fl">Telefone (Fixo ou Whats)</label><input className="fi" value={personForm.telefone} onChange={(e) => setPersonForm({ ...personForm, telefone: e.target.value })} placeholder="(51) 99999-9999" /></div>
+                  <div className="fg"><label className="fl">Telefone (Fixo ou Whats)</label><input className="fi" value={personForm.telefone} onChange={(e) => setPersonForm({ ...personForm, telefone: maskPhone(e.target.value) })} placeholder="(51) 99999-9999" /></div>
                   <div className="fg"><label className="fl">Ramal</label><input className="fi" value={personForm.ramal} onChange={(e) => setPersonForm({ ...personForm, ramal: e.target.value })} placeholder="Ex: 8001" /></div>
                 </div>
                 
@@ -3789,22 +3798,22 @@ export default function App() {
                 </div>
                 <div style={{ fontSize: 10, color: "var(--n500)", marginTop: 12, padding: 10, background: "var(--n50)", borderRadius: 8, border: "1px dashed var(--n300)" }}>
                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: "bold", marginBottom: 4 }}>
-                     <MapPin size={12} color="#ef4444" /> Localização Inteligente
+                     <MapPin size={12} color="#ef4444" /> LocalizaÃ§Ã£o Inteligente
                    </div>
-                   O endereço deste colaborador é herdado automaticamente da caixa onde ele está lotado. Para alterar a localização, edite os dados da caixa no organograma.
+                   O endereÃ§o deste colaborador Ã© herdado automaticamente da caixa onde ele estÃ¡ lotado. Para alterar a localizaÃ§Ã£o, edite os dados da caixa no organograma.
                 </div>
               </div>
             )}
 
             <div className="modal-footer">
               <button className="btn btn-outline btn-xs" onClick={() => setOpenPersonDlg(openPersonDlg === "registry" ? false : "registry")}>{openPersonDlg === "registry" ? "Fechar" : "Voltar"}</button>
-              {openPersonDlg === "edit" && <button className="btn btn-primary btn-xs" onClick={savePerson}>Salvar Alterações</button>}
+              {openPersonDlg === "edit" && <button className="btn btn-primary btn-xs" onClick={savePerson}>Salvar AlteraÃ§Ãµes</button>}
             </div>
           </div>
         </div>
       )}
 
-      {/* ═─ ═─ ═─ PERSON DETAIL VIEW ═─ ═─ ═─ */}
+      {/* â•â”€ â•â”€ â•â”€ PERSON DETAIL VIEW â•â”€ â•â”€ â•â”€ */}
       {showPersonDetail && (
         <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowPersonDetail(null); }}>
           <div className="modal-content wide">
@@ -3812,7 +3821,7 @@ export default function App() {
             {personMap.has(showPersonDetail) ? (
               (() => {
                 const p = personMap.get(showPersonDetail);
-                if (!p) return <p>Pessoa não encontrada.</p>;
+                if (!p) return <p>Pessoa nÃ£o encontrada.</p>;
                 return (
                   <>
                     <div className="modal-header">
@@ -3822,7 +3831,7 @@ export default function App() {
                         </div>
                         <div>
                           <h2 style={{ margin: 0, lineHeight: 1.2 }}>{p.name}</h2>
-                          <p style={{ margin: 0, color: "var(--n500)" }}>{p.cargo} • Matrícula {p.matricula}</p>
+                          <p style={{ margin: 0, color: "var(--n500)" }}>{p.cargo} â€¢ MatrÃcula {p.matricula}</p>
                         </div>
                       </div>
                     </div>
@@ -3833,14 +3842,14 @@ export default function App() {
                             <div className="dg-item">
                               <div className="dg-label">E-mail</div>
                               <div className="dg-val" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.email || "—"}</span>
+                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.email || "â€”"}</span>
                                 {p.email && <a href={`mailto:${p.email}`} className="btn-icon-xs" title="Enviar E-mail"><Mail size={12} /></a>}
                               </div>
                             </div>
                             <div className="dg-item">
                               <div className="dg-label">Telefone</div>
                               <div className="dg-val" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                {p.telefone || "—"}
+                                {p.telefone || "â€”"}
                                 {p.telefone && (
                                   <a href={`https://wa.me/55${p.telefone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="btn-icon-xs" title="WhatsApp">
                                     <MessageCircle size={12} color="#25D366" />
@@ -3848,11 +3857,11 @@ export default function App() {
                                 )}
                               </div>
                             </div>
-                            <div className="dg-item"><div className="dg-label">Ramal</div><div className="dg-val">{p.ramal || "—"}</div></div>
-                            <div className="dg-item"><div className="dg-label">Regime</div><div className="dg-val">{p.regime || "—"}</div></div>
-                            <div className="dg-item"><div className="dg-label">Vínculo</div><div className="dg-val">{p.vinculo || "—"}</div></div>
+                            <div className="dg-item"><div className="dg-label">Ramal</div><div className="dg-val">{p.ramal || "â€”"}</div></div>
+                            <div className="dg-item"><div className="dg-label">Regime</div><div className="dg-val">{p.regime || "â€”"}</div></div>
+                            <div className="dg-item"><div className="dg-label">VÃnculo</div><div className="dg-val">{p.vinculo || "â€”"}</div></div>
                             <div className="dg-item" style={{ gridColumn: "span 3" }}>
-                              <div className="dg-label">Endereço de Lotação (Herdado da Caixa)</div>
+                              <div className="dg-label">EndereÃ§o de LotaÃ§Ã£o (Herdado da Caixa)</div>
                               <div className="dg-val" style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                 {(() => {
                                   const pNode = nodes.find(n => n.personId === showPersonDetail);
@@ -3880,7 +3889,7 @@ export default function App() {
                         ) : (
                           <div className="dg-item" style={{ gridColumn: "span 3", background: "var(--n50)", padding: 12, borderRadius: 8, textAlign: "center" }}>
                             <div style={{ fontSize: 13, color: "var(--n600)" }}>
-                              🔒 <b>Dados Privados</b>. Para visualizar e-mail, telefone e localização, faça login com sua matrícula.
+                              ðŸ”’ <b>Dados Privados</b>. Para visualizar e-mail, telefone e localizaÃ§Ã£o, faÃ§a login com sua matrÃcula.
                             </div>
                           </div>
                         )}
@@ -3899,7 +3908,7 @@ export default function App() {
                               <div key={c.id} className="asset-mini" style={{ background: "var(--n50)" }}>
                                 <div className="asset-mini-name">{c.sei} <span className="badge badge-sec" style={{ marginLeft: "auto", fontSize: 9 }}>
                                   {c.gestor.titularId === showPersonDetail || c.gestor.suplenteId === showPersonDetail ? "Gestor" :
-                                    (c.fiscaisContrato || []).some(f => f.titularId === showPersonDetail || f.suplenteId === showPersonDetail) ? "Fiscal Contrato" : "Fiscal Serviço"}
+                                    (c.fiscaisContrato || []).some(f => f.titularId === showPersonDetail || f.suplenteId === showPersonDetail) ? "Fiscal Contrato" : "Fiscal ServiÃ§o"}
                                 </span></div>
                                 <div className="asset-mini-meta"><b>Objeto:</b> {c.objeto}</div>
                                 <div className="asset-mini-meta"><b>Papel:</b> {
@@ -3907,8 +3916,8 @@ export default function App() {
                                     c.gestor.suplenteId === showPersonDetail ? "Suplente (Gestor)" :
                                       (c.fiscaisContrato || []).some(f => f.titularId === showPersonDetail) ? "Titular (Fiscal Contrato)" :
                                         (c.fiscaisContrato || []).some(f => f.suplenteId === showPersonDetail) ? "Suplente (Fiscal Contrato)" :
-                                          (c.fiscaisServico || []).some(f => f.titularId === showPersonDetail) ? "Titular (Fiscal Serviço)" :
-                                            "Suplente (Fiscal Serviço)"
+                                          (c.fiscaisServico || []).some(f => f.titularId === showPersonDetail) ? "Titular (Fiscal ServiÃ§o)" :
+                                            "Suplente (Fiscal ServiÃ§o)"
                                 }</div>
                               </div>
                             )) : <p style={{ fontSize: 12, color: "var(--n400)" }}>Nenhum contrato vinculado.</p>;
@@ -3917,11 +3926,11 @@ export default function App() {
                       )}
 
                       <div className="asset-section" style={{ padding: 0, marginTop: 12 }}>
-                        <div className="asset-section-title"><Network size={14} /> Atuação no Organograma</div>
+                        <div className="asset-section-title"><Network size={14} /> AtuaÃ§Ã£o no Organograma</div>
                         {nodes.filter(n => n.personId === p.id).map(n => (
                           <div key={n.id} className="asset-mini" style={{ cursor: "pointer" }} onClick={() => { selectNode(n.id); setFocusId(n.id); setShowPersonDetail(null); setShowDetail(true); }}>
                             <div className="asset-mini-name">{n.name} - {n.description || n.cargo}</div>
-                            <div className="asset-mini-meta">Função: {n.funcao || "—"}</div>
+                            <div className="asset-mini-meta">FunÃ§Ã£o: {n.funcao || "â€”"}</div>
                           </div>
                         ))}
                       </div>
@@ -3929,20 +3938,20 @@ export default function App() {
                   </>
                 );
               })()
-            ) : <p>Pessoa não encontrada.</p>}
+            ) : <p>Pessoa nÃ£o encontrada.</p>}
             <div className="modal-footer"><button className="btn btn-primary btn-xs" onClick={() => setShowPersonDetail(null)}>Fechar</button></div>
           </div>
         </div>
       )}
 
-      {/* ═─ ═─ ═─ CONTRACT DETAIL VIEW ═─ ═─ ═─ */}
+      {/* â•â”€ â•â”€ â•â”€ CONTRACT DETAIL VIEW â•â”€ â•â”€ â•â”€ */}
       {showContractDetail && (
         <div className="modal-overlay" style={{ zIndex: 1100 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setShowContractDetail(null); }}>
           <div className="modal-content">
             <button className="modal-close" onClick={() => setShowContractDetail(null)}><X size={12} /></button>
             {(() => {
               const c = contracts.find(x => x.id === showContractDetail);
-              if (!c) return <p>Contrato não encontrado.</p>;
+              if (!c) return <p>Contrato nÃ£o encontrado.</p>;
               const status = getContractStatus(c);
               const node = nodes.find(n => n.id === c.nodeId);
               return (
@@ -3955,7 +3964,7 @@ export default function App() {
                            {status === "active" ? "Ativo" : status === "expiring" ? "A Vencer" : "Vencido"}
                          </span>
                        </h2>
-                       <p style={{ marginTop: 4 }}>Visualização das informações da contratação</p>
+                       <p style={{ marginTop: 4 }}>VisualizaÃ§Ã£o das informaÃ§Ãµes da contrataÃ§Ã£o</p>
                      </div>
                      <div style={{ display: "flex", gap: 8 }}>
                         <button className="btn btn-outline btn-xs" onClick={() => window.print()}><Printer size={12} /> Imprimir</button>
@@ -3968,10 +3977,10 @@ export default function App() {
                          <div>
                            <p style={{ fontSize: 13, marginBottom: 4 }}><b>Objeto:</b> {c.objeto || "---"}</p>
                            <p style={{ fontSize: 13, marginBottom: 4 }}><b>Itens:</b> {c.itens || "---"}</p>
-                           <p style={{ fontSize: 13, marginBottom: 4 }}><b>Unidade Vinculada:</b> {node ? `${node.name} — ${node.description || ""}` : "(Nenhuma)"}</p>
+                           <p style={{ fontSize: 13, marginBottom: 4 }}><b>Unidade Vinculada:</b> {node ? `${node.name} â€” ${node.description || ""}` : "(Nenhuma)"}</p>
                          </div>
                          {assets.some(a => a.numeroContrato === c.sei && a.isEmergency) && (
-                           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: "50%", background: "rgba(0,0,0,0.05)", border: "2px solid #fbbf24" }} title="Este contrato possui ativos de CONTINGÊNCIA">
+                           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: "50%", background: "rgba(0,0,0,0.05)", border: "2px solid #fbbf24" }} title="Este contrato possui ativos de CONTINGÃŠNCIA">
                               <Siren size={20} color="#ef4444" strokeWidth={3} fill="#ef4444" fillOpacity={0.1} style={{ transform: "scale(1.8)" }} />
                            </div>
                          )}
@@ -3981,7 +3990,7 @@ export default function App() {
                          <p style={{ fontSize: 11, fontWeight: 700, color: "var(--n500)", marginBottom: 4 }}>DADOS DA EMPRESA</p>
                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                             <div>
-                               <p style={{ fontSize: 13, fontWeight: 700, color: "var(--p700)" }}>{c.empresa || "(Razão Social não informada)"}</p>
+                               <p style={{ fontSize: 13, fontWeight: 700, color: "var(--p700)" }}>{c.empresa || "(RazÃ£o Social nÃ£o informada)"}</p>
                                <p style={{ fontSize: 11, color: "var(--n500)" }}>CNPJ: {c.cnpj || "---"}</p>
                             </div>
                             <div>
@@ -3991,8 +4000,8 @@ export default function App() {
                       </div>
 
                       <div style={{ display: "flex", gap: 16, marginTop: 12, fontSize: 13, borderTop: "1px solid var(--n200)", paddingTop: 12 }}>
-                        <div><b>Início:</b> {c.dataInício ? new Date(`${c.dataInício}T12:00:00`).toLocaleDateString("pt-BR") : "N/A"}</div>
-                        <div><b>Término:</b> {c.dataTermino ? new Date(`${c.dataTermino}T12:00:00`).toLocaleDateString("pt-BR") : "N/A"}</div>
+                        <div><b>InÃcio:</b> {c.dataInÃcio ? new Date(`${c.dataInÃcio}T12:00:00`).toLocaleDateString("pt-BR") : "N/A"}</div>
+                        <div><b>TÃ©rmino:</b> {c.dataTermino ? new Date(`${c.dataTermino}T12:00:00`).toLocaleDateString("pt-BR") : "N/A"}</div>
                       </div>
                     </div>
 
@@ -4020,7 +4029,7 @@ export default function App() {
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                           {c.aditivos.map((ad, idx) => (
                             <div key={idx} style={{ fontSize: 12, background: "var(--n50)", padding: "6px 10px", borderRadius: 8, border: "1px solid var(--n200)" }}>
-                              <b>Aditivo {idx + 1}:</b> {ad.aditivoInício ? new Date(`${ad.aditivoInício}T12:00:00`).toLocaleDateString("pt-BR") : "N/A"} a {ad.aditivoTermino ? new Date(`${ad.aditivoTermino}T12:00:00`).toLocaleDateString("pt-BR") : "N/A"}
+                              <b>Aditivo {idx + 1}:</b> {ad.aditivoInÃcio ? new Date(`${ad.aditivoInÃcio}T12:00:00`).toLocaleDateString("pt-BR") : "N/A"} a {ad.aditivoTermino ? new Date(`${ad.aditivoTermino}T12:00:00`).toLocaleDateString("pt-BR") : "N/A"}
                             </div>
                           ))}
                         </div>
@@ -4029,23 +4038,23 @@ export default function App() {
 
                     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                       <div>
-                        <h3 className="asset-section-title" style={{ fontSize: 14, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}><Briefcase size={14} /> Gestão do Contrato</h3>
+                        <h3 className="asset-section-title" style={{ fontSize: 14, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}><Briefcase size={14} /> GestÃ£o do Contrato</h3>
                         {c.gestor?.titularId ? (
                           <div style={{ fontSize: 13, padding: "8px", background: "var(--n50)", borderRadius: 8, marginBottom: 4, display: "flex", justifyContent: "space-between" }}>
                             <span><b>Titular:</b> {personMap.get(c.gestor.titularId)?.name || "Desconhecido"}</span>
-                            <span style={{ fontSize: 11, color: "var(--n500)" }}>Mat: {personMap.get(c.gestor.titularId)?.matricula || "—"}</span>
+                            <span style={{ fontSize: 11, color: "var(--n500)" }}>Mat: {personMap.get(c.gestor.titularId)?.matricula || "â€”"}</span>
                           </div>
                         ) : <div style={{ fontSize: 12, color: "var(--n400)" }}>Sem Gestor Titular</div>}
                         {c.gestor?.suplenteId ? (
                           <div style={{ fontSize: 13, padding: "8px", background: "var(--n50)", borderRadius: 8, display: "flex", justifyContent: "space-between" }}>
                             <span><b>Suplente:</b> {personMap.get(c.gestor.suplenteId)?.name || "Desconhecido"}</span>
-                            <span style={{ fontSize: 11, color: "var(--n500)" }}>Mat: {personMap.get(c.gestor.suplenteId)?.matricula || "—"}</span>
+                            <span style={{ fontSize: 11, color: "var(--n500)" }}>Mat: {personMap.get(c.gestor.suplenteId)?.matricula || "â€”"}</span>
                           </div>
                         ) : null}
                       </div>
 
                       <div>
-                        <h3 className="asset-section-title" style={{ fontSize: 14, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}><ShieldCheck size={14} /> Equipes de Fiscalização</h3>
+                        <h3 className="asset-section-title" style={{ fontSize: 14, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}><ShieldCheck size={14} /> Equipes de FiscalizaÃ§Ã£o</h3>
                         {(() => {
                           const allFiscais = [...(c.fiscaisContrato || []), ...(c.fiscaisServico || [])].filter(f => f.titularId || f.suplenteId);
                           if (allFiscais.length === 0) return <div style={{ fontSize: 12, color: "var(--n400)" }}>Nenhum fiscal vinculado.</div>;
@@ -4054,8 +4063,8 @@ export default function App() {
                               {allFiscais.map((f, idx) => (
                                 <div key={idx} style={{ fontSize: 12, padding: "10px", background: "var(--n50)", borderRadius: 8, border: "1px solid var(--n200)" }}>
                                   <div style={{ fontWeight: "bold", marginBottom: 6, color: "var(--n600)" }}>Fiscal Equipe {idx + 1}</div>
-                                  {f.titularId && <div style={{ marginBottom: 4 }}><b>Titular:</b> {personMap.get(f.titularId)?.name || "Desconhecido"} <span style={{ color: "var(--n500)", fontSize: 10 }}>(Mat: {personMap.get(f.titularId)?.matricula || "—"})</span></div>}
-                                  {f.suplenteId && <div><b>Suplente:</b> {personMap.get(f.suplenteId)?.name || "Desconhecido"} <span style={{ color: "var(--n500)", fontSize: 10 }}>(Mat: {personMap.get(f.suplenteId)?.matricula || "—"})</span></div>}
+                                  {f.titularId && <div style={{ marginBottom: 4 }}><b>Titular:</b> {personMap.get(f.titularId)?.name || "Desconhecido"} <span style={{ color: "var(--n500)", fontSize: 10 }}>(Mat: {personMap.get(f.titularId)?.matricula || "â€”"})</span></div>}
+                                  {f.suplenteId && <div><b>Suplente:</b> {personMap.get(f.suplenteId)?.name || "Desconhecido"} <span style={{ color: "var(--n500)", fontSize: 10 }}>(Mat: {personMap.get(f.suplenteId)?.matricula || "â€”"})</span></div>}
                                 </div>
                               ))}
                             </div>
@@ -4067,19 +4076,19 @@ export default function App() {
                 </>
               );
             })()}
-            <div className="modal-footer"><button className="btn btn-primary btn-xs" onClick={() => setShowContractDetail(null)}>Fechar Visualização</button></div>
+            <div className="modal-footer"><button className="btn btn-primary btn-xs" onClick={() => setShowContractDetail(null)}>Fechar VisualizaÃ§Ã£o</button></div>
           </div>
         </div>
       )}
 
-      {/* ═─ ═─ ═─ CONTRACT REGISTRY / EDIT MODAL ═─ ═─ ═─ */}
+      {/* â•â”€ â•â”€ â•â”€ CONTRACT REGISTRY / EDIT MODAL â•â”€ â•â”€ â•â”€ */}
       {openContractDlg && (
         <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setOpenContractDlg(false); }}>
           <div className="modal-content wide">
             <button className="modal-close" onClick={() => setOpenContractDlg(false)}><X size={12} /></button>
             <div className="modal-header">
               <h2>{openContractDlg === "registry" ? "Cadastro de Contratos" : (editContractId ? "Editar Contrato" : "Cadastrar Contrato")}</h2>
-              <p>{openContractDlg === "registry" ? "Base de dados centralizada de contratos e seus respectivos fiscais." : "Preencha as informações do processo SEI e responsabilidades."}</p>
+              <p>{openContractDlg === "registry" ? "Base de dados centralizada de contratos e seus respectivos fiscais." : "Preencha as informaÃ§Ãµes do processo SEI e responsabilidades."}</p>
             </div>
 
             {openContractDlg === "registry" ? (
@@ -4091,7 +4100,7 @@ export default function App() {
                 <div style={{ border: "1px solid var(--n200)", borderRadius: 12, overflow: "hidden" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                     <thead style={{ background: "var(--n50)" }}>
-                      <tr><th style={{ padding: 10, textAlign: "left" }}>Nº SEI</th><th style={{ padding: 10, textAlign: "left" }}>Status</th><th style={{ padding: 10, textAlign: "left" }}>Objeto / Itens</th><th style={{ padding: 10, textAlign: "right" }}>Ações</th></tr>
+                      <tr><th style={{ padding: 10, textAlign: "left" }}>NÂº SEI</th><th style={{ padding: 10, textAlign: "left" }}>Status</th><th style={{ padding: 10, textAlign: "left" }}>Objeto / Itens</th><th style={{ padding: 10, textAlign: "right" }}>AÃ§Ãµes</th></tr>
                     </thead>
                     <tbody>
                       {contracts.filter(c => !contractFilter || c.sei.toLowerCase().includes(contractFilter.toLowerCase()) || c.objeto.toLowerCase().includes(contractFilter.toLowerCase())).map(c => (
@@ -4099,7 +4108,7 @@ export default function App() {
                           <td style={{ padding: 10, display: "flex", alignItems: "center", gap: 8 }}>
                             <b>{c.sei}</b>
                             {assets.some(a => a.numeroContrato === c.sei && a.isEmergency) && (
-                               <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", background: "rgba(0,0,0,0.05)", border: "2px solid #fbbf24" }} title="Possui ativos de CONTINGÊNCIA">
+                               <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", background: "rgba(0,0,0,0.05)", border: "2px solid #fbbf24" }} title="Possui ativos de CONTINGÃŠNCIA">
                                   <Siren size={14} color="#ef4444" strokeWidth={3} fill="#ef4444" fillOpacity={0.1} />
                                </span>
                             )}
@@ -4136,31 +4145,31 @@ export default function App() {
                       onChange={(id) => setContractForm({ ...contractForm, nodeId: id })}
                     />
                   </div>
-                  <div className="fg" style={{ flex: 1 }}><label className="fl">Nº Processo (SEI) *</label><input className="fi" value={contractForm.sei} onChange={(e) => setContractForm({ ...contractForm, sei: e.target.value })} placeholder="Ex: 25.10.000010414-3" /></div>
+                  <div className="fg" style={{ flex: 1 }}><label className="fl">NÂº Processo (SEI) *</label><input className="fi" value={contractForm.sei} onChange={(e) => setContractForm({ ...contractForm, sei: e.target.value })} placeholder="Ex: 25.10.000010414-3" /></div>
                 </div>
                 <div className="fr">
-                  <div className="fg" style={{ flex: 1 }}><label className="fl">Nome da Empresa Contratada *</label><input className="fi" value={contractForm.empresa || ""} placeholder="Razão social..." onChange={(e) => setContractForm({ ...contractForm, empresa: e.target.value })} /></div>
+                  <div className="fg" style={{ flex: 1 }}><label className="fl">Nome da Empresa Contratada *</label><input className="fi" value={contractForm.empresa || ""} placeholder="RazÃ£o social..." onChange={(e) => setContractForm({ ...contractForm, empresa: e.target.value })} /></div>
                   <div className="fg" style={{ flex: 1 }}><label className="fl">CNPJ *</label><input className="fi" value={contractForm.cnpj || ""} placeholder="00.000.000/0000-00" onChange={(e) => setContractForm({ ...contractForm, cnpj: e.target.value })} /></div>
                 </div>
                 <div className="fr">
                   <div className="fg" style={{ flex: 1 }}><label className="fl">Contato da Empresa (Acionamento)</label><input className="fi" value={contractForm.contato || ""} placeholder="Telefone, WhatsApp ou E-mail..." onChange={(e) => setContractForm({ ...contractForm, contato: e.target.value })} /></div>
                 </div>
                 <div className="fr">
-                  <div className="fg" style={{ flex: 1 }}><label className="fl">Data de Início</label><input type="date" className="fi" value={contractForm.dataInicio || ""} onChange={(e) => setContractForm({ ...contractForm, dataInicio: e.target.value })} /></div>
-                  <div className="fg" style={{ flex: 1 }}><label className="fl">Data de Término</label><input type="date" className="fi" value={contractForm.dataTermino || ""} onChange={(e) => setContractForm({ ...contractForm, dataTermino: e.target.value })} /></div>
+                  <div className="fg" style={{ flex: 1 }}><label className="fl">Data de InÃcio</label><input type="date" className="fi" value={contractForm.dataInicio || ""} onChange={(e) => setContractForm({ ...contractForm, dataInicio: e.target.value })} /></div>
+                  <div className="fg" style={{ flex: 1 }}><label className="fl">Data de TÃ©rmino</label><input type="date" className="fi" value={contractForm.dataTermino || ""} onChange={(e) => setContractForm({ ...contractForm, dataTermino: e.target.value })} /></div>
                 </div>
-                <div className="fg"><label className="fl">Objeto do Contrato *</label><textarea className="ft" style={{ height: 60 }} value={contractForm.objeto} onChange={(e) => setContractForm({ ...contractForm, objeto: e.target.value })} placeholder="Descreva o objeto da contratação..." /></div>
-                <div className="fg"><label className="fl">Itens do Contrato (Materiais / Serviços)</label><textarea className="ft" style={{ height: 60 }} value={contractForm.itens} onChange={(e) => setContractForm({ ...contractForm, itens: e.target.value })} placeholder="Liste os materiais ou serviços contemplados..." /></div>
+                <div className="fg"><label className="fl">Objeto do Contrato *</label><textarea className="ft" style={{ height: 60 }} value={contractForm.objeto} onChange={(e) => setContractForm({ ...contractForm, objeto: e.target.value })} placeholder="Descreva o objeto da contrataÃ§Ã£o..." /></div>
+                <div className="fg"><label className="fl">Itens do Contrato (Materiais / ServiÃ§os)</label><textarea className="ft" style={{ height: 60 }} value={contractForm.itens} onChange={(e) => setContractForm({ ...contractForm, itens: e.target.value })} placeholder="Liste os materiais ou serviÃ§os contemplados..." /></div>
                 
                 <div style={{ marginTop: 12, padding: 12, background: "var(--n50)", borderRadius: 12, border: "1px solid var(--n200)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                     <h3 style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>Aditivos</h3>
-                    <button className="btn btn-outline btn-xs" onClick={() => setContractForm({ ...contractForm, aditivos: [...(contractForm.aditivos || []), { aditivoInício: "", aditivoTermino: "" }] })}>+ Add Aditivo</button>
+                    <button className="btn btn-outline btn-xs" onClick={() => setContractForm({ ...contractForm, aditivos: [...(contractForm.aditivos || []), { aditivoInÃcio: "", aditivoTermino: "" }] })}>+ Add Aditivo</button>
                   </div>
                   {contractForm.aditivos && contractForm.aditivos.map((ad, idx) => (
                     <div key={idx} className="fr" style={{ marginBottom: 8, alignItems: "flex-end" }}>
-                      <div className="fg"><label className="fl">Início Aditivo {idx + 1}</label><input type="date" className="fi" value={ad.aditivoInício} onChange={(e) => { const nads = [...contractForm.aditivos]; nads[idx].aditivoInício = e.target.value; setContractForm({ ...contractForm, aditivos: nads }); }} /></div>
-                      <div className="fg"><label className="fl">Término Aditivo {idx + 1}</label><input type="date" className="fi" value={ad.aditivoTermino} onChange={(e) => { const nads = [...contractForm.aditivos]; nads[idx].aditivoTermino = e.target.value; setContractForm({ ...contractForm, aditivos: nads }); }} /></div>
+                      <div className="fg"><label className="fl">InÃcio Aditivo {idx + 1}</label><input type="date" className="fi" value={ad.aditivoInÃcio} onChange={(e) => { const nads = [...contractForm.aditivos]; nads[idx].aditivoInÃcio = e.target.value; setContractForm({ ...contractForm, aditivos: nads }); }} /></div>
+                      <div className="fg"><label className="fl">TÃ©rmino Aditivo {idx + 1}</label><input type="date" className="fi" value={ad.aditivoTermino} onChange={(e) => { const nads = [...contractForm.aditivos]; nads[idx].aditivoTermino = e.target.value; setContractForm({ ...contractForm, aditivos: nads }); }} /></div>
                       <button className="btn btn-outline btn-xs" style={{ marginBottom: 12, color: "red" }} onClick={() => setContractForm({ ...contractForm, aditivos: contractForm.aditivos.filter((_, i) => i !== idx) })}><Trash2 size={12} /></button>
                     </div>
                   ))}
@@ -4195,8 +4204,8 @@ export default function App() {
 
                 <div style={{ marginTop: 16 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <h3 style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}><Wrench size={14} /> Fiscais de Serviço</h3>
-                    <button type="button" className="btn btn-outline btn-xs" onClick={() => setContractForm({ ...contractForm, fiscaisServico: [...contractForm.fiscaisServico, { titularId: "", suplenteId: "" }] })}>+ Add Fiscal de Serviço</button>
+                    <h3 style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}><Wrench size={14} /> Fiscais de ServiÃ§o</h3>
+                    <button type="button" className="btn btn-outline btn-xs" onClick={() => setContractForm({ ...contractForm, fiscaisServico: [...contractForm.fiscaisServico, { titularId: "", suplenteId: "" }] })}>+ Add Fiscal de ServiÃ§o</button>
                   </div>
                   {contractForm.fiscaisServico.map((f, idx) => (
                     <div key={idx} className="fr" style={{ marginBottom: 12, background: "var(--n50)", padding: 10, borderRadius: 12, border: "1px solid var(--n200)", alignItems: "flex-end" }}>
@@ -4222,19 +4231,19 @@ export default function App() {
         </div>
       )}
 
-      {/* ═Â═Â═Â CHANGE PASSWORD MODAL ═Â═Â═Â */}
+      {/* â•Ã‚Ââ•Ã‚Ââ•Ã‚Â CHANGE PASSWORD MODAL â•Ã‚Ââ•Ã‚Ââ•Ã‚Â */}
       {(openPasswordDlg || forcePassMode) && (
         <div className="modal-overlay" style={{ zIndex: 10001 }}>
           <div className="modal-content narrow">
             {!forcePassMode && <button className="modal-close" onClick={() => setOpenPasswordDlg(false)}><X size={12} /></button>}
             <div className="modal-header">
-                            <h2>{forcePassMode ? "\u2699\ufe0f Segurança: Primeiro Acesso" : "Trocar Senha"}</h2>
-              <p>Usuário: <b>{currentUser?.username}</b></p>
+                            <h2>{forcePassMode ? "\u2699\ufe0f SeguranÃ§a: Primeiro Acesso" : "Trocar Senha"}</h2>
+              <p>UsuÃ¡rio: <b>{currentUser?.username}</b></p>
             </div>
             <div className="modal-body">
               {forcePassMode && (
                 <div style={{ background: "#eff6ff", padding: 12, borderRadius: 8, marginBottom: 15, border: "1px solid #bfdbfe", fontSize: 13 }}>
-                                    <b>Bem-vindo!</b> Por segurança corporativa, você deve criar uma senha pessoal antes de prosseguir com o uso do sistema.
+                                    <b>Bem-vindo!</b> Por seguranÃ§a corporativa, vocÃª deve criar uma senha pessoal antes de prosseguir com o uso do sistema.
                 </div>
               )}
               {!forcePassMode && <div className="fg"><label className="fl">Senha Atual</label><input className="fi" type="password" value={pwdCurrent} onChange={(e) => setPwdCurrent(e.target.value)} /></div>}
@@ -4252,7 +4261,7 @@ export default function App() {
           </div>
         </div>
       )}
-      {/* ═─ ═─ ═─ ASSET REGISTRY MODAL (CENTRALIZED) ═─ ═─ ═─ */}
+      {/* â•â”€ â•â”€ â•â”€ ASSET REGISTRY MODAL (CENTRALIZED) â•â”€ â•â”€ â•â”€ */}
       {openAssetRegistryDlg && (
         <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setOpenAssetRegistryDlg(false); }}>
           <div className="modal-content wide" style={{ maxWidth: 1100 }}>
@@ -4262,7 +4271,7 @@ export default function App() {
                 <Package size={24} color="var(--p600)" />
                 <div>
                   <h2 style={{ margin: 0 }}>Registro Centralizado de Ativos</h2>
-                  <p style={{ margin: 0, opacity: 0.7, fontSize: 12 }}>Gerenciamento completo do patrimônio e equipamentos do DMAE.</p>
+                  <p style={{ margin: 0, opacity: 0.7, fontSize: 12 }}>Gerenciamento completo do patrimÃ´nio e equipamentos do DMAE.</p>
                 </div>
               </div>
               {canEdit && (
@@ -4286,20 +4295,20 @@ export default function App() {
                 alignItems: "end"
               }}>
                 <div className="fg" style={{ margin: 0 }}>
-                  <label className="fl">Busca Identificação</label>
+                  <label className="fl">Busca IdentificaÃ§Ã£o</label>
                   <div style={{ position: "relative" }}>
                     <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--n400)" }} />
                     <input className="fi" style={{ paddingLeft: 32 }} 
-                      placeholder={assetRegFilter.vinculo === "Contratado" ? "Busque por Nome, Placa, SEI ou Empresa..." : "Busque por Nome, Placa ou Patrimônio..."} 
+                      placeholder={assetRegFilter.vinculo === "Contratado" ? "Busque por Nome, Placa, SEI ou Empresa..." : "Busque por Nome, Placa ou PatrimÃ´nio..."} 
                       value={assetRegFilter.search} onChange={e => setAssetRegFilter({...assetRegFilter, search: e.target.value})} />
                   </div>
                 </div>
 
                 <div className="fg" style={{ margin: 0 }}>
-                  <label className="fl">Vínculo</label>
+                  <label className="fl">VÃnculo</label>
                   <select className="fi" value={assetRegFilter.vinculo} onChange={e => setAssetRegFilter({...assetRegFilter, vinculo: e.target.value, sei: "all", empresa: "all"})}>
                     <option value="all">Todos</option>
-                    <option value="Próprio">Próprio</option>
+                    <option value="PrÃ³prio">PrÃ³prio</option>
                     <option value="Contratado">Contratado</option>
                   </select>
                 </div>
@@ -4393,7 +4402,7 @@ export default function App() {
                 <div className="fg" style={{ margin: 0, display: "flex", alignItems: "center", paddingBottom: 8 }}>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: "bold", color: assetRegFilter.emergency ? "#ef4444" : "inherit" }}>
                     <input type="checkbox" checked={assetRegFilter.emergency} onChange={e => setAssetRegFilter({...assetRegFilter, emergency: e.target.checked})} />
-                    Apenas Contingência
+                    Apenas ContingÃªncia
                   </label>
                 </div>
               </div>
@@ -4441,10 +4450,10 @@ export default function App() {
                     <thead style={{ background: "var(--n100)", position: "sticky", top: 0, zIndex: 10 }}>
                       <tr>
                         <th style={{ padding: "12px 16px", textAlign: "left" }}>Ativo</th>
-                        <th style={{ padding: "12px 16px", textAlign: "left" }}>Vínculo</th>
-                        <th style={{ padding: "12px 16px", textAlign: "left" }}>Localização (Unidade)</th>
-                        <th style={{ padding: "12px 16px", textAlign: "left" }}>Contato / Responsável</th>
-                        <th style={{ padding: "12px 16px", textAlign: "right" }}>Ações</th>
+                        <th style={{ padding: "12px 16px", textAlign: "left" }}>VÃnculo</th>
+                        <th style={{ padding: "12px 16px", textAlign: "left" }}>LocalizaÃ§Ã£o (Unidade)</th>
+                        <th style={{ padding: "12px 16px", textAlign: "left" }}>Contato / ResponsÃ¡vel</th>
+                        <th style={{ padding: "12px 16px", textAlign: "right" }}>AÃ§Ãµes</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -4501,7 +4510,7 @@ export default function App() {
                                           border: "2px solid #eab308", background: "#fff", 
                                           boxShadow: "0 0 6px rgba(234, 179, 8, 0.4)",
                                           marginLeft: 4
-                                        }} title="Ativo de Contingência">
+                                        }} title="Ativo de ContingÃªncia">
                                           <Siren size={12} color="#ef4444" strokeWidth={3} fill="#ef4444" fillOpacity={0.1} style={{ transform: "scale(1.3)" }} />
                                         </div>
                                       )}
@@ -4513,18 +4522,18 @@ export default function App() {
                                           boxShadow: "0 0 6px rgba(217, 119, 6, 0.4)",
                                           marginLeft: 4,
                                           color: "#d97706"
-                                        }} title="Ativo em Manutenção/Inoperante">
+                                        }} title="Ativo em ManutenÃ§Ã£o/Inoperante">
                                           <AlertTriangle size={12} strokeWidth={3} style={{ transform: "scale(1.3)" }} />
                                         </div>
                                       )}
                                     </div>
-                                    <div style={{ fontSize: 10, color: "var(--n500)" }}>{a.type} • {a.model || "—"} {a.year && `(${a.year})`}</div>
+                                    <div style={{ fontSize: 10, color: "var(--n500)" }}>{a.type} â€¢ {a.model || "â€”"} {a.year && `(${a.year})`}</div>
                                   </div>
                                 </div>
                               </td>
                               <td style={{ padding: "12px 16px" }}>
                                 <span className={`badge ${a.tipoVinculo === "Contratado" ? "badge-sec" : "badge-out"}`}>
-                                  {a.tipoVinculo || "Próprio"}
+                                  {a.tipoVinculo || "PrÃ³prio"}
                                 </span>
                                 {a.plate && <div style={{ fontSize: 10, marginTop: 4, fontWeight: 600 }}>Placa: {a.plate}</div>}
                               </td>
@@ -4532,35 +4541,29 @@ export default function App() {
                                 <div style={{ fontWeight: 600 }}>{node?.name || "Desconhecida"}</div>
                                 <div style={{ fontSize: 10, color: "var(--n500)" }}>{node?.unidade || "DMAE"}</div>
                               </td>
-                               <td style={{ padding: "12px 16px" }}>
-                                {(() => {
-                                  const displayContact = a.isEmergency && a.contatoResponsavel ? a.contatoResponsavel : a.contatoResponsavel || a.contatoFone || "—";
-                                  return (
-                                    <>
-                                      <div style={{ fontWeight: 600 }}>{displayContact}</div>
-                                      {a.isEmergency ? (
-                                        <div style={{ fontSize: 10, color: "#ef4444", fontWeight: 700, display: "flex", flexDirection: "column", gap: 2 }}>
-                                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                            <Siren size={10} /> Tel.: {a.contatoAcionamento || "Não informado"}
-                                            {a.contatoAcionamento && (
-                                              <a href={`https://wa.me/55${a.contatoAcionamento.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ color: "#25D366" }} title="WhatsApp">
-                                                <MessageCircle size={10} />
-                                              </a>
-                                            )}
+                                <td style={{ padding: "12px 16px" }}>
+                                  {(() => {
+                                    if (a.isEmergency) {
+                                      return (
+                                        <>
+                                          <div style={{ fontWeight: 600 }}>{a.contatoResponsavel || "Responsável não informado"}</div>
+                                          <div className="asset-mini-meta emergency-contact" style={{ fontSize: 10, color: "#ef4444", fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                                            <Siren size={10} /> Tel.: {a.contatoAcionamento || "Telefone não informado"}
                                           </div>
-                                        </div>
-                                      ) : null}
-                                      {!a.isEmergency && (a.contatoFone || a.contatoAcionamento) && (
-                                        <div style={{ fontSize: 10, color: "var(--n500)", display: "flex", alignItems: "center", gap: 4 }}>
-                                          <Phone size={10} /> {a.contatoFone || a.contatoAcionamento}
-                                        </div>
-                                      )}
-                                    </>
-                                  );
-                                })()}
-                              </td>
-                              <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                                <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                                          <WhatsAppButton phone={a.contatoAcionamento} label="WhatsApp" />
+                                        </>
+                                      );
+                                    }
+                                    return (
+                                      <>
+                                        <div style={{ fontWeight: 600 }}>{a.contatoResponsavel || a.contatoFone || "—"}</div>
+                                        <WhatsAppButton phone={a.contatoFone} label="WhatsApp" />
+                                      </>
+                                    );
+                                  })()}
+                                </td>
+                                <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                                  <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                                   <button className="btn btn-outline btn-xs" title="Visualizar Cadastro" onClick={() => setViewAssetId(a.id)}>
                                     <Eye size={12} />
                                   </button>
@@ -4607,47 +4610,47 @@ export default function App() {
             }}>
               <div /> {/* Spacer */}
               <div style={{ textAlign: "center" }}>
-                Desenvolvido por <span>&nbsp;{"Fábio Bühler"} - {"Versão"} 1.0.2026.04241445</span>
+                Desenvolvido por <span>&nbsp;{"FÃ¡bio BÃ¼hler"} - {"VersÃ£o"} 1.0.2026.04232120</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--n600)", justifyContent: "flex-end" }}>
                 <div className="pulse-dot" style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }}></div>
-                <b>{onlineCount}</b> usuários on-line
+                <b>{onlineCount}</b> usuÃ¡rios on-line
               </div>
             </footer>
 
-      {/* ─€─€─€─€ DELETE CONFIRMATION MODAL ─€─€─€─€ */}
+      {/* â”€â‚¬â”€â‚¬â”€â‚¬â”€â‚¬ DELETE CONFIRMATION MODAL â”€â‚¬â”€â‚¬â”€â‚¬â”€â‚¬ */}
       {deleteRequest && (
         <div className="modal-overlay" style={{ zIndex: 2000 }}>
           <div className="modal-content narrow" style={{ borderTop: "4px solid var(--danger)" }}>
             <button className="modal-close" onClick={() => setDeleteRequest(null)}><X size={14} /></button>
             <div className="modal-header">
-              <h2 style={{ color: "var(--danger)", display: "flex", alignItems: "center", gap: 8 }}><AlertTriangle size={20} /> Confirmar Exclusão</h2>
-              <p>Esta ação não pode ser desfeita.</p>
+              <h2 style={{ color: "var(--danger)", display: "flex", alignItems: "center", gap: 8 }}><AlertTriangle size={20} /> Confirmar ExclusÃ£o</h2>
+              <p>Esta aÃ§Ã£o nÃ£o pode ser desfeita.</p>
             </div>
             <div className="modal-body">
               <p style={{ fontSize: 14 }}>Tem certeza que deseja excluir <strong>{deleteRequest.name}</strong>?</p>
               <div style={{ marginTop: 12, padding: 10, background: "#fff1f2", borderRadius: 8, fontSize: 12, color: "#991b1b", border: "1px solid #fecaca" }}>
                 {deleteRequest.type === "node" 
-                  ? "A exclusão só será permitida se não houver subordinados nem ativos vinculados."
-                  : "A pessoa só será excluída se não estiver vinculada a nenhuma caixa do organograma."}
+                  ? "A exclusÃ£o sÃ³ serÃ¡ permitida se nÃ£o houver subordinados nem ativos vinculados."
+                  : "A pessoa sÃ³ serÃ¡ excluÃda se nÃ£o estiver vinculada a nenhuma caixa do organograma."}
               </div>
             </div>
             <div className="modal-footer" style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button className="btn btn-outline btn-xs" onClick={() => setDeleteRequest(null)}>Cancelar</button>
-              <button className="btn btn-danger btn-xs" onClick={confirmDelete}><Trash2 size={12} /> Confirmar Exclusão</button>
+              <button className="btn btn-danger btn-xs" onClick={confirmDelete}><Trash2 size={12} /> Confirmar ExclusÃ£o</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ═─ ═─ ═─ ASSET DETAIL VIEW ═─ ═─ ═─ */}
+      {/* â•â”€ â•â”€ â•â”€ ASSET DETAIL VIEW â•â”€ â•â”€ â•â”€ */}
       {viewAssetId && (
         <div className="modal-overlay" style={{ zIndex: 1600 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setViewAssetId(null); }}>
           <div className="modal-content">
             <button className="modal-close" onClick={() => setViewAssetId(null)}><X size={12} /></button>
             {(() => {
               const a = assets.find(x => x.id === viewAssetId);
-              if (!a) return <p>Ativo não encontrado.</p>;
+              if (!a) return <p>Ativo nÃ£o encontrado.</p>;
               const node = nodes.find(n => n.id === a.nodeId);
               return (
                 <>
@@ -4655,17 +4658,17 @@ export default function App() {
                     <h2 style={{ display: "flex", alignItems: "center", gap: 10 }}>
                        {assetIcon(a.category)} {a.name}
                        {a.isEmergency && (
-                         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", border: "2px solid #eab308", background: "#fff", boxShadow: "0 0 6px rgba(234, 179, 8, 0.4)" }} title="Contingência">
+                         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", border: "2px solid #eab308", background: "#fff", boxShadow: "0 0 6px rgba(234, 179, 8, 0.4)" }} title="ContingÃªncia">
                            <Siren size={12} color="#ef4444" strokeWidth={3} fill="#ef4444" fillOpacity={0.1} style={{ transform: "scale(1.3)" }} />
                          </div>
                        )}
                        {a.isMaintenance && (
-                         <div className="badge-maintenance" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", border: "2px solid #d97706", background: "#fff", boxShadow: "0 0 6px rgba(217, 119, 6, 0.4)", color: "#d97706" }} title="Manutenção">
+                         <div className="badge-maintenance" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", border: "2px solid #d97706", background: "#fff", boxShadow: "0 0 6px rgba(217, 119, 6, 0.4)", color: "#d97706" }} title="ManutenÃ§Ã£o">
                            <AlertTriangle size={12} strokeWidth={3} style={{ transform: "scale(1.3)" }} />
                          </div>
                        )}
                     </h2>
-                    <p style={{ marginTop: 4 }}>{a.category} • {a.type}</p>
+                    <p style={{ marginTop: 4 }}>{a.category} â€¢ {a.type}</p>
                   </div>
                   <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                      {/* Photos Gallery */}
@@ -4692,40 +4695,33 @@ export default function App() {
                            <div className="detail-val" style={{ fontWeight: 600, fontSize: 13 }}>{a.year || "---"} / {a.plate || "---"}</div>
                         </div>
                         <div className="detail-group">
-                           <label className="fl" style={{ fontSize: 9, textTransform: "uppercase", color: "var(--n500)" }}>Patrimônio / OS</label>
+                           <label className="fl" style={{ fontSize: 9, textTransform: "uppercase", color: "var(--n500)" }}>PatrimÃ´nio / OS</label>
                            <div className="detail-val" style={{ fontWeight: 600, fontSize: 13 }}>{a.patrimonio || "---"} / {a.os || "---"}</div>
                         </div>
                         <div className="detail-group">
-                           <label className="fl" style={{ fontSize: 9, textTransform: "uppercase", color: "var(--n500)" }}>Localização (Unidade)</label>
+                           <label className="fl" style={{ fontSize: 9, textTransform: "uppercase", color: "var(--n500)" }}>LocalizaÃ§Ã£o (Unidade)</label>
                            <div className="detail-val" style={{ fontWeight: 600, fontSize: 13 }}>{node?.name || "---"}</div>
                         </div>
                      </div>
 
-                     {a.isEmergency && (
+                      {a.isEmergency && (
                         <div className="asset-detail-emergency-box">
                           <h3>
                             <Siren size={16} />
-                            Acionamento de Contingência
+                            Acionamento de ContingÃªncia
                           </h3>
 
                           <p>
-                            <strong>Responsável pela Contingência:</strong>{" "}
-                            {a.contatoResponsavel || "Não informado"}
+                            <strong>ResponsÃ¡vel pela ContingÃªncia:</strong>{" "}
+                            {a.contatoResponsavel || "NÃ£o informado"}
                           </p>
 
                           <p>
-                            <strong>Telefone de Emergência / Acionamento:</strong>{" "}
-                            {a.contatoAcionamento || "Não informado"}
-                            {a.contatoAcionamento && (
-                              <a href={`https://wa.me/55${a.contatoAcionamento.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 8, color: "#25D366", display: "inline-flex", verticalAlign: "middle" }} title="Chamar no WhatsApp">
-                                <MessageCircle size={14} />
-                              </a>
-                            )}
+                            <strong>Telefone de Emergência / Acionamento:</strong>{" "} {a.contatoAcionamento || "Não informado"} <WhatsAppButton phone={a.contatoAcionamento} label="Chamar no WhatsApp" />
                           </p>
 
                           <p>
-                            <strong>Contato Geral:</strong>{" "}
-                            {a.contatoFone || "Não informado"}
+                            <strong>Contato Geral:</strong>{" "} {a.contatoFone || "Não informado"} <WhatsAppButton phone={a.contatoFone} label="WhatsApp contato geral" />
                           </p>
                         </div>
                       )}
@@ -4756,7 +4752,7 @@ export default function App() {
 
                      {a.notes && (
                         <div className="detail-group">
-                           <label className="fl" style={{ fontSize: 9, textTransform: "uppercase", color: "var(--n500)" }}>Observações</label>
+                           <label className="fl" style={{ fontSize: 9, textTransform: "uppercase", color: "var(--n500)" }}>ObservaÃ§Ãµes</label>
                            <div className="detail-val" style={{ fontSize: 11, whiteSpace: "pre-wrap" }}>{a.notes}</div>
                         </div>
                      )}
@@ -4813,3 +4809,7 @@ export default function App() {
     </div>
   );
 }
+
+
+
+
