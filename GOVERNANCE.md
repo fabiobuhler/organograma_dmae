@@ -47,4 +47,4 @@ Os elementos abaixo são a "alma" visual do sistema e só devem ser alterados so
 
 ---
 **Desenvolvido por:** Fábio Bühler  
-**Versão Atual:** 1.0.2026.04241445
+**Versão Atual:** 1.0.2026.04241700
