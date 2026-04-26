@@ -3,7 +3,7 @@ import {
   FolderTree, Search, KeyRound, Download, Upload,
   Pencil, Trash2, Users, Building2, ClipboardList, Briefcase,
   Home, Plus, Save, Mail, Phone, Car, Wrench, X, Menu, LogOut,
-  ImagePlus, List, Network, MapPin, ChevronUp, ChevronsDown, Undo2, FileText, Printer, PieChart, CloudUpload, MessageCircle, Package, ArrowUp,
+  ImagePlus, List, Network, MapPin, ChevronsDown, Undo2, FileText, Printer, PieChart, MessageCircle, Package, ArrowUp,
   AlertTriangle, Info, Calendar, History, User, ChevronLeft, Eye, EyeOff, AlertCircle, Settings, Siren, ShieldCheck
 } from "lucide-react";
 import html2canvas from "html2canvas";
@@ -11,6 +11,7 @@ import jsPDF from "jspdf";
 import { OrgBranch } from "./components/OrgNode";
 import PersonDetail from "./components/people/PersonDetail";
 import ContractDetail from "./components/contracts/ContractDetail";
+import AssetDetail from "./components/assets/AssetDetail";
 import { seedNodes, seedAssets, seedPersons, seedContracts, seedAssetTypes } from "./data/seedData";
 import {
   makeId, initials, sortNodes, downloadFile, toCsv,
@@ -1492,12 +1493,28 @@ export default function App() {
   }, [assetForm, editAssetId, logAction, supabase]);
 
   const deleteAsset = useCallback((id, name) => {
-    if (!confirm("Excluir ativo?")) return;
     if (supabase) supabase.from('assets').delete().eq('id', id).then(() => console.log("Asset deleted"));
     setAssets((c) => c.filter((a) => a.id !== id));
     logAction("Excluir Ativo", "ASSET", name || id);
     flash("Ativo excluído");
   }, [logAction]);
+
+  const requestDeleteAsset = useCallback((asset) => {
+    if (!asset) return;
+    setConfirmDialog({
+      open: true,
+      title: "Excluir Ativo",
+      message: `Confirma a exclusão do ativo "${asset.name}"? Esta ação não poderá ser desfeita.`,
+      confirmLabel: "Excluir",
+      cancelLabel: "Cancelar",
+      type: "danger",
+      onConfirm: () => {
+        deleteAsset(asset.id, asset.name);
+        setConfirmDialog(null);
+        setViewAssetId(null);
+      }
+    });
+  }, [deleteAsset]);
 
   // Person CRUD
   const openNewPerson = useCallback(() => { setEditPersonId(null); setPersonForm(emptyPerson); setOpenPersonDlg(true); }, []);
@@ -4536,7 +4553,7 @@ export default function App() {
                                       <button className="btn btn-outline btn-xs" title="Editar Ativo" onClick={() => openEditAsset(a)}>
                                         <Pencil size={12} />
                                       </button>
-                                      <button className="btn btn-outline btn-xs" title="Excluir Ativo" style={{ color: "#ef4444" }} onClick={() => deleteAsset(a.id, a.name)}>
+                                      <button className="btn btn-outline btn-xs" title="Excluir Ativo" style={{ color: "#ef4444" }} onClick={() => requestDeleteAsset(a)}>
                                         <Trash2 size={12} />
                                       </button>
                                     </>
@@ -4606,141 +4623,16 @@ export default function App() {
 
       {/* ═─ ═─ ═─ ASSET DETAIL VIEW ═─ ═─ ═─ */}
       {viewAssetId && (
-        <div className="modal-overlay" style={{ zIndex: 1600 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setViewAssetId(null); }}>
-          <div className="modal-content">
-            <button className="modal-close" onClick={() => setViewAssetId(null)}><X size={12} /></button>
-            {(() => {
-              const a = assets.find(x => x.id === viewAssetId);
-              if (!a) return <p>Ativo não encontrado.</p>;
-              const node = nodes.find(n => n.id === a.nodeId);
-              return (
-                <>
-                  <div className="modal-header">
-                    <h2 style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                       {assetIcon(a.category)} {a.name}
-                       {a.isEmergency && (
-                         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", border: "2px solid #eab308", background: "#fff", boxShadow: "0 0 6px rgba(234, 179, 8, 0.4)" }} title="Contingência">
-                           <Siren size={12} color="#ef4444" strokeWidth={3} fill="#ef4444" fillOpacity={0.1} style={{ transform: "scale(1.3)" }} />
-                         </div>
-                       )}
-                       {a.isMaintenance && (
-                         <div className="badge-maintenance" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", border: "2px solid #d97706", background: "#fff", boxShadow: "0 0 6px rgba(217, 119, 6, 0.4)", color: "#d97706" }} title="Manutenção">
-                           <AlertTriangle size={12} strokeWidth={3} style={{ transform: "scale(1.3)" }} />
-                         </div>
-                       )}
-                    </h2>
-                    <p style={{ marginTop: 4 }}>{a.category} • {a.type}</p>
-                  </div>
-                  <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                     {/* Photos Gallery */}
-                     {a.photos && a.photos.length > 0 && (
-                       <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8 }}>
-                         {a.photos.map((p, idx) => (
-                           <img 
-                             key={idx} 
-                             src={p} 
-                             style={{ height: 160, borderRadius: 12, border: "1px solid var(--n200)", cursor: "zoom-in", objectFit: "cover" }} 
-                             onClick={() => setExpandedImage(p)}
-                           />
-                         ))}
-                       </div>
-                     )}
-
-                     <div className="asset-detail-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                        <div className="detail-group">
-                           <label className="fl" style={{ fontSize: 9, textTransform: "uppercase", color: "var(--n500)" }}>Fabricante / Modelo</label>
-                           <div className="detail-val" style={{ fontWeight: 600, fontSize: 13 }}>{a.manufacturer || "---"} / {a.model || "---"}</div>
-                        </div>
-                        <div className="detail-group">
-                           <label className="fl" style={{ fontSize: 9, textTransform: "uppercase", color: "var(--n500)" }}>Ano / Placa</label>
-                           <div className="detail-val" style={{ fontWeight: 600, fontSize: 13 }}>{a.year || "---"} / {a.plate || "---"}</div>
-                        </div>
-                        <div className="detail-group">
-                           <label className="fl" style={{ fontSize: 9, textTransform: "uppercase", color: "var(--n500)" }}>Patrimônio / OS</label>
-                           <div className="detail-val" style={{ fontWeight: 600, fontSize: 13 }}>{a.patrimonio || "---"} / {a.os || "---"}</div>
-                        </div>
-                        <div className="detail-group">
-                           <label className="fl" style={{ fontSize: 9, textTransform: "uppercase", color: "var(--n500)" }}>Localização (Unidade)</label>
-                           <div className="detail-val" style={{ fontWeight: 600, fontSize: 13 }}>{node?.name || "---"}</div>
-                        </div>
-                     </div>
-
-                     {a.isEmergency && (
-                        <div className="asset-detail-emergency-box">
-                          <h3>
-                            <Siren size={16} />
-                            Acionamento de Contingência
-                          </h3>
-
-                          <p>
-                            <strong>Responsável pela Contingência:</strong>{" "}
-                            {a.contatoResponsavel || "Não informado"}
-                          </p>
-
-                          <p>
-                            <strong>Telefone de Emergência / Acionamento:</strong>{" "}
-                            {a.contatoAcionamento || "Não informado"}
-                            {a.contatoAcionamento && (
-                              <>
-                                <AssetContactActions phone={a.contatoAcionamento} responsible={a.contatoResponsavel} />
-                              </>
-                            )}
-                          </p>
-
-                          <p>
-                            <strong>Contato Geral:</strong>{" "}
-                            {a.contatoFone || "Não informado"}
-                            {a.contatoFone && (
-                              <WhatsAppQrButton
-                                phone={a.contatoFone}
-                                label="QR Code"
-                                title="QR Code para Contato Geral"
-                              />
-                            )}
-                          </p>
-                        </div>
-                      )}
-
-                     {(isProtected || canEdit) && a.tipoVinculo === "Contratado" && (
-                        <div style={{ background: "#fefce8", padding: 16, borderRadius: 12, border: "1px solid #fde047" }}>
-                           <h4 style={{ fontSize: 11, color: "#854d0e", marginBottom: 12, fontWeight: 800 }}>DADOS DO CONTRATO</h4>
-                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                              <div>
-                                 <label className="fl" style={{ fontSize: 8 }}>Processo SEI</label>
-                                 <div className="detail-val" style={{ fontWeight: 700, fontSize: 12 }}>{a.numeroContrato}</div>
-                              </div>
-                              <div>
-                                 <label className="fl" style={{ fontSize: 8 }}>Empresa</label>
-                                 <div className="detail-val" style={{ fontSize: 12 }}>{a.empresaContratada}</div>
-                              </div>
-                              <div>
-                                 <label className="fl" style={{ fontSize: 8 }}>Fiscal Titular</label>
-                                 <div className="detail-val" style={{ fontSize: 12 }}>{a.fiscalContrato}</div>
-                              </div>
-                              <div>
-                                 <label className="fl" style={{ fontSize: 8 }}>Contato Empresa</label>
-                                 <div className="detail-val" style={{ fontSize: 11 }}>{a.contatoAcionamento}</div>
-                              </div>
-                           </div>
-                        </div>
-                      )}
-
-                     {a.notes && (
-                        <div className="detail-group">
-                           <label className="fl" style={{ fontSize: 9, textTransform: "uppercase", color: "var(--n500)" }}>Observações</label>
-                           <div className="detail-val" style={{ fontSize: 11, whiteSpace: "pre-wrap" }}>{a.notes}</div>
-                        </div>
-                     )}
-                  </div>
-                  <div className="modal-footer" style={{ gap: 8 }}>
-                    <button className="btn btn-outline btn-xs" onClick={() => setViewAssetId(null)}>Fechar</button>
-                    {canEdit && <button className="btn btn-primary btn-xs" onClick={() => { setViewAssetId(null); openEditAsset(a); }}><Pencil size={12} /> Editar Cadastro</button>}
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
+        <AssetDetail
+          asset={assets.find(x => x.id === viewAssetId)}
+          nodes={nodes}
+          canEdit={canEdit}
+          isProtected={isProtected}
+          onClose={() => setViewAssetId(null)}
+          onEdit={(a) => { setViewAssetId(null); openEditAsset(a); }}
+          onDeleteRequest={requestDeleteAsset}
+          setExpandedImage={setExpandedImage}
+        />
       )}
 
       {/* LIGHTBOX DE FOTO */}
