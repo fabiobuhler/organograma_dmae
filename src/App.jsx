@@ -3,13 +3,14 @@ import {
   FolderTree, Search, KeyRound, Download, Upload,
   Pencil, Trash2, Users, Building2, ClipboardList, Briefcase,
   Home, Plus, Save, Mail, Phone, Car, Wrench, X, Menu, LogOut,
-  ImagePlus, List, Network, MapPin, ChevronRight, ChevronDown, ChevronUp, ChevronsDown, Undo2, FileText, Printer, PieChart, CloudUpload, MessageCircle, Package, ArrowUp,
+  ImagePlus, List, Network, MapPin, ChevronUp, ChevronsDown, Undo2, FileText, Printer, PieChart, CloudUpload, MessageCircle, Package, ArrowUp,
   AlertTriangle, Info, Calendar, History, User, ChevronLeft, Eye, EyeOff, AlertCircle, Settings, Siren, ShieldCheck
 } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { OrgBranch } from "./components/OrgNode";
 import PersonDetail from "./components/people/PersonDetail";
+import ContractDetail from "./components/contracts/ContractDetail";
 import { seedNodes, seedAssets, seedPersons, seedContracts, seedAssetTypes } from "./data/seedData";
 import {
   makeId, initials, sortNodes, downloadFile, toCsv,
@@ -1689,12 +1690,27 @@ export default function App() {
   }, [contractForm, editContractId, logAction]);
 
   const deleteContract = useCallback((id, sei) => {
-    if (!confirm(`Excluir contrato ${sei}?`)) return;
     if (supabase) supabase.from('contracts').delete().eq('id', id).then(() => console.log("Contract removed from cloud"));
     setContracts((prev) => prev.filter((c) => c.id !== id));
     logAction("Excluir Contrato", "CONTRACT", sei || id);
     showSystemAlert("Contrato excluído com sucesso.", { title: "Concluído", type: "success" });
   }, [logAction]);
+
+  const requestDeleteContract = useCallback((contract) => {
+    if (!contract) return;
+    setConfirmDialog({
+      open: true,
+      title: "Excluir contrato",
+      message: `Confirma a exclusão do contrato SEI ${contract.sei}? Esta ação removerá o vínculo de todos os ativos e fiscais associados e não poderá ser desfeita.`,
+      confirmLabel: "Excluir",
+      cancelLabel: "Cancelar",
+      type: "danger",
+      onConfirm: () => {
+        deleteContract(contract.id, contract.sei);
+        setConfirmDialog(null);
+      }
+    });
+  }, [deleteContract]);
 
   const requestDeleteNode = useCallback((nodeId) => {
     if (!canEdit) { flash("Entre no modo edição para excluir."); return; }
@@ -3981,139 +3997,17 @@ export default function App() {
 
       {/* ═─ ═─ ═─ CONTRACT DETAIL VIEW ═─ ═─ ═─ */}
       {showContractDetail && (
-        <div className="modal-overlay" style={{ zIndex: 1100 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setShowContractDetail(null); }}>
-          <div className="modal-content">
-            <button className="modal-close" onClick={() => setShowContractDetail(null)}><X size={12} /></button>
-            {(() => {
-              const c = contracts.find(x => x.id === showContractDetail);
-              if (!c) return <p>Contrato não encontrado.</p>;
-              const status = getContractStatus(c);
-              const node = nodes.find(n => n.id === c.nodeId);
-              return (
-                <>
-                  <div className="modal-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-                     <div>
-                       <h2 style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 18 }}>
-                         Contrato SEI: {c.sei}
-                         <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, fontWeight: "bold", background: status === "active" ? "#d1fae5" : status === "expiring" ? "#ffedd5" : "#fee2e2", color: status === "active" ? "#065f46" : status === "expiring" ? "#9a3412" : "#991b1b" }}>
-                           {status === "active" ? "Ativo" : status === "expiring" ? "A Vencer" : "Vencido"}
-                         </span>
-                       </h2>
-                       <p style={{ marginTop: 4 }}>Visualização das informações da contratação</p>
-                     </div>
-                     <div style={{ display: "flex", gap: 8 }}>
-                        <button className="btn btn-outline btn-xs" onClick={() => window.print()}><Printer size={12} /> Imprimir</button>
-                        <button className="btn btn-outline btn-xs" onClick={() => exportContractPdf(c)}><FileText size={12} /> Exportar PDF</button>
-                     </div>
-                   </div>
-                  <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                    <div style={{ background: "var(--n50)", padding: 12, borderRadius: 12, border: "1px solid var(--n200)" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                         <div>
-                           <p style={{ fontSize: 13, marginBottom: 4 }}><b>Objeto:</b> {c.objeto || "---"}</p>
-                           <p style={{ fontSize: 13, marginBottom: 4 }}><b>Itens:</b> {c.itens || "---"}</p>
-                           <p style={{ fontSize: 13, marginBottom: 4 }}><b>Unidade Vinculada:</b> {node ? `${node.name} — ${node.description || ""}` : "(Nenhuma)"}</p>
-                         </div>
-                         {assets.some(a => a.numeroContrato === c.sei && a.isEmergency) && (
-                           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: "50%", background: "rgba(0,0,0,0.05)", border: "2px solid #fbbf24" }} title="Este contrato possui ativos de CONTINGÊNCIA">
-                              <Siren size={20} color="#ef4444" strokeWidth={3} fill="#ef4444" fillOpacity={0.1} style={{ transform: "scale(1.8)" }} />
-                           </div>
-                         )}
-                      </div>
-
-                      <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--n200)" }}>
-                         <p style={{ fontSize: 11, fontWeight: 700, color: "var(--n500)", marginBottom: 4 }}>DADOS DA EMPRESA</p>
-                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                            <div>
-                               <p style={{ fontSize: 13, fontWeight: 700, color: "var(--p700)" }}>{c.empresa || "(Razão Social não informada)"}</p>
-                               <p style={{ fontSize: 11, color: "var(--n500)" }}>CNPJ: {c.cnpj || "---"}</p>
-                            </div>
-                            <div>
-                               <p style={{ fontSize: 12 }}><b>Contato:</b> {c.contato || "---"}</p>
-                            </div>
-                         </div>
-                      </div>
-
-                      <div style={{ display: "flex", gap: 16, marginTop: 12, fontSize: 13, borderTop: "1px solid var(--n200)", paddingTop: 12 }}>
-                        <div><b>Início:</b> {c.dataInício ? new Date(`${c.dataInício}T12:00:00`).toLocaleDateString("pt-BR") : "N/A"}</div>
-                        <div><b>Término:</b> {c.dataTermino ? new Date(`${c.dataTermino}T12:00:00`).toLocaleDateString("pt-BR") : "N/A"}</div>
-                      </div>
-                    </div>
-
-                    {(() => {
-                       const contractAssets = assets.filter(a => a.numeroContrato === c.sei);
-                       if (contractAssets.length === 0) return null;
-                       return (
-                         <div>
-                           <h3 className="asset-section-title" style={{ fontSize: 14, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}><Package size={14} /> Ativos Vinculados ({contractAssets.length})</h3>
-                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                             {contractAssets.map(a => (
-                               <div key={a.id} style={{ fontSize: 11, padding: "8px", background: "var(--n50)", borderRadius: 8, border: "1px solid var(--n200)" }}>
-                                 <div style={{ fontWeight: "bold" }}>{a.name}</div>
-                                 <div style={{ opacity: 0.7 }}>{a.category} | {a.plate || a.patrimonio || "S/N"}</div>
-                               </div>
-                             ))}
-                           </div>
-                         </div>
-                       );
-                     })()}
-
-                    {(c.aditivos && c.aditivos.length > 0) && (
-                      <div>
-                        <h3 className="asset-section-title" style={{ fontSize: 14, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}><Calendar size={14} /> Aditivos</h3>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                          {c.aditivos.map((ad, idx) => (
-                            <div key={idx} style={{ fontSize: 12, background: "var(--n50)", padding: "6px 10px", borderRadius: 8, border: "1px solid var(--n200)" }}>
-                              <b>Aditivo {idx + 1}:</b> {ad.aditivoInício ? new Date(`${ad.aditivoInício}T12:00:00`).toLocaleDateString("pt-BR") : "N/A"} a {ad.aditivoTermino ? new Date(`${ad.aditivoTermino}T12:00:00`).toLocaleDateString("pt-BR") : "N/A"}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                      <div>
-                        <h3 className="asset-section-title" style={{ fontSize: 14, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}><Briefcase size={14} /> Gestão do Contrato</h3>
-                        {c.gestor?.titularId ? (
-                          <div style={{ fontSize: 13, padding: "8px", background: "var(--n50)", borderRadius: 8, marginBottom: 4, display: "flex", justifyContent: "space-between" }}>
-                            <span><b>Titular:</b> {personMap.get(c.gestor.titularId)?.name || "Desconhecido"}</span>
-                            <span style={{ fontSize: 11, color: "var(--n500)" }}>Mat: {personMap.get(c.gestor.titularId)?.matricula || "—"}</span>
-                          </div>
-                        ) : <div style={{ fontSize: 12, color: "var(--n400)" }}>Sem Gestor Titular</div>}
-                        {c.gestor?.suplenteId ? (
-                          <div style={{ fontSize: 13, padding: "8px", background: "var(--n50)", borderRadius: 8, display: "flex", justifyContent: "space-between" }}>
-                            <span><b>Suplente:</b> {personMap.get(c.gestor.suplenteId)?.name || "Desconhecido"}</span>
-                            <span style={{ fontSize: 11, color: "var(--n500)" }}>Mat: {personMap.get(c.gestor.suplenteId)?.matricula || "—"}</span>
-                          </div>
-                        ) : null}
-                      </div>
-
-                      <div>
-                        <h3 className="asset-section-title" style={{ fontSize: 14, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}><ShieldCheck size={14} /> Equipes de Fiscalização</h3>
-                        {(() => {
-                          const allFiscais = [...(c.fiscaisContrato || []), ...(c.fiscaisServico || [])].filter(f => f.titularId || f.suplenteId);
-                          if (allFiscais.length === 0) return <div style={{ fontSize: 12, color: "var(--n400)" }}>Nenhum fiscal vinculado.</div>;
-                          return (
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                              {allFiscais.map((f, idx) => (
-                                <div key={idx} style={{ fontSize: 12, padding: "10px", background: "var(--n50)", borderRadius: 8, border: "1px solid var(--n200)" }}>
-                                  <div style={{ fontWeight: "bold", marginBottom: 6, color: "var(--n600)" }}>Fiscal Equipe {idx + 1}</div>
-                                  {f.titularId && <div style={{ marginBottom: 4 }}><b>Titular:</b> {personMap.get(f.titularId)?.name || "Desconhecido"} <span style={{ color: "var(--n500)", fontSize: 10 }}>(Mat: {personMap.get(f.titularId)?.matricula || "—"})</span></div>}
-                                  {f.suplenteId && <div><b>Suplente:</b> {personMap.get(f.suplenteId)?.name || "Desconhecido"} <span style={{ color: "var(--n500)", fontSize: 10 }}>(Mat: {personMap.get(f.suplenteId)?.matricula || "—"})</span></div>}
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              );
-            })()}
-            <div className="modal-footer"><button className="btn btn-primary btn-xs" onClick={() => setShowContractDetail(null)}>Fechar Visualização</button></div>
-          </div>
-        </div>
+        <ContractDetail
+          contract={contracts.find(x => x.id === showContractDetail)}
+          nodes={nodes}
+          assets={assets}
+          personMap={personMap}
+          canEdit={canEdit}
+          onClose={() => setShowContractDetail(null)}
+          onExportPdf={exportContractPdf}
+          onPrint={() => window.print()}
+          onDeleteRequest={requestDeleteContract}
+        />
       )}
 
       {/* ═─ ═─ ═─ CONTRACT REGISTRY / EDIT MODAL ═─ ═─ ═─ */}
@@ -4159,7 +4053,7 @@ export default function App() {
                             {canEdit && (
                               <>
                                 <button className="btn btn-outline btn-xs" title="Editar" onClick={() => { setEditContractId(c.id); setContractForm(c); setOpenContractDlg("edit"); }} style={{ marginRight: 4 }}><Pencil size={12} /></button>
-                                <button className="btn btn-outline btn-xs" title="Excluir" onClick={() => deleteContract(c.id, c.sei)}><Trash2 size={12} /></button>
+                                <button className="btn btn-outline btn-xs" title="Excluir" onClick={() => requestDeleteContract(c)}><Trash2 size={12} /></button>
                               </>
                             )}
                           </td>
