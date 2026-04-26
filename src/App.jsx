@@ -64,6 +64,11 @@ import {
   deleteUserByUsername
 } from "./services/supabaseWriteService";
 import { writeAuditLog } from "./services/auditService";
+import { 
+  exportAuditLogsCsv, 
+  exportAuditLogsPdf, 
+  generateDirectLogsPdf 
+} from "./services/exportService";
 
 const STORAGE_KEY = "dmae-orgchart-v16";
 const DEMO_USER = "admin";
@@ -307,113 +312,31 @@ function exportAssetsPdf(list, label, getPath, sort, nodesList) {
 }
 
 function exportLogsPdf(logsList) {
-  const w = window.open("", "_blank");
-  if (!w) { alert("Permita pop-ups para exportar."); return; }
-  
   const logoUrl = window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png";
-
   const normalizedLogs = (logsList || []).map(normalizeAuditLog);
-  const rows = normalizedLogs.map((lg) =>
-    `<tr>
-      <td style="white-space: nowrap;">${lg.timestamp}</td>
-      <td><b>${lg.user}</b></td>
-      <td><span style="padding:4px 8px;background:#e2e8f0;color:#334155;border-radius:4px;font-size:11px;font-weight:600;">${lg.action}</span></td>
-      <td>${lg.target || "—"}</td>
-    </tr>`
-  ).join("");
   
-  w.document.write(`<!DOCTYPE html>
-<html>
-<head>
-<title>Auditoria de Sistema</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-  body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; background: #fff; margin: 0; }
-  .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 24px; }
-  .header img { height: 55px; object-fit: contain; }
-  .header-titles h2 { margin: 0; font-size: 24px; color: #0f172a; letter-spacing: -0.5px; }
-  .header-titles p { margin: 6px 0 0; font-size: 14px; color: #64748b; }
-  .meta { display: flex; justify-content: space-between; font-size: 13px; color: #475569; margin-bottom: 20px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  th, td { border-bottom: 1px solid #e2e8f0; padding: 12px 10px; text-align: left; vertical-align: middle; }
-  th { background: #f1f5f9; font-weight: 700; color: #334155; text-transform: uppercase; font-size: 11px; border-top: 1px solid #e2e8f0; }
-  tr:nth-child(even) { background: #fafaf9; }
-</style>
-</head>
-<body>
-  <div class="header">
-    <img src="${logoUrl}" alt="DMAE Logo" />
-    <div class="header-titles" style="text-align: right;">
-      <h2>Registro de Auditoria de Sistema</h2>
-      <p>Log de eventos e operações</p>
-    </div>
-  </div>
-  <div class="meta">
-    <span>Emissão: <b>${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}</b></span>
-    <span>Total de Eventos: <b>${logsList.length}</b></span>
-  </div>
-  <table>
-    <thead>
-      <tr><th>Data/Hora</th><th>Operador</th><th>Ação do Sistema</th><th>Alvo/Detalhe</th></tr>
-    </thead>
-    <tbody>${rows}</tbody>
-  </table>
-  <script>setTimeout(() => window.print(), 800);</script>
-</body>
-</html>`);
-  w.document.close();
+  try {
+    exportAuditLogsPdf(normalizedLogs, {
+      logoUrl,
+      title: "Auditoria de Sistema",
+      subtitle: "Log de eventos e operações"
+    });
+  } catch (err) {
+    alert(err.message);
+  }
 }
 
+
 function generateDirectPdf(logsList) {
-  if (typeof window.html2pdf === "undefined") {
-    alert("Carregador PDF indisponível no momento. Usando módulo de impressão.");
-    exportLogsPdf(logsList);
-    return;
-  }
   const logoUrl = window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png";
-  
   const normalizedLogs = (logsList || []).map(normalizeAuditLog);
-  const rows = normalizedLogs.map((lg) =>
-    `<tr>
-      <td style="border-bottom:1px solid #e2e8f0;padding:12px 10px;white-space:nowrap;">${lg.timestamp}</td>
-      <td style="border-bottom:1px solid #e2e8f0;padding:12px 10px;"><b>${lg.user}</b></td>
-      <td style="border-bottom:1px solid #e2e8f0;padding:12px 10px;"><span style="padding:4px 8px;background:#e2e8f0;color:#334155;border-radius:4px;font-size:11px;font-weight:600;">${lg.action}</span></td>
-      <td style="border-bottom:1px solid #e2e8f0;padding:12px 10px;width:100%">${lg.target || "—"}</td>
-    </tr>`
-  ).join("");
-  const content = document.createElement("div");
-  content.innerHTML = `<div style="font-family:Inter,sans-serif;padding:30px;color:#1e293b;background:#fff;">
-    <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #e2e8f0;padding-bottom:20px;margin-bottom:24px;">
-      <img src="${logoUrl}" alt="DMAE Logo" style="height:55px;object-fit:contain;" />
-      <div style="text-align:right;">
-        <h2 style="margin:0;font-size:24px;color:#0f172a;letter-spacing:-0.5px;">Registro de Auditoria de Sistema</h2>
-        <p style="margin:6px 0 0;font-size:14px;color:#64748b;">Log de eventos e operações</p>
-      </div>
-    </div>
-    <div style="display:flex;justify-content:space-between;font-size:13px;color:#475569;margin-bottom:20px;background:#f8fafc;padding:12px 16px;border-radius:8px;border:1px solid #e2e8f0;">
-      <span>Emissão: <b>${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}</b></span>
-      <span>Total de Eventos: <b>${logsList.length}</b></span>
-    </div>
-    <table style="width:100%;border-collapse:collapse;font-size:12px;">
-      <thead>
-        <tr>
-          <th style="border-bottom:1px solid #e2e8f0;border-top:1px solid #e2e8f0;padding:12px 10px;background:#f1f5f9;text-align:left;font-weight:700;color:#334155;text-transform:uppercase;font-size:11px;">Data/Hora</th>
-          <th style="border-bottom:1px solid #e2e8f0;border-top:1px solid #e2e8f0;padding:12px 10px;background:#f1f5f9;text-align:left;font-weight:700;color:#334155;text-transform:uppercase;font-size:11px;">Operador</th>
-          <th style="border-bottom:1px solid #e2e8f0;border-top:1px solid #e2e8f0;padding:12px 10px;background:#f1f5f9;text-align:left;font-weight:700;color:#334155;text-transform:uppercase;font-size:11px;">Ação do Sistema</th>
-          <th style="border-bottom:1px solid #e2e8f0;border-top:1px solid #e2e8f0;padding:12px 10px;background:#f1f5f9;text-align:left;font-weight:700;color:#334155;text-transform:uppercase;font-size:11px;">Detalhe</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </div>`;
-  const opt = {
-    margin: 10,
-    filename: 'auditoria-logs.pdf',
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  };
-  window.html2pdf().set(opt).from(content).save();
+
+  generateDirectLogsPdf(normalizedLogs, {
+    logoUrl,
+    title: "Registro de Auditoria de Sistema",
+    subtitle: "Log de eventos e operações",
+    filename: 'auditoria-logs.pdf'
+  });
 }
 
 function getLogTarget(log) {
@@ -480,8 +403,9 @@ function normalizeAuditLog(log) {
 
 function exportLogsCsv(logsList) {
   const normalizedLogs = (logsList || []).map(normalizeAuditLog);
-  const rows = [["Data/Hora", "Operador", "Acao", "Detalhes"], ...normalizedLogs.map((lg) => [lg.timestamp, lg.user, lg.action, lg.target || "—"])];
-  downloadFile(`auditoria-logs.csv`, toCsv(rows), "text/csv;charset=utf-8;");
+  exportAuditLogsCsv(normalizedLogs, {
+    filename: `auditoria-logs.csv`
+  });
 }
 
 
