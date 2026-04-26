@@ -715,3 +715,189 @@ Fase 7 — serviços Supabase, somente após estabilização dos formulários.
 - Teste manual obrigatório antes do commit.
 - Atenção especial para validação, alertas e ConfirmDialog.
 - Não alterar Dashboard/PDF/CSV durante os formulários.
+
+---
+
+## Checkpoint pós-Fase 6D — Formulários principais
+
+### Estado atual
+- Branch atual: `refactor/app-split-phase-6d-contract-form`
+- Último commit: `60dca8a5` — refactor: extrai formulario de contrato e valida CNPJ
+- Linhas atuais do App.jsx: 4088
+- Working tree: Limpo (exceto documentação)
+
+### Fase 6A — PersonForm
+- Extraído componente:
+  - src/components/people/PersonForm.jsx
+- Responsável pela interface de cadastro, edição e listagem de pessoas.
+- Preservados no App.jsx:
+  - savePerson;
+  - Supabase;
+  - logs;
+  - validações principais;
+  - regras de vínculo pessoa-node.
+- Ajustes realizados:
+  - correção do fluxo Cadastro de Pessoas > Visualizar > Editar;
+  - retorno ao Cadastro de Pessoas após salvar/cancelar quando a origem for a listagem;
+  - máscara de telefone no formulário;
+  - separação entre fechar o cadastro e voltar da edição.
+
+### Fase 6B — NodeForm
+- Extraído componente:
+  - src/components/org/NodeForm.jsx
+- Responsável pela interface de criação/edição de estruturas, caixas e unidades.
+- Preservados no App.jsx:
+  - saveNode;
+  - Supabase;
+  - logs;
+  - validações principais;
+  - regra de pessoa única em node;
+  - integração com PersonSelector.
+
+### Fase 6C — AssetForm
+- Extraído componente:
+  - src/components/assets/AssetForm.jsx
+- Responsável pela interface de criação/edição de ativos.
+- Preservados no App.jsx:
+  - saveAsset;
+  - Supabase;
+  - logs;
+  - validações principais;
+  - Dashboard/BI;
+  - exportações PDF/CSV.
+- Ajustes realizados:
+  - separação entre dados do contrato e dados de contingência;
+  - contatos de contrato não preenchem automaticamente contatos de emergência;
+  - contato de contingência permanece operacional e específico por ativo;
+  - adicionados/mapeados campos:
+    - contato_empresa;
+    - responsavel_direto.
+- Regra de negócio consolidada:
+  - uma empresa contratada pode possuir vários ativos;
+  - cada ativo pode ter contato operacional próprio para deslocamento ou acionamento em contingência;
+  - contato da empresa/contrato não é o mesmo que contato de emergência.
+
+### Fase 6D — ContractForm
+- Extraído componente:
+  - src/components/contracts/ContractForm.jsx
+- Criado utilitário:
+  - src/utils/cnpj.js
+- Responsável pela interface de cadastro/edição/listagem de contratos.
+- Preservados no App.jsx:
+  - saveContract;
+  - Supabase;
+  - logs;
+  - validações principais;
+  - exportações PDF/CSV;
+  - ContractDetail.
+- Ajustes realizados:
+  - máscara automática de CNPJ;
+  - validação matemática de CNPJ;
+  - bloqueio de salvamento com CNPJ inválido;
+  - retorno à listagem de contratos após salvar/cancelar quando a origem for a listagem.
+
+### Regra permanente — retorno ao modal de origem
+Quando uma ação for iniciada a partir de um modal/listagem, o sistema deve retornar para esse mesmo modal/listagem após salvar, cancelar, fechar, voltar, visualizar detalhe ou editar a partir do detalhe.
+
+Não retornar automaticamente para a árvore/organograma, exceto quando a ação tiver sido iniciada diretamente pelo organograma.
+
+Padrões:
+- Fechar no modo registry/listagem: fecha o cadastro e volta para a árvore.
+- Voltar/Cancelar no modo edição iniciado pela listagem: retorna para a listagem.
+- Salvar no modo edição/criação iniciado pela listagem: retorna para a listagem.
+- Visualizar item a partir da listagem: detalhe abre sobre a listagem.
+- Fechar detalhe vindo da listagem: retorna para a listagem.
+- Editar a partir do detalhe vindo da listagem: após salvar/cancelar, retorna para a listagem.
+- Abrir detalhe diretamente pelo organograma: ao fechar, não deve abrir a listagem.
+
+### Componentes extraídos até a Fase 6
+Common:
+- SystemAlertModal
+- ConfirmDialog
+- WhatsAppButton
+- WhatsAppQrButton
+
+Admin:
+- LogsModal
+- StatsModal
+
+Selectors:
+- NodeSelector
+- PersonSelector
+
+Org:
+- ListNode
+- NodeForm
+
+People:
+- PersonDetail
+- PersonForm
+
+Contracts:
+- ContractDetail
+- ContractForm
+
+Assets:
+- AssetTypesModal
+- AssetContactActions
+- AssetBadges
+- AssetDetail
+- AssetForm
+
+Utils:
+- phone.js
+- cnpj.js
+- assetUtils.js
+- contractUtils.js
+
+### Testes realizados
+- Cadastro de pessoas;
+- edição de pessoas;
+- visualização de pessoas;
+- retorno ao Cadastro de Pessoas após salvar/cancelar;
+- máscara de telefone;
+- cadastro de estrutura/node;
+- edição de estrutura/node;
+- responsável por estrutura;
+- bloqueio de pessoa já alocada em outro node;
+- cadastro de ativo;
+- edição de ativo;
+- ativo próprio;
+- ativo contratado;
+- ativo de contingência;
+- ativo em manutenção;
+- contatos de contrato separados dos contatos de contingência;
+- cadastro de contrato;
+- edição de contrato;
+- máscara de CNPJ;
+- validação de CNPJ;
+- retorno à listagem de contratos após salvar/cancelar;
+- detalhes de pessoa, contrato e ativo preservados;
+- console sem erros nos fluxos testados.
+
+### Áreas ainda preservadas para fases futuras
+- loadCloudData;
+- serviços Supabase;
+- funções savePerson/saveNode/saveAsset/saveContract;
+- Dashboard/BI;
+- exportações principais PDF/CSV;
+- autenticação/login;
+- permissões;
+- imports e limpeza final;
+- merge/push/deploy.
+
+### Próximas fases sugeridas
+Fase 7A — organizar serviços Supabase de leitura/carregamento.
+Fase 7B — organizar serviços Supabase de persistência.
+Fase 7C — organizar serviços de auditoria/logAction.
+Fase 7D — revisar exportações PDF/CSV.
+Fase 7E — checkpoint documental.
+Fase 8 — limpeza final, revisão de imports, merge e preparação para deploy.
+
+### Regras para Fase 7
+- Não misturar serviço Supabase com alteração visual.
+- Uma família de serviço por fase.
+- Não alterar schema sem SQL documentado.
+- Não alterar Dashboard junto com Supabase.
+- Testar login, CRUD e auditoria após cada fase.
+- Commit sempre manual pelo usuário via PowerShell.
