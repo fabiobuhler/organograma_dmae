@@ -1070,8 +1070,42 @@ li.apoio-card-box:last-child:before {
   position: relative;
   animation: mdIn .25s ease
 }
-.modal-content.wide {
-  max-width: 680px
+.modal-content.wide { max-width: 800px; }
+
+.modal-header-fixed {
+  padding: 24px 24px 16px 24px;
+  position: relative;
+  background: #fff;
+  border-bottom: 1px solid var(--n100);
+  z-index: 10;
+}
+
+.modal-scroll-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.asset-scroll-list {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
+  margin-top: 12px;
+}
+
+/* Custom scrollbar for cleaner look */
+.asset-scroll-list::-webkit-scrollbar,
+.modal-scroll-body::-webkit-scrollbar {
+  width: 6px;
+}
+.asset-scroll-list::-webkit-scrollbar-thumb,
+.modal-scroll-body::-webkit-scrollbar-thumb {
+  background: var(--n200);
+  border-radius: 10px;
+}
+.asset-scroll-list::-webkit-scrollbar-track,
+.modal-scroll-body::-webkit-scrollbar-track {
+  background: transparent;
 }
 .modal-content.narrow {
   max-width: 380px
@@ -1426,10 +1460,25 @@ li.apoio-card-box:last-child:before {
 
 /* BI DASHBOARD STYLES */
 .bi-dash { background: #fff !important; }
+@media print {
+  .bi-header { display: none !important; }
+  .bi-footer-actions { display: none !important; }
+  .modal-scroll-body { overflow: visible !important; }
+  .bi-body { padding: 0 !important; }
+}
 .bi-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--n100); padding-bottom: 15px !important; margin-bottom: 15px; }
 .bi-grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 10px; }
-.bi-card { display: flex; align-items: center; gap: 15px; padding: 15px; background: var(--n50); border: 1px solid var(--n200); border-radius: 16px; transition: all 0.2s; cursor: pointer; }
+.bi-card { display: flex; align-items: center; gap: 15px; padding: 15px; background: var(--n50); border: 1px solid var(--n200); border-radius: 16px; transition: all 0.2s; cursor: pointer; position: relative; overflow: hidden; }
 .bi-card:hover { transform: translateY(-3px); box-shadow: var(--sh-md); border-color: var(--n400); background: #fff; }
+.bi-card:after { content: "Ver Detalhes \2192"; position: absolute; bottom: 8px; right: 12px; font-size: 8px; font-weight: 800; text-transform: uppercase; opacity: 0; transition: all 0.2s; color: var(--n500); }
+.bi-card:hover:after { opacity: 1; bottom: 12px; }
+
+.bi-card.people { border-left: 4px solid #2563eb; }
+.bi-card.assets { border-left: 4px solid #d97706; }
+.bi-card.emergency { border-left: 4px solid #ef4444; }
+.bi-card.maintenance { border-left: 4px solid #f59e0b; }
+.bi-card.units { border-left: 4px solid #16a34a; }
+
 .bi-card-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .bi-card-label { font-size: 11px; font-weight: 700; color: var(--n500); text-transform: uppercase; letter-spacing: 0.5px; }
 .bi-card-main { font-size: 16px; font-weight: 800; color: var(--n900); margin: 2px 0; }
@@ -1543,3 +1592,38 @@ li.apoio-card-box:last-child:before {
 
 .whatsapp-btn { margin-top: 4px; color: #166534 !important; border-color: #bbf7d0 !important; background: #f0fdf4 !important; }
 .whatsapp-btn:hover { color: #14532d !important; border-color: #86efac !important; background: #dcfce7 !important; }
+
+.whatsapp-qr-btn {
+  margin-top: 4px;
+  color: #075985;
+  border-color: #bae6fd;
+  background: #f0f9ff;
+}
+
+.whatsapp-qr-btn:hover {
+  color: #0c4a6e;
+  border-color: #7dd3fc;
+  background: #e0f2fe;
+}
+
+.whatsapp-qr-modal {
+  max-width: 420px;
+}
+
+.whatsapp-qr-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid var(--n200);
+  background: var(--n50);
+}
+
+.whatsapp-qr-info {
+  text-align: center;
+  font-size: 13px;
+  color: var(--n700);
+  line-height: 1.5;
+}

@@ -13,8 +13,11 @@ import { seedNodes, seedAssets, seedPersons, seedContracts, seedAssetTypes } fro
 import {
   makeId, initials, sortNodes, downloadFile, toCsv,
   getDescendantIds, getParentChain, fileToBase64,
-  normalizeHex, DEFAULT_ROOT_COLOR, computeNodeColor, maskPhone
+  normalizeHex, DEFAULT_ROOT_COLOR, computeNodeColor
 } from "./utils/helpers";
+import { maskPhone } from "./utils/phone";
+import WhatsAppButton from "./components/common/WhatsAppButton";
+import WhatsAppQrButton from "./components/common/WhatsAppQrButton";
 import { supabase } from "./lib/supabase";
 
 const STORAGE_KEY = "dmae-orgchart-v16";
@@ -2420,7 +2423,7 @@ export default function App() {
         <div className="header-row-1">
           <div className="header-brand">
             <div className="header-icon" style={{ padding: 0, overflow: "hidden", background: "transparent", width: 44, height: 44 }}>
-              <img src={dmaeNode?.foto || "/logo-dmae.png"} alt="DMAE" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+              <img src={dmaeNode?.foto || (window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png")} alt="DMAE" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
             </div>
             <div>
               <div className="header-title">Organograma DMAE</div>
@@ -2723,19 +2726,20 @@ export default function App() {
         )}
       </div>
 
-      {/* \u2500\u2500\u2500 FLOATING EDIT BUTTON \u2500\u2500\u2500 */}
+      {/* ─── FLOATING EDIT BUTTON ─── */}
       <button className={`fab-edit ${canEdit ? "active" : ""}`}
         onClick={() => canEdit ? setCanEdit(false) : setOpenLoginDlg(true)}
         title={canEdit ? "Sair da edição e salvar" : "Entrar na edição"}>
         {canEdit ? <Save size={22} /> : <KeyRound size={22} />}
       </button>
 
-      {/* \u2500\u2500\u2500 DETAIL MODAL (shows when clicking a card) \u2500\u2500\u2500 */}
+      {/* ─── DETAIL MODAL (shows when clicking a card) ─── */}
       {showDetail && selected && (
         <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowDetail(false); }}>
-          <div className="modal-content wide" style={{ position: "relative" }}>
-            <button className="detail-close" onClick={() => setShowDetail(false)}><X size={14} /></button>
-            <div className="detail-head">
+          <div className="modal-content wide" style={{ display: "flex", flexDirection: "column", maxHeight: "90vh", overflow: "hidden" }}>
+            <div className="modal-header-fixed">
+              <button className="detail-close" onClick={() => setShowDetail(false)} style={{ top: 20, right: 20 }}><X size={14} /></button>
+              <div className="detail-head">
               {(() => {
                 const pObj = selected.personId ? personMap.get(selected.personId) : null;
                 const dPhoto = pObj?.foto || selected.foto;
@@ -2781,7 +2785,7 @@ export default function App() {
                         <Pencil size={12} /> Editar
                       </button>
                     )}
-                    <button className="btn btn-outline btn-xs" onClick={() => { setDashboardNodeId(selected.id); setShowDetail(false); }} title="Painel de Contratos">
+                    <button className="btn btn-outline btn-xs" onClick={() => { setDashboardNodeId(selected.id); setDashboardView("summary"); setShowDetail(false); }} title="Painel de Contratos">
                       <PieChart size={12} /> Dashboard
                     </button>
                     {canEdit && selected.parentId && (
@@ -2801,8 +2805,10 @@ export default function App() {
                 )}
               </div>
             </div>
+          </div>
 
-            {(isProtected || canEdit) && (
+          <div className="modal-scroll-body">
+              {(isProtected || canEdit) && (
               <div className="detail-grid">
                 <div className="dg-item"><div className="dg-label">Subordinado a</div><div className="dg-val">{selected.parentId ? nodeMap.get(selected.parentId)?.name : "---"}</div></div>
                 <div className="dg-item"><div className="dg-label">Responsável</div><div className="dg-val">{selected.responsavel || "---"}</div></div>
@@ -2816,7 +2822,7 @@ export default function App() {
                       const full = `${addr.lotacao}${addr.complemento ? `, ${addr.complemento}` : ""}`;
                       return (
                         <>
-                          <span style={{ fontSize: 11 }}>${full}</span>
+                          <span style={{ fontSize: 11 }}>{full}</span>
                           <a 
                             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr.lotacao)}`} 
                             target="_blank" 
@@ -2849,9 +2855,15 @@ export default function App() {
                         <div className="dg-val" style={{ display: "flex", alignItems: "center", gap: 4 }}>
                           {showPhone}
                           {showPhone !== "" && (
-                            <a href={`https://wa.me/55${showPhone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="btn-icon-xs" title="WhatsApp">
-                              <MessageCircle size={12} color="#25D366" />
-                            </a>
+                            <>
+                              <WhatsAppButton phone={showPhone} label="" />
+                              <WhatsAppQrButton 
+                                phone={showPhone} 
+                                responsible={selected.responsavel || respObj?.name} 
+                                label="" 
+                                title="QR Code WhatsApp" 
+                              />
+                            </>
                           )}
                         </div>
                       </div>
@@ -2874,66 +2886,102 @@ export default function App() {
                     </button>
                   )}
                 </div>
-                {directAssets.map((a) => (
-                  <div key={a.id} className="asset-mini">
-                    <div className="asset-mini-name">{assetIcon(a.category)} {a.name}</div>
-                    <div className="asset-mini-meta">{[a.manufacturer, a.model, a.year].filter(Boolean).join(" \u2022 ")}</div>
-                    <div className="asset-mini-badges">
+                <div className="asset-scroll-list">
+                  {directAssets.map((a) => (
+                    <div key={a.id} className="asset-mini">
+                      <div className="asset-mini-name">{assetIcon(a.category)} {a.name}</div>
+                      {a.tipoVinculo === "Contratado" && a.empresaContratada && (
+                        <div style={{ fontSize: 10, fontWeight: 700, color: "#0369a1", marginBottom: 4 }}>🏢 {a.empresaContratada}</div>
+                      )}
+                      <div className="asset-mini-meta">{[a.manufacturer, a.model, a.year].filter(Boolean).join(" \u2022 ")}</div>
+                    <div className="asset-mini-badges" style={{ alignItems: "center" }}>
                       {a.plate && <span className="badge badge-out">Placa {a.plate}</span>}
                       {a.patrimonio && <span className="badge badge-out">Pat. {a.patrimonio}</span>}
                       <span className={`badge ${a.tipoVinculo === "Contratado" ? "badge-sec" : "badge-out"}`}>{a.tipoVinculo || "Próprio"}</span>
                       {a.isEmergency && (
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", border: "2px solid #eab308", background: "#fff", boxShadow: "0 0 6px rgba(234, 179, 8, 0.4)", flexShrink: 0 }} title="Ativo de Contingência">
-                          <Siren size={12} color="#ef4444" strokeWidth={3} fill="#ef4444" fillOpacity={0.1} />
+                          <Siren size={14} color="#ef4444" strokeWidth={3} fill="#ef4444" fillOpacity={0.1} />
                         </div>
                       )}
                       {a.isMaintenance && (
                         <div className="badge-maintenance" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", border: "2px solid #d97706", background: "#fff", boxShadow: "0 0 6px rgba(217, 119, 6, 0.4)", flexShrink: 0, color: "#d97706" }} title="Ativo em Manutenção/Inoperante">
-                          <AlertTriangle size={12} strokeWidth={3} />
+                          <AlertTriangle size={14} strokeWidth={3} />
+                        </div>
+                      )}
+                      {a.isEmergency && a.contatoAcionamento && (
+                        <div style={{ display: "flex", gap: 4, marginLeft: 4 }}>
+                          <WhatsAppButton phone={a.contatoAcionamento} label="" />
+                          <WhatsAppQrButton 
+                            phone={a.contatoAcionamento} 
+                            responsible={a.contatoResponsavel} 
+                            label="" 
+                            title="QR Code para Acionamento de Contingência" 
+                          />
                         </div>
                       )}
                     </div>
-                    {a.tipoVinculo === "Contratado" && (
-                      <button className="btn btn-outline btn-xs" style={{ marginTop: 6, width: "100%", justifyContent: "center" }} onClick={() => setShowAssetContractModal(a.id)}>
-                        <FileText size={10} /> Ver Contrato
+
+                    <div style={{ marginTop: 8, display: "flex", gap: 4 }}>
+                      <button className="btn btn-outline btn-xs" style={{ flex: 1, justifyContent: "center" }} onClick={() => setViewAssetId(a.id)}>
+                        <Eye size={10} /> Detalhes
                       </button>
-                    )}
-                    {canEdit && (
-                      <div className="asset-mini-actions">
-                        <button className="btn btn-outline btn-xs" onClick={() => { setShowDetail(false); openEditAsset(a); }}><Pencil size={10} /></button>
-                        <button className="btn btn-outline btn-xs" onClick={() => deleteAsset(a.id, a.name)}><Trash2 size={10} /></button>
-                      </div>
-                    )}
+                      {a.tipoVinculo === "Contratado" && (
+                        <button className="btn btn-outline btn-xs" style={{ flex: 1, justifyContent: "center" }} onClick={() => setShowAssetContractModal(a.id)}>
+                          <FileText size={10} /> Contrato
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
+                </div>
               </div>
             )}
 
-            {/* Contracts where the responsible person is involved - HIDDEN IF NOT LOGGED IN */}
-            {(isProtected || canEdit) && selected.personId && (
+            {/* Contracts Section - HIDDEN IF NOT LOGGED IN */}
+            {(isProtected || canEdit) && (
               <div className="asset-section">
-                <div className="asset-section-title"><ShieldCheck size={13} /> Contratos vinculados ao Responsável</div>
-                {(() => {
-                  const pContracts = contracts.filter(c =>
-                    c.gestor.titularId === selected.personId || c.gestor.suplenteId === selected.personId ||
-                    c.fiscaisContrato.some(f => f.titularId === selected.personId || f.suplenteId === selected.personId) ||
-                    c.fiscaisServico.some(f => f.titularId === selected.personId || f.suplenteId === selected.personId)
-                  );
-                  return pContracts.length > 0 ? pContracts.map((c) => (
-                    <div key={c.id} className="asset-mini" style={{ background: "var(--n50)" }}>
-                      <div className="asset-mini-name">{c.sei}</div>
-                      <div className="asset-mini-meta" style={{ fontSize: 10 }}><b>Objeto:</b> {c.objeto}</div>
-                      <div className="asset-mini-badges">
-                        <span className="badge badge-sec" style={{ fontSize: 8 }}>
-                          {c.gestor.titularId === selected.personId || c.gestor.suplenteId === selected.personId ? "Gestor" :
-                            c.fiscaisContrato.some(f => f.titularId === selected.personId || f.suplenteId === selected.personId) ? "Fiscal Contrato" : "Fiscal Serviço"}
-                        </span>
-                      </div>
-                    </div>
-                  )) : <p style={{ fontSize: 11, color: "var(--n400)" }}>Nenhum contrato direto encontrado para o responsável.</p>;
-                })()}
+                {selected.tipo === "estrutura" ? (
+                  <>
+                    <div className="asset-section-title"><ShieldCheck size={13} /> Contratos vinculados à Estrutura</div>
+                    {(() => {
+                      const sContracts = contracts.filter(c => c.nodeId === selected.id);
+                      return sContracts.length > 0 ? sContracts.map((c) => (
+                        <div key={c.id} className="asset-mini" style={{ background: "var(--n50)" }}>
+                          <div className="asset-mini-name">{c.sei}</div>
+                          <div className="asset-mini-meta" style={{ fontSize: 10 }}><b>Objeto:</b> {c.objeto}</div>
+                        </div>
+                      )) : <p style={{ fontSize: 11, color: "var(--n400)" }}>Nenhum contrato vinculado diretamente a esta estrutura.</p>;
+                    })()}
+                  </>
+                ) : (
+                  selected.personId && (
+                    <>
+                      <div className="asset-section-title"><ShieldCheck size={13} /> Contratos vinculados ao Responsável</div>
+                      {(() => {
+                        const pContracts = contracts.filter(c =>
+                          c.gestor.titularId === selected.personId || c.gestor.suplenteId === selected.personId ||
+                          c.fiscaisContrato.some(f => f.titularId === selected.personId || f.suplenteId === selected.personId) ||
+                          c.fiscaisServico.some(f => f.titularId === selected.personId || f.suplenteId === selected.personId)
+                        );
+                        return pContracts.length > 0 ? pContracts.map((c) => (
+                          <div key={c.id} className="asset-mini" style={{ background: "var(--n50)" }}>
+                            <div className="asset-mini-name">{c.sei}</div>
+                            <div className="asset-mini-meta" style={{ fontSize: 10 }}><b>Objeto:</b> {c.objeto}</div>
+                            <div className="asset-mini-badges">
+                              <span className="badge badge-sec" style={{ fontSize: 8 }}>
+                                {c.gestor.titularId === selected.personId || c.gestor.suplenteId === selected.personId ? "Gestor" :
+                                  c.fiscaisContrato.some(f => f.titularId === selected.personId || f.suplenteId === selected.personId) ? "Fiscal Contrato" : "Fiscal Serviço"}
+                              </span>
+                            </div>
+                          </div>
+                        )) : <p style={{ fontSize: 11, color: "var(--n400)" }}>Nenhum contrato vinculado ao responsável.</p>;
+                      })()}
+                    </>
+                  )
+                )}
               </div>
             )}
+            </div>
           </div>
         </div>
       )}
@@ -2968,17 +3016,186 @@ export default function App() {
         const sEmergencyMaintenance = sAssets.filter(a => a.isEmergency && a.isMaintenance).length;
 
         const exportPDF = async () => {
+          // If in a list view, use the professional tabular report format
+          if (dashboardView !== "summary") {
+            const listToExport = dashboardView === "allAssets" ? [...dAssets, ...sAssets] : 
+                                 dashboardView === "emergencyAssets" ? [...dAssets.filter(a => a.isEmergency), ...sAssets.filter(a => a.isEmergency)] :
+                                 [...dAssets, ...sAssets].filter(a => a.isEmergency && a.isMaintenance);
+            
+            const listTitle = dashboardView === "allAssets" ? "Inventário Geral de Ativos" : 
+                              dashboardView === "emergencyAssets" ? "Inventário de Contingência" : 
+                              "Ativos em Manutenção";
+            
+            exportAssetsPdf(listToExport, `${listTitle} - ${dNode.name}`, nodePath, null, nodes);
+            return;
+          }
+
+          // For summary view, use the "Model" with logo but capturing the dashboard visuals
           const el = document.getElementById("bi-dashboard-content");
           if(!el) return;
+          
+          flash("Gerando Relatório Executivo...");
           const canvas = await html2canvas(el, { scale: 2 });
           const imgData = canvas.toDataURL("image/png");
-          const pdf = new jsPDF("p", "mm", "a4");
-          const imgProps = pdf.getImageProperties(imgData);
-          const pdfWidth = pdf.internal.pageSize.getWidth();
-          const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-          pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-          pdf.save(`Relatorio_BI_${dNode.name.replace(/\s/g,'_')}.pdf`);
+          
+          const w = window.open("", "_blank");
+          if (!w) return;
+
+          const logoUrl = window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png";
+          
+          w.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <title>Relatório BI - ${dNode.name}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+    body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; background: #fff; margin: 0; }
+    .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 24px; }
+    .header img { height: 60px; object-fit: contain; }
+    .header-titles { text-align: right; }
+    .header-titles h2 { margin: 0; font-size: 22px; color: #0f172a; }
+    .header-titles p { margin: 4px 0 0; font-size: 14px; color: #64748b; }
+    .content-img { width: 100%; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; }
+    @media print { .no-print { display: none; } body { padding: 20px; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="${logoUrl}" alt="DMAE" />
+    <div class="header-titles">
+      <h2>Relatório Executivo de Governança e BI</h2>
+      <p>Unidade: <b>${dNode.name}</b></p>
+      <p style="font-size: 11px;">Consolidado: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+    </div>
+  </div>
+  
+  <img src="${imgData}" class="content-img" />
+
+  <div class="footer">
+    <div>Sistema de Gestão de Organograma e Ativos - DMAE</div>
+    <div>Página 1 de 1</div>
+  </div>
+
+  <script>
+    window.onload = () => {
+      setTimeout(() => { window.print(); }, 500);
+    };
+  </script>
+</body>
+</html>`);
+          w.document.close();
         };
+
+        const exportExcel = () => {
+          let rows = [];
+          let filename = `Dashboard_${dNode.name.replace(/\s/g,'_')}.csv`;
+
+          if (dashboardView === "summary") {
+            rows = [
+              ["Métrica", "Total", "Direto", "Indireto"],
+              ["Força de Trabalho", dPersons.length + sPersons.length, dPersons.length, sPersons.length],
+              ["Patrimônio / Ativos", dAssets.length + sAssets.length, dAssets.length, sAssets.length],
+              ["Ativos de Contingência", dEmergency + sEmergency, dEmergency, sEmergency],
+              ["Contingência em Manutenção", (dEmergencyMaintenance + sEmergencyMaintenance), dEmergencyMaintenance, sEmergencyMaintenance],
+              ["Subunidades", dStructures.length + sStructures.length, dStructures.length, sStructures.length]
+            ];
+          } else {
+            // Asset List export
+            const list = dashboardView === "allAssets" ? [...dAssets, ...sAssets] : 
+                         dashboardView === "emergencyAssets" ? [...dAssets.filter(a => a.isEmergency), ...sAssets.filter(a => a.isEmergency)] :
+                         [...dAssets, ...sAssets].filter(a => a.isEmergency && a.isMaintenance);
+            
+            rows = [
+              ["Ativo", "Categoria", "Unidade", "Patrimônio/Placa", "Contingência", "Status", "Manutenção Desde"]
+            ];
+            list.forEach(a => {
+              rows.push([
+                a.name,
+                a.category || "",
+                nodeMap.get(a.nodeId)?.name || "",
+                `${a.patrimonio || ""} ${a.plate || ""}`.trim(),
+                a.isEmergency ? "Sim" : "Não",
+                a.isMaintenance ? "Em Manutenção" : "Operacional",
+                a.maintenanceSince ? new Date(a.maintenanceSince).toLocaleDateString('pt-BR') : ""
+              ]);
+            });
+            filename = `Listagem_${dashboardView}_${dNode.name.replace(/\s/g,'_')}.csv`;
+          }
+
+          const csvContent = "\uFEFF" + rows.map(e => e.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(";")).join("\n");
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.setAttribute("href", url);
+          link.setAttribute("download", filename);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        };
+
+        const AssetTable = ({ list, title }) => (
+          <div style={{ marginBottom: 30 }}>
+            <h3 style={{ fontSize: 14, marginBottom: 12, display: "flex", alignItems: "center", gap: 8, color: "var(--n700)" }}>
+              <Package size={16} /> {title} ({list.length})
+            </h3>
+            <div style={{ border: "1px solid var(--n200)", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                <thead style={{ background: "var(--n50)" }}>
+                  <tr>
+                    <th style={{ padding: 10, textAlign: "left" }}>Ativo</th>
+                    <th style={{ padding: 10, textAlign: "left" }}>Categoria / Modelo</th>
+                    <th style={{ padding: 10, textAlign: "left" }}>Unidade</th>
+                    <th style={{ padding: 10, textAlign: "left" }}>Patrimônio / Placa</th>
+                    <th style={{ padding: 10, textAlign: "left" }}>Contingência</th>
+                    <th style={{ padding: 10, textAlign: "center" }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.length > 0 ? list.map(a => (
+                    <tr key={a.id} style={{ borderTop: "1px solid var(--n100)" }}>
+                      <td style={{ padding: 10 }}>
+                        <div style={{ fontWeight: 700 }}>{a.name}</div>
+                        {a.tipoVinculo === "Contratado" && <div style={{ fontSize: 9, color: "#0369a1", fontWeight: 600 }}>{a.empresaContratada || "Contratado"}</div>}
+                      </td>
+                      <td style={{ padding: 10 }}>
+                        {a.category || "—"} / {a.model || "—"}
+                      </td>
+                      <td style={{ padding: 10 }}>{nodeMap.get(a.nodeId)?.name || "—"}</td>
+                      <td style={{ padding: 10 }}>
+                        {a.patrimonio || "—"} / {a.plate || "—"}
+                      </td>
+                      <td style={{ padding: 10 }}>
+                        {a.isEmergency ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <Siren size={16} color="#ef4444" strokeWidth={3} fill="#ef4444" fillOpacity={0.1} />
+                            {a.isMaintenance && <AlertTriangle size={16} color="#d97706" strokeWidth={3} title="Ativo em Manutenção" />}
+                            <WhatsAppButton phone={a.contatoAcionamento} label="" />
+                            <WhatsAppQrButton 
+                              phone={a.contatoAcionamento} 
+                              responsible={a.contatoResponsavel} 
+                              label="" 
+                              title="QR Code para Acionamento de Contingência" 
+                            />
+                          </div>
+                        ) : <span style={{ color: "var(--n400)" }}>Não</span>}
+                      </td>
+                      <td style={{ padding: 10, textAlign: "center" }}>
+                        {a.isMaintenance ? (
+                          <span className="badge badge-danger" style={{ fontSize: 9, padding: "2px 6px" }}>Em Manutenção</span>
+                        ) : (
+                          <span className="badge badge-success" style={{ fontSize: 9, padding: "2px 6px" }}>Operacional</span>
+                        )}
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr><td colSpan={6} style={{ padding: 20, textAlign: "center", color: "var(--n400)" }}>Nenhum ativo encontrado.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
 
         const DonutChart = ({ stats, title }) => (
           <div className="bi-chart-box">
@@ -2998,9 +3215,9 @@ export default function App() {
         );
 
         return (
-          <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setDashboardNodeId(null); }}>
+          <div className="modal-overlay">
             <div className="modal-content wide bi-dash" id="bi-dashboard-content" style={{ maxWidth: 1000 }}>
-              <button className="modal-close no-print" onClick={() => setDashboardNodeId(null)}><X size={12} /></button>
+              <button className="modal-close no-print" onClick={() => { setDashboardNodeId(null); setShowDetail(true); }}><X size={12} /></button>
               
               <div className="modal-header bi-header">
                 <div style={{display:"flex", alignItems:"center", gap: 12}}>
@@ -3013,12 +3230,16 @@ export default function App() {
                    )}
                    <div>
                       <h2 style={{margin:0, fontSize: 22}}>
-                        {dashboardView === "emergencyMaintenanceAssets" ? "Ativos de Contingência Inoperantes" : "Dashboard de Governança e BI"}
+                        {dashboardView === "emergencyMaintenanceAssets" ? "Ativos de Contingência Inoperantes" : 
+                         dashboardView === "allAssets" ? "Inventário Geral de Ativos" :
+                         dashboardView === "emergencyAssets" ? "Inventário de Contingência" :
+                         "Dashboard de Governança e BI"}
                       </h2>
                       <p style={{margin:0, opacity:0.8, fontSize: 13}}>Unidade: <b>{dNode.name}</b> {descIds.length > 0 && `(+ ${descIds.length} subunidades)`}</p>
                    </div>
                 </div>
-                <div className="bi-header-actions no-print">
+                <div className="bi-header-actions no-print" style={{ display: "flex", gap: 6 }}>
+                   <button className="btn btn-outline btn-xs" onClick={exportExcel}><FileText size={14} /> Exportar Excel</button>
                    <button className="btn btn-primary btn-xs" onClick={exportPDF}><Download size={14} /> Exportar PDF</button>
                 </div>
               </div>
@@ -3028,7 +3249,7 @@ export default function App() {
                   <>
                     {/* TOP METRIC CARDS */}
                      <div className="bi-grid-cards" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
-                        <div className="bi-card">
+                        <div className="bi-card people">
                            <div className="bi-card-icon" style={{background:"#dbeafe", color:"#2563eb"}}><Users size={18} /></div>
                            <div className="bi-card-data">
                               <div className="bi-card-label">Força de Trabalho</div>
@@ -3036,7 +3257,7 @@ export default function App() {
                               <div className="bi-card-sub">Direto: {dPersons.length} | Indireto: {sPersons.length}</div>
                            </div>
                         </div>
-                        <div className="bi-card">
+                        <div className="bi-card assets" style={{ cursor: "pointer" }} onClick={() => setDashboardView("allAssets")}>
                            <div className="bi-card-icon" style={{background:"#fef3c7", color:"#d97706"}}><Package size={18} /></div>
                            <div className="bi-card-data">
                               <div className="bi-card-label">Patrimônio / Ativos</div>
@@ -3044,7 +3265,10 @@ export default function App() {
                               <div className="bi-card-sub">Direto: {dAssets.length} | Indireto: {sAssets.length}</div>
                            </div>
                         </div>
-                        <div className="bi-card" style={{ border: dEmergency + sEmergency > 0 ? "1px solid #fee2e2" : "1px solid var(--n200)" }}>
+                        <div className="bi-card emergency" 
+                             style={{ borderColor: dEmergency + sEmergency > 0 ? "#ef4444" : "var(--n200)", cursor: "pointer" }}
+                             onClick={() => setDashboardView("emergencyAssets")}
+                        >
                            <div className="bi-card-icon" style={{background:"#fee2e2", color:"#ef4444"}}><Siren size={18} /></div>
                            <div className="bi-card-data">
                               <div className="bi-card-label">Ativos de Contingência</div>
@@ -3052,8 +3276,8 @@ export default function App() {
                               <div className="bi-card-sub">Direto: {dEmergency} | Indireto: {sEmergency}</div>
                            </div>
                         </div>
-                        <div className="bi-card warning" 
-                             style={{ border: (dEmergencyMaintenance + sEmergencyMaintenance) > 0 ? "1px solid #f59e0b" : "1px solid var(--n200)", cursor: "pointer" }}
+                        <div className="bi-card maintenance" 
+                             style={{ borderColor: (dEmergencyMaintenance + sEmergencyMaintenance) > 0 ? "#f59e0b" : "var(--n200)", cursor: "pointer" }}
                              onClick={() => setDashboardView("emergencyMaintenanceAssets")}
                         >
                            <div className="bi-card-icon"><AlertTriangle size={18} /></div>
@@ -3063,7 +3287,7 @@ export default function App() {
                               <div className="bi-card-sub">Críticos Inoperantes: {(dEmergencyMaintenance + sEmergencyMaintenance)}</div>
                            </div>
                         </div>
-                        <div className="bi-card">
+                        <div className="bi-card units">
                            <div className="bi-card-icon" style={{background:"#dcfce7", color:"#16a34a"}}><Building2 size={18} /></div>
                            <div className="bi-card-data">
                               <div className="bi-card-label">Subunidades</div>
@@ -3121,12 +3345,22 @@ export default function App() {
                                 <td style={{ padding: 12 }}>{nodes.find(n => n.id === a.nodeId)?.name || "—"}</td>
                                 <td style={{ padding: 12, fontWeight: 600 }}>{a.contatoResponsavel || "—"}</td>
                                 <td style={{ padding: 12 }}>
-                                  {a.contatoAcionamento || "—"}
-                                  {a.contatoAcionamento && (
-                                    <a href={`https://wa.me/55${a.contatoAcionamento.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 6, color: "#25D366", display: "inline-flex", verticalAlign: "middle" }} title="WhatsApp">
-                                      <MessageCircle size={14} />
-                                    </a>
-                                  )}
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                    <span>{a.contatoAcionamento || "—"}</span>
+                                    {a.contatoAcionamento && (
+                                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                        <Siren size={16} color="#ef4444" strokeWidth={3} fill="#ef4444" fillOpacity={0.1} />
+                                        {a.isMaintenance && <AlertTriangle size={16} color="#d97706" strokeWidth={3} title="Ativo em Manutenção" />}
+                                        <WhatsAppButton phone={a.contatoAcionamento} label="" />
+                                        <WhatsAppQrButton 
+                                          phone={a.contatoAcionamento} 
+                                          responsible={a.contatoResponsavel} 
+                                          label="" 
+                                          title="QR Code para Acionamento de Contingência" 
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
                                 </td>
                                 <td style={{ padding: 12, fontSize: 10 }}>{a.maintenanceNotes || "—"}</td>
                                 <td style={{ padding: 12, textAlign: "center" }}>
@@ -3142,10 +3376,36 @@ export default function App() {
                     </div>
                   </div>
                 )}
+
+                {dashboardView === "allAssets" && (
+                  <div className="bi-list-view">
+                    <div className="bi-list-view-header" style={{ marginBottom: 20 }}>
+                      <h2 style={{ fontSize: 18, fontWeight: 800 }}>Inventário Geral de Ativos</h2>
+                      <p style={{ fontSize: 12, color: "var(--n500)" }}>Listagem completa de equipamentos da estrutura e subunidades.</p>
+                    </div>
+                    <AssetTable list={dAssets} title="Ativos Diretos da Unidade" />
+                    <AssetTable list={sAssets} title="Ativos das Subunidades (Hierarquia)" />
+                  </div>
+                )}
+
+                {dashboardView === "emergencyAssets" && (
+                  <div className="bi-list-view">
+                    <div className="bi-list-view-header" style={{ marginBottom: 20 }}>
+                      <h2 style={{ fontSize: 18, fontWeight: 800, color: "#ef4444" }}>Inventário de Contingência</h2>
+                      <p style={{ fontSize: 12, color: "var(--n500)" }}>Ativos estratégicos para operação em situações de emergência.</p>
+                    </div>
+                    <AssetTable list={dAssets.filter(a => a.isEmergency)} title="Contingência: Ativos Diretos" />
+                    <AssetTable list={sAssets.filter(a => a.isEmergency)} title="Contingência: Subunidades" />
+                  </div>
+                )}
               </div>
               
-              <div className="modal-footer no-print">
-                <button className="btn btn-outline btn-xs" onClick={() => setDashboardNodeId(null)}>Fechar Dashboard</button>
+               <div className="modal-footer bi-footer-actions no-print">
+                {dashboardView !== "summary" ? (
+                  <button className="btn btn-primary btn-xs" onClick={() => setDashboardView("summary")}>Voltar para o Resumo</button>
+                ) : (
+                  <button className="btn btn-outline btn-xs" onClick={() => { setDashboardNodeId(null); setShowDetail(true); }}>Fechar Dashboard</button>
+                )}
               </div>
             </div>
           </div>
@@ -4232,9 +4492,15 @@ export default function App() {
                               <div className="dg-val" style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                 {p.telefone || "—"}
                                 {p.telefone && (
-                                  <a href={`https://wa.me/55${p.telefone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="btn-icon-xs" title="WhatsApp">
-                                    <MessageCircle size={12} color="#25D366" />
-                                  </a>
+                                  <>
+                                    <WhatsAppButton phone={p.telefone} label="" />
+                                    <WhatsAppQrButton 
+                                      phone={p.telefone} 
+                                      responsible={p.name} 
+                                      label="" 
+                                      title="QR Code WhatsApp" 
+                                    />
+                                  </>
                                 )}
                               </div>
                             </div>
@@ -4959,9 +5225,15 @@ export default function App() {
                                           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                                             <Siren size={10} /> Tel.: {a.contatoAcionamento || "Não informado"}
                                             {a.contatoAcionamento && (
-                                              <a href={`https://wa.me/55${a.contatoAcionamento.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ color: "#25D366" }} title="WhatsApp">
-                                                <MessageCircle size={10} />
-                                              </a>
+                                              <>
+                                                <WhatsAppButton phone={a.contatoAcionamento} label="" />
+                                                <WhatsAppQrButton 
+                                                  phone={a.contatoAcionamento} 
+                                                  responsible={a.contatoResponsavel} 
+                                                  label="" 
+                                                  title="QR Code para Acionamento de Contingência" 
+                                                />
+                                              </>
                                             )}
                                           </div>
                                         </div>
@@ -5023,7 +5295,7 @@ export default function App() {
             }}>
               <div /> {/* Spacer */}
               <div style={{ textAlign: "center" }}>
-                Desenvolvido por <span>&nbsp;{"Fábio Bühler"} - {"Versão"} 1.0.2026.04241700</span>
+                Desenvolvido por <span>&nbsp;{"Fábio Bühler"} - {"Versão"} 1.0.2026.04252155</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--n600)", justifyContent: "flex-end" }}>
                 <div className="pulse-dot" style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }}></div>
@@ -5133,15 +5405,28 @@ export default function App() {
                             <strong>Telefone de Emergência / Acionamento:</strong>{" "}
                             {a.contatoAcionamento || "Não informado"}
                             {a.contatoAcionamento && (
-                              <a href={`https://wa.me/55${a.contatoAcionamento.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 8, color: "#25D366", display: "inline-flex", verticalAlign: "middle" }} title="Chamar no WhatsApp">
-                                <MessageCircle size={14} />
-                              </a>
+                              <>
+                                <WhatsAppButton phone={a.contatoAcionamento} label="" />
+                                <WhatsAppQrButton 
+                                  phone={a.contatoAcionamento} 
+                                  responsible={a.contatoResponsavel} 
+                                  label="" 
+                                  title="QR Code para Acionamento de Contingência" 
+                                />
+                              </>
                             )}
                           </p>
 
                           <p>
                             <strong>Contato Geral:</strong>{" "}
                             {a.contatoFone || "Não informado"}
+                            {a.contatoFone && (
+                              <WhatsAppQrButton
+                                phone={a.contatoFone}
+                                label="QR Code"
+                                title="QR Code para Contato Geral"
+                              />
+                            )}
                           </p>
                         </div>
                       )}
