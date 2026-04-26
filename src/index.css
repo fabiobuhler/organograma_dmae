@@ -1627,3 +1627,12 @@ li.apoio-card-box:last-child:before {
   color: var(--n700);
   line-height: 1.5;
 }
+
+
+/* ASSET BADGES */
+.asset-badges { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.asset-badges.compact { gap: 4px; }
+.asset-badge { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; font-size: 11px; font-weight: 800; line-height: 1; padding: 4px 7px; }
+.asset-badge.compact { padding: 3px 5px; }
+.asset-badge-contingency { color: #991b1b; background: #fee2e2; border: 1px solid #fecaca; }
+.asset-badge-maintenance { color: #92400e; background: #fef3c7; border: 1px solid #fde68a; }

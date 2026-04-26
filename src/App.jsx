@@ -28,6 +28,7 @@ import PersonSelector from "./components/selectors/PersonSelector";
 import ListNode from "./components/org/ListNode";
 import AssetTypesModal from "./components/assets/AssetTypesModal";
 import AssetContactActions from "./components/assets/AssetContactActions";
+import AssetBadges from "./components/assets/AssetBadges";
 
 const STORAGE_KEY = "dmae-orgchart-v16";
 const DEMO_USER = "admin";
@@ -2790,8 +2791,7 @@ export default function App() {
                       <td style={{ padding: 10 }}>
                         {a.isEmergency ? (
                           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                            <Siren size={16} color="#ef4444" strokeWidth={3} fill="#ef4444" fillOpacity={0.1} />
-                            {a.isMaintenance && <AlertTriangle size={16} color="#d97706" strokeWidth={3} title="Ativo em Manutenção" />}
+                            <AssetBadges asset={a} compact showText={false} />
                             <AssetContactActions phone={a.contatoAcionamento} responsible={a.contatoResponsavel} />
                           </div>
                         ) : <span style={{ color: "var(--n400)" }}>Não</span>}
@@ -2965,8 +2965,7 @@ export default function App() {
                                     <span>{a.contatoAcionamento || "—"}</span>
                                     {a.contatoAcionamento && (
                                       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                        <Siren size={16} color="#ef4444" strokeWidth={3} fill="#ef4444" fillOpacity={0.1} />
-                                        {a.isMaintenance && <AlertTriangle size={16} color="#d97706" strokeWidth={3} title="Ativo em Manutenção" />}
+                                        <AssetBadges asset={a} compact showText={false} />
                                         <AssetContactActions phone={a.contatoAcionamento} responsible={a.contatoResponsavel} />
                                       </div>
                                     )}
