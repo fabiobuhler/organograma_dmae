@@ -16,13 +16,14 @@ export default function PersonDetail({
   isProtected = false,
   canEdit = false,
   onClose,
+  onEdit,
   onSelectNode,
   resolveAddress
 }) {
   if (!person) return null;
 
   return (
-    <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="modal-overlay" style={{ zIndex: 5600 }} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal-content wide">
         <button className="modal-close" onClick={onClose}><X size={12} /></button>
         
@@ -161,7 +162,12 @@ export default function PersonDetail({
           </div>
         </div>
 
-        <div className="modal-footer">
+        <div className="modal-footer" style={{ display: "flex", justifyContent: "space-between" }}>
+          <div>
+            {canEdit && !isProtected && (
+              <button className="btn btn-outline btn-xs" onClick={() => onEdit && onEdit(person)}>Editar Dados</button>
+            )}
+          </div>
           <button className="btn btn-primary btn-xs" onClick={onClose}>Fechar</button>
         </div>
       </div>

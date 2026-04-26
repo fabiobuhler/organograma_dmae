@@ -4,11 +4,12 @@ import {
   Pencil, Trash2, Users, Building2, ClipboardList, Briefcase,
   Home, Plus, Save, Mail, Phone, Car, Wrench, X, Menu, LogOut,
   ImagePlus, List, Network, MapPin, ChevronsDown, Undo2, FileText, Printer, PieChart, Package, ArrowUp,
-  AlertTriangle, Calendar, History, User, ChevronLeft, Eye, EyeOff, AlertCircle, Settings, Siren, ShieldCheck
+  AlertTriangle, History, ChevronLeft, Eye, Settings, Siren, ShieldCheck
 } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { OrgBranch } from "./components/OrgNode";
+import PersonForm from "./components/people/PersonForm";
 import PersonDetail from "./components/people/PersonDetail";
 import ContractDetail from "./components/contracts/ContractDetail";
 import AssetDetail from "./components/assets/AssetDetail";
@@ -566,6 +567,7 @@ export default function App() {
   const [personFilter, setPersonFilter] = useState("");
   const [openAssetDlg, setOpenAssetDlg] = useState(false);
   const [openPersonDlg, setOpenPersonDlg] = useState(false); 
+  const [personReturnTarget, setPersonReturnTarget] = useState(null); // null | "registry"
   const [registryFilter, setRegistryFilter] = useState("");
   const [contractFilter, setContractFilter] = useState("");
   const [openContractDlg, setOpenContractDlg] = useState(false);
@@ -1517,8 +1519,101 @@ export default function App() {
   }, [deleteAsset]);
 
   // Person CRUD
-  const openNewPerson = useCallback(() => { setEditPersonId(null); setPersonForm(emptyPerson); setOpenPersonDlg(true); }, []);
-  const openEditPerson = useCallback((p) => { setEditPersonId(p.id); setPersonForm({ ...p, email: p.email || "@dmae.prefpoa.com.br" }); setOpenPersonDlg(true); }, []);
+  const openPersonEdit = useCallback((person, options = {}) => {
+    if (!person) return;
+    const fromRegistry = options.fromRegistry || personReturnTarget === "registry";
+    
+    setPersonForm({
+      id: person.id || "",
+      name: person.name || "",
+      matricula: person.matricula || "",
+      cargo: person.cargo || "",
+      email: person.email || "@dmae.prefpoa.com.br",
+      telefone: maskPhone(person.telefone || ""),
+      ramal: person.ramal || "",
+      regime: person.regime || "",
+      vinculo: person.vinculo || "",
+      foto: person.foto || "",
+      lotacao: person.lotacao || ""
+    });
+
+    setEditPersonId(person.id);
+    setShowPersonDetail(null);
+    
+    if (fromRegistry) {
+      setPersonReturnTarget("registry");
+    } else {
+      setPersonReturnTarget(null);
+    }
+    
+    setOpenPersonDlg("edit");
+  }, [maskPhone, personReturnTarget]);
+
+  const openPersonCreate = useCallback((options = {}) => {
+    const fromRegistry = options.fromRegistry || false;
+    setEditPersonId(null);
+    setPersonForm({
+      ...emptyPerson,
+      email: "@dmae.prefpoa.com.br"
+    });
+    if (fromRegistry) {
+      setPersonReturnTarget("registry");
+    } else {
+      setPersonReturnTarget(null);
+    }
+    setShowPersonDetail(null);
+    setOpenPersonDlg("edit");
+    setTimeout(() => {
+      const el = document.getElementById("person-email-input");
+      if (el) {
+        el.focus();
+        el.setSelectionRange(0, 0);
+      }
+    }, 100);
+  }, [emptyPerson]);
+
+  const closePersonDetail = useCallback(() => {
+    setShowPersonDetail(null);
+    if (personReturnTarget === "registry") {
+      setOpenPersonDlg("registry");
+      return;
+    }
+    setPersonReturnTarget(null);
+  }, [personReturnTarget]);
+
+  const closePersonRegistry = useCallback(() => {
+    setShowPersonDetail(null);
+    setEditPersonId(null);
+    setPersonReturnTarget(null);
+    setOpenPersonDlg(false);
+  }, []);
+
+  const backToPersonRegistry = useCallback(() => {
+    setShowPersonDetail(null);
+    setEditPersonId(null);
+    setPersonReturnTarget("registry");
+    setOpenPersonDlg("registry");
+  }, []);
+
+  const cancelPersonEdit = useCallback(() => {
+    setEditPersonId(null);
+    if (personReturnTarget === "registry") {
+      setOpenPersonDlg("registry");
+      return;
+    }
+    setOpenPersonDlg(false);
+    setPersonReturnTarget(null);
+  }, [personReturnTarget]);
+
+  const closePersonForm = useCallback(() => {
+    if (personReturnTarget === "registry") {
+      setOpenPersonDlg("registry");
+    } else {
+      setOpenPersonDlg(false);
+      setPersonReturnTarget(null);
+    }
+    setEditPersonId(null);
+  }, [personReturnTarget]);
   const savePerson = useCallback(() => {
     const emailVal = personForm.email.trim();
     if (!personForm.name?.trim()) {
@@ -1537,7 +1632,16 @@ export default function App() {
     if (supabase) supabase.from('persons').upsert(p).then(() => console.log("Person synced"));
     setPersons(editPersonId ? (c) => c.map((x) => x.id === editPersonId ? p : x) : (c) => [...c, p]);
     logAction(editPersonId ? "Editar Pessoa" : "Criar Pessoa", "PERSON", p.name);
-    setOpenPersonDlg(false);
+    
+    if (personReturnTarget === "registry") {
+      setOpenPersonDlg("registry");
+      setEditPersonId(null);
+      setShowPersonDetail(null);
+    } else {
+      setOpenPersonDlg(false);
+      setPersonReturnTarget(null);
+    }
+    
     showSystemAlert(editPersonId ? "Pessoa atualizada!" : "Pessoa cadastrada!", { title: "Pessoa salva", type: "success" });
     // If we were in the middle of assigning this person to a node, restore the node dialog
     if (pendingPersonNodeForm) {
@@ -3845,153 +3949,33 @@ export default function App() {
       />
 
       {/* ═─ ═─ ═─ PERSON REGISTRY / EDIT MODAL ═─ ═─ ═─ */}
-      {openPersonDlg && (
-        <div className="modal-overlay" style={{ zIndex: 1500 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setOpenPersonDlg(false); }}>
-          <div className="modal-content wide">
-            <button className="modal-close" onClick={() => setOpenPersonDlg(false)}><X size={12} /></button>
-            <div className="modal-header">
-              <h2>{openPersonDlg === "registry" ? "Cadastro de Pessoas" : (editPersonId ? "Editar Pessoa" : "Cadastrar Pessoa")}</h2>
-              <p>{openPersonDlg === "registry" ? "Base de dados centralizada de servidores e colaboradores." : "Preencha as informações obrigatórias."}</p>
-            </div>
-
-            {openPersonDlg === "registry" ? (
-              <div className="modal-body" style={{ minHeight: 400 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, gap: 10 }}>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button className="btn btn-primary btn-sm" onClick={() => { 
-                      setEditPersonId(null); 
-                      setPersonForm({ ...emptyPerson, email: "@dmae.prefpoa.com.br" }); 
-                      setOpenPersonDlg("edit"); 
-                      setTimeout(() => {
-                        const el = document.getElementById("person-email-input");
-                        if (el) {
-                          el.focus();
-                          el.setSelectionRange(0, 0);
-                        }
-                      }, 100);
-                    }}>+ Nova Pessoa</button>
-                    <label className="btn btn-outline btn-sm" style={{ cursor: "pointer" }}>
-                      <Upload size={14} /> Importar
-                      <input type="file" accept=".csv,.txt" style={{ display: "none" }} onChange={handleImportPersons} />
-                    </label>
-                  </div>
-                  <div className="hdr-search" style={{ width: 220 }}>
-                    <Search size={12} />
-                    <input
-                      placeholder="Filtrar pessoas..."
-                      value={registryFilter}
-                      onChange={(e) => setRegistryFilter(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div style={{ border: "1px solid var(--n200)", borderRadius: 12, overflow: "hidden" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                    <thead style={{ background: "var(--n50)" }}>
-                      <tr><th style={{ padding: 10, textAlign: "left" }}>Nome / Matrícula</th><th style={{ padding: 10, textAlign: "left" }}>Cargo Oficial</th><th style={{ padding: 10, textAlign: "right" }}>Ações</th></tr>
-                    </thead>
-                    <tbody>
-                      {persons
-                        .filter(p => !registryFilter || p.name.includes(registryFilter.toUpperCase()) || p.matricula.includes(registryFilter))
-                        .slice(0, 50)
-                        .map(p => (
-                          <tr key={p.id} style={{ borderBottom: "1px solid var(--n100)" }}>
-                            <td style={{ padding: 10 }}><b>{p.name}</b><br /><span style={{ fontSize: 10, color: "var(--n400)" }}>{p.matricula} • {p.regime || "—"} / {p.vinculo || "—"}</span></td>
-                            <td style={{ padding: 10 }}>{p.cargo}</td>
-                            <td style={{ padding: 10, textAlign: "right" }}>
-                              <button className="btn btn-outline btn-xs" title="Visualizar Detalhes" onClick={() => setShowPersonDetail(p.id)} style={{ marginRight: 4 }}><Users size={12} /></button>
-                              <button className="btn btn-outline btn-xs" title="Editar Cadastro" onClick={() => { setEditPersonId(p.id); setPersonForm(p); setOpenPersonDlg("edit"); }} style={{ marginRight: 4 }}><Pencil size={12} /></button>
-                              <button className="btn btn-outline btn-xs" title="Excluir Registro" onClick={() => requestDeletePerson(p.id)}><Trash2 size={12} /></button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              <div className="modal-body">
-                <div className="fr">
-                  <div className="fg"><label className="fl">Nome Completo <span style={{ color: "red" }}>*</span></label><input className="fi" value={personForm.name} onChange={(e) => setPersonForm({ ...personForm, name: e.target.value.toUpperCase() })} /></div>
-                  <div className="fg"><label className="fl">Matrícula <span style={{ color: "red" }}>*</span></label><input className="fi" value={personForm.matricula} onChange={(e) => setPersonForm({ ...personForm, matricula: e.target.value })} /></div>
-                </div>
-                <div className="fr">
-                  <div className="fg"><label className="fl">Cargo Oficial <span style={{ color: "red" }}>*</span></label><input className="fi" value={personForm.cargo} onChange={(e) => setPersonForm({ ...personForm, cargo: e.target.value.toUpperCase() })} /></div>
-                  <div className="fg"><label className="fl">E-mail <span style={{ color: "red" }}>*</span></label><input id="person-email-input" className="fi" value={personForm.email} onChange={(e) => setPersonForm({ ...personForm, email: e.target.value })} /></div>
-                </div>
-                <div className="fr">
-              <div className="fg"><label className="fl">Regime Jurídico</label>
-                    {editPersonId ? (
-                      <input className="fi" value={personForm.regime} onChange={(e) => setPersonForm({ ...personForm, regime: e.target.value })} placeholder="Estatutário, CLT..." />
-                    ) : (
-                      <select className="fi" value={personForm.regime} onChange={(e) => setPersonForm({ ...personForm, regime: e.target.value })}>
-                        <option value="">Selecione...</option>
-                        <option value="estatutário">Estatutário</option>
-                        <option value="clt">CLT</option>
-                        <option value="cc">Cargo em Comissão (CC)</option>
-                        <option value="estagiário">Estagiário</option>
-                        <option value="terceirizado">Terceirizado</option>
-                        <option value="outro">Outro (Empregado Público, etc)</option>
-                      </select>
-                    )}
-                  </div>
-              <div className="fg"><label className="fl">Vínculo</label>
-                    {editPersonId ? (
-                      <input className="fi" value={personForm.vinculo} onChange={(e) => setPersonForm({ ...personForm, vinculo: e.target.value })} placeholder="Efetivo, Adido, Temporário..." />
-                    ) : (
-                      <select className="fi" value={personForm.vinculo} onChange={(e) => setPersonForm({ ...personForm, vinculo: e.target.value })}>
-                        <option value="">Selecione...</option>
-                        <option value="efetivo">Efetivo</option>
-                        <option value="adido">Adido</option>
-                        <option value="cedido">Cedido</option>
-                        <option value="comissionado">Comissionado</option>
-                        <option value="contratação">Contratado</option>
-                        <option value="temporario">Temporário</option>
-                        <option value="outro">Outro</option>
-                      </select>
-                    )}
-                  </div>
-                </div>
-
-                <div className="fr">
-                  <div className="fg"><label className="fl">Telefone (Fixo ou Whats)</label><input className="fi" value={personForm.telefone} onChange={(e) => setPersonForm({ ...personForm, telefone: e.target.value })} placeholder="(51) 99999-9999" /></div>
-                  <div className="fg"><label className="fl">Ramal</label><input className="fi" value={personForm.ramal} onChange={(e) => setPersonForm({ ...personForm, ramal: e.target.value })} placeholder="Ex: 8001" /></div>
-                </div>
-                
-                <div className="fg">
-                  <label className="fl">Foto do Colaborador</label>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--n100)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--n200)" }}>
-                      {personForm.foto ? <img src={personForm.foto} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <Users size={20} color="var(--n400)" />}
-                    </div>
-                    <label className="btn btn-outline btn-xs" style={{ cursor: "pointer" }}>
-                      Selecionar Foto
-                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={async (e) => {
-                        const file = e.target.files[0];
-                        if (file) {
-                          const b64 = await fileToBase64(file);
-                          setPersonForm({ ...personForm, foto: b64 });
-                        }
-                      }} />
-                    </label>
-                    {personForm.foto && <button className="btn btn-outline btn-xs" style={{ color: "red" }} onClick={() => setPersonForm({ ...personForm, foto: "" })}>Remover</button>}
-                  </div>
-                </div>
-                <div style={{ fontSize: 10, color: "var(--n500)", marginTop: 12, padding: 10, background: "var(--n50)", borderRadius: 8, border: "1px dashed var(--n300)" }}>
-                   <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: "bold", marginBottom: 4 }}>
-                     <MapPin size={12} color="#ef4444" /> Localização Inteligente
-                   </div>
-                   O endereço deste colaborador é herdado automaticamente da caixa onde ele está lotado. Para alterar a localização, edite os dados da caixa no organograma.
-                </div>
-              </div>
-            )}
-
-            <div className="modal-footer">
-              <button className="btn btn-outline btn-xs" onClick={() => setOpenPersonDlg(openPersonDlg === "registry" ? false : "registry")}>{openPersonDlg === "registry" ? "Fechar" : "Voltar"}</button>
-              {openPersonDlg === "edit" && <button className="btn btn-primary btn-xs" onClick={savePerson}>Salvar Alterações</button>}
-            </div>
-          </div>
-        </div>
-      )}
+      <PersonForm
+        open={openPersonDlg}
+        setOpen={setOpenPersonDlg}
+        personForm={personForm}
+        setPersonForm={setPersonForm}
+        editPersonId={editPersonId}
+        setEditPersonId={setEditPersonId}
+        persons={persons}
+        registryFilter={registryFilter}
+        setRegistryFilter={setRegistryFilter}
+        onShowDetail={(id) => {
+          setPersonReturnTarget("registry");
+          setShowPersonDetail(id);
+          setOpenPersonDlg("registry");
+        }}
+        onCreatePerson={() => openPersonCreate({ fromRegistry: true })}
+        onEditPerson={(person) => openPersonEdit(person, { fromRegistry: true })}
+        onSave={savePerson}
+        onCloseRegistry={closePersonRegistry}
+        onCancelEdit={cancelPersonEdit}
+        onBackToRegistry={backToPersonRegistry}
+        onDeleteRequest={requestDeletePerson}
+        onImport={handleImportPersons}
+        emptyPerson={emptyPerson}
+        fileToBase64={fileToBase64}
+        maskPhone={maskPhone}
+      />
 
       {/* ═─ ═─ ═─ PERSON DETAIL VIEW ═─ ═─ ═─ */}
       {showPersonDetail && (
@@ -4001,7 +3985,8 @@ export default function App() {
           contracts={contracts}
           isProtected={isProtected}
           canEdit={canEdit}
-          onClose={() => setShowPersonDetail(null)}
+          onClose={closePersonDetail}
+          onEdit={(p) => openPersonEdit(p)}
           onSelectNode={(id) => { 
             selectNode(id); 
             setFocusId(id); 
