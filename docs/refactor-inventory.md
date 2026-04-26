@@ -718,186 +718,120 @@ Fase 7 — serviços Supabase, somente após estabilização dos formulários.
 
 ---
 
-## Checkpoint pós-Fase 6D — Formulários principais
+## Checkpoint pós-Fase 7B.3 — Services Supabase
 
 ### Estado atual
-- Branch atual: `refactor/app-split-phase-6d-contract-form`
-- Último commit: `60dca8a5` — refactor: extrai formulario de contrato e valida CNPJ
-- Linhas atuais do App.jsx: 4088
-- Working tree: Limpo (exceto documentação)
+- Branch atual: `refactor/app-split-phase-7b3-write-contract-services`
+- Último commit: `cb27676e` (Fase 6E) + Alterações pendentes da Fase 7.
+- Linhas atuais do App.jsx: 4.238
+- Working tree: Alterações de escrita Supabase (Persons, Nodes, Assets, Contracts) pendentes de commit.
 
-### Fase 6A — PersonForm
-- Extraído componente:
-  - src/components/people/PersonForm.jsx
-- Responsável pela interface de cadastro, edição e listagem de pessoas.
-- Preservados no App.jsx:
-  - savePerson;
-  - Supabase;
-  - logs;
-  - validações principais;
-  - regras de vínculo pessoa-node.
-- Ajustes realizados:
-  - correção do fluxo Cadastro de Pessoas > Visualizar > Editar;
-  - retorno ao Cadastro de Pessoas após salvar/cancelar quando a origem for a listagem;
-  - máscara de telefone no formulário;
-  - separação entre fechar o cadastro e voltar da edição.
+### Fase 7A — Serviços de leitura Supabase
+Arquivo criado:
+- `src/services/supabaseReadService.js`
 
-### Fase 6B — NodeForm
-- Extraído componente:
-  - src/components/org/NodeForm.jsx
-- Responsável pela interface de criação/edição de estruturas, caixas e unidades.
-- Preservados no App.jsx:
-  - saveNode;
-  - Supabase;
-  - logs;
-  - validações principais;
-  - regra de pessoa única em node;
-  - integração com PersonSelector.
+Responsabilidade:
+- centralizar consultas SELECT;
+- encapsular leitura das principais tabelas;
+- reduzir acoplamento direto entre App.jsx e Supabase.
 
-### Fase 6C — AssetForm
-- Extraído componente:
-  - src/components/assets/AssetForm.jsx
-- Responsável pela interface de criação/edição de ativos.
-- Preservados no App.jsx:
-  - saveAsset;
-  - Supabase;
-  - logs;
-  - validações principais;
-  - Dashboard/BI;
-  - exportações PDF/CSV.
-- Ajustes realizados:
-  - separação entre dados do contrato e dados de contingência;
-  - contatos de contrato não preenchem automaticamente contatos de emergência;
-  - contato de contingência permanece operacional e específico por ativo;
-  - adicionados/mapeados campos:
-    - contato_empresa;
-    - responsavel_direto.
-- Regra de negócio consolidada:
-  - uma empresa contratada pode possuir vários ativos;
-  - cada ativo pode ter contato operacional próprio para deslocamento ou acionamento em contingência;
-  - contato da empresa/contrato não é o mesmo que contato de emergência.
+Funções extraídas:
+- `fetchNodes`, `fetchPersons`, `fetchAssets`, `fetchContracts`, `fetchUsers`, `fetchAssetTypes`, `fetchAuditLogs`.
 
-### Fase 6D — ContractForm
-- Extraído componente:
-  - src/components/contracts/ContractForm.jsx
-- Criado utilitário:
-  - src/utils/cnpj.js
-- Responsável pela interface de cadastro/edição/listagem de contratos.
-- Preservados no App.jsx:
-  - saveContract;
-  - Supabase;
-  - logs;
-  - validações principais;
-  - exportações PDF/CSV;
-  - ContractDetail.
-- Ajustes realizados:
-  - máscara automática de CNPJ;
-  - validação matemática de CNPJ;
-  - bloqueio de salvamento com CNPJ inválido;
-  - retorno à listagem de contratos após salvar/cancelar quando a origem for a listagem.
+Preservado no App.jsx:
+- `loadCloudData` como orquestrador de carga inicial;
+- fallback para desenvolvimento local;
+- estados React globais.
+
+### Fase 7A.1 — Navegação do organograma
+Ajustes realizados:
+- centralização robusta de caixa expandida/focada (`centerNodeInView`);
+- preservação da caixa centralizada ao usar botões de zoom (`zoomAndKeepCenter`);
+- compensação de `transform: scale(zoom)` no cálculo de scroll;
+- retry automático para aguardar montagem do DOM.
+
+### Fase 7B.1 — Escrita Supabase de pessoas e estruturas
+Operações extraídas para `src/services/supabaseWriteService.js`:
+- `upsertPerson`, `deletePersonById`;
+- `upsertNode`, `deleteNodeById`.
+
+Preservado no App.jsx:
+- `savePerson` e `saveNode` (orquestração);
+- montagem de payload e validações de campos obrigatórios;
+- regra de pessoa única por node;
+- registro de auditoria (`logAction`).
+
+### Fase 7B.2 — Escrita Supabase de ativos
+Operações extraídas para `src/services/supabaseWriteService.js`:
+- `upsertAsset`, `deleteAssetById`.
+
+Preservado no App.jsx:
+- `saveAsset` (orquestração);
+- independência entre contato de contrato e contato de contingência;
+- gestão de fotos e status de manutenção.
+
+### Correção pós-7B.2 — Fotos de ativos (7B.2.1)
+- Fotos cadastradas integradas ao `AssetDetail.jsx` com visualização em grade.
+- Adicionado indicador visual de foto na listagem do Registro Centralizado de Ativos.
+- Suporte a zoom/lightbox para imagens anexadas.
+
+### Fase 7B.3 — Escrita Supabase de contratos
+Operações extraídas para `src/services/supabaseWriteService.js`:
+- `upsertContract`, `deleteContractById`.
+
+Preservado no App.jsx:
+- `saveContract` (orquestração);
+- máscara e validação matemática de CNPJ;
+- regra de retorno para a listagem após salvar/cancelar.
+
+### Responsabilidade atual dos services
+**supabaseReadService.js:**
+- Executa somente leituras (SELECT);
+- Não altera estado React;
+- Não mostra alertas nem logs.
+
+**supabaseWriteService.js:**
+- Executa escrita (UPSERT/DELETE) nas tabelas principais;
+- Recebe a instância do `supabase` e o `payload` pronto;
+- Não valida regras de negócio nem monta payloads.
 
 ### Regra permanente — retorno ao modal de origem
 Quando uma ação for iniciada a partir de um modal/listagem, o sistema deve retornar para esse mesmo modal/listagem após salvar, cancelar, fechar, voltar, visualizar detalhe ou editar a partir do detalhe.
-
-Não retornar automaticamente para a árvore/organograma, exceto quando a ação tiver sido iniciada diretamente pelo organograma.
-
-Padrões:
 - Fechar no modo registry/listagem: fecha o cadastro e volta para a árvore.
 - Voltar/Cancelar no modo edição iniciado pela listagem: retorna para a listagem.
 - Salvar no modo edição/criação iniciado pela listagem: retorna para a listagem.
-- Visualizar item a partir da listagem: detalhe abre sobre a listagem.
-- Fechar detalhe vindo da listagem: retorna para a listagem.
-- Editar a partir do detalhe vindo da listagem: após salvar/cancelar, retorna para a listagem.
-- Abrir detalhe diretamente pelo organograma: ao fechar, não deve abrir a listagem.
 
-### Componentes extraídos até a Fase 6
-Common:
-- SystemAlertModal
-- ConfirmDialog
-- WhatsAppButton
-- WhatsAppQrButton
-
-Admin:
-- LogsModal
-- StatsModal
-
-Selectors:
-- NodeSelector
-- PersonSelector
-
-Org:
-- ListNode
-- NodeForm
-
-People:
-- PersonDetail
-- PersonForm
-
-Contracts:
-- ContractDetail
-- ContractForm
-
-Assets:
-- AssetTypesModal
-- AssetContactActions
-- AssetBadges
-- AssetDetail
-- AssetForm
-
-Utils:
-- phone.js
-- cnpj.js
-- assetUtils.js
-- contractUtils.js
+### Componentes extraídos até a Fase 7B.3
+- **Common:** `SystemAlertModal`, `ConfirmDialog`, `WhatsAppButton`, `WhatsAppQrButton`.
+- **Admin:** `LogsModal`, `StatsModal`.
+- **Selectors:** `NodeSelector`, `PersonSelector`.
+- **Org:** `ListNode`, `NodeForm`.
+- **People:** `PersonDetail`, `PersonForm`.
+- **Contracts:** `ContractDetail`, `ContractForm`.
+- **Assets:** `AssetTypesModal`, `AssetContactActions`, `AssetBadges`, `AssetDetail`, `AssetForm`.
+- **Utils:** `phone.js`, `cnpj.js`, `assetUtils.js`, `contractUtils.js`, `encoding.js`, `exportUtils.js`.
 
 ### Testes realizados
-- Cadastro de pessoas;
-- edição de pessoas;
-- visualização de pessoas;
-- retorno ao Cadastro de Pessoas após salvar/cancelar;
-- máscara de telefone;
-- cadastro de estrutura/node;
-- edição de estrutura/node;
-- responsável por estrutura;
-- bloqueio de pessoa já alocada em outro node;
-- cadastro de ativo;
-- edição de ativo;
-- ativo próprio;
-- ativo contratado;
-- ativo de contingência;
-- ativo em manutenção;
-- contatos de contrato separados dos contatos de contingência;
-- cadastro de contrato;
-- edição de contrato;
-- máscara de CNPJ;
-- validação de CNPJ;
-- retorno à listagem de contratos após salvar/cancelar;
-- detalhes de pessoa, contrato e ativo preservados;
-- console sem erros nos fluxos testados.
+- Carregamento inicial pelo Supabase;
+- Criação/edição/exclusão de pessoas, estruturas, ativos e contratos;
+- Contato de contrato separado de contato de contingência;
+- Fotos no detalhe de ativo e indicador de foto na listagem;
+- Validação e máscara de CNPJ;
+- Retorno ao modal/listagem de origem;
+- Logs de auditoria.
 
-### Áreas ainda preservadas para fases futuras
-- loadCloudData;
-- serviços Supabase;
-- funções savePerson/saveNode/saveAsset/saveContract;
+### Áreas preservadas para fases futuras
+- `loadCloudData` (orquestração);
 - Dashboard/BI;
-- exportações principais PDF/CSV;
-- autenticação/login;
-- permissões;
-- imports e limpeza final;
-- merge/push/deploy.
+- Exportações principais PDF/CSV;
+- Autenticação/login;
+- Auditoria (`logAction`).
 
 ### Próximas fases sugeridas
-Fase 7A — organizar serviços Supabase de leitura/carregamento.
-Fase 7B — organizar serviços Supabase de persistência.
-Fase 7C — organizar serviços de auditoria/logAction.
-Fase 7D — revisar exportações PDF/CSV.
-Fase 7E — checkpoint documental.
-Fase 8 — limpeza final, revisão de imports, merge e preparação para deploy.
+- **Fase 7C:** Audit Service / `logAction`.
+- **Fase 7D:** Asset Types, Users e serviços auxiliares.
+- **Fase 7E:** Export Services (PDF/CSV).
+- **Fase 8:** Dashboard/BI modular.
+- **Fase 9:** Limpeza final e merge.
 
-### Regras para Fase 7
-- Não misturar serviço Supabase com alteração visual.
-- Uma família de serviço por fase.
-- Não alterar schema sem SQL documentado.
-- Não alterar Dashboard junto com Supabase.
-- Testar login, CRUD e auditoria após cada fase.
-- Commit sempre manual pelo usuário via PowerShell.
+*Documento atualizado em 2026-04-26.*
