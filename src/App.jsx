@@ -39,6 +39,15 @@ import NodeForm from "./components/org/NodeForm";
 import AssetForm from "./components/assets/AssetForm";
 import ContractForm from "./components/contracts/ContractForm";
 import { maskCnpj, isValidCnpj, getCnpjValidationMessage } from "./utils/cnpj";
+import {
+  fetchNodes,
+  fetchPersons,
+  fetchAssets,
+  fetchContracts,
+  fetchUsers,
+  fetchAssetTypes,
+  fetchAuditLogs
+} from "./services/supabaseReadService";
 
 const STORAGE_KEY = "dmae-orgchart-v16";
 const DEMO_USER = "admin";
@@ -598,29 +607,18 @@ export default function App() {
   const [cloudStatus, setCloudStatus] = useState("checking"); // "online" | "offline" | "checking"
 
   // --- SUPABASE CLOUD DATA LOAD (PAGINATED) ---
-  const fetchAll = async (tableName) => {
-    let allData = [];
-    let from = 0;
-    let to = 999;
-    let finished = false;
-    while (!finished) {
-      const { data, error } = await supabase.from(tableName).select('*').range(from, to);
-      if (error) throw error;
-      if (data && data.length > 0) {
-        allData = [...allData, ...data];
-        if (data.length < 1000) finished = true;
-        else { from += 1000; to += 1000; }
-      } else { finished = true; }
-    }
-    return allData;
-  };
 
   const loadCloudData = useCallback(async () => {
     if (!supabase) { setCloudStatus("offline"); setIsLoadingCloud(false); return; }
     try {
       setCloudStatus("checking");
       const [nData, pData, aData, cData, uData, tData] = await Promise.all([
-        fetchAll('nodes'), fetchAll('persons'), fetchAll('assets'), fetchAll('contracts'), fetchAll('users'), fetchAll('asset_types')
+        fetchNodes(supabase),
+        fetchPersons(supabase),
+        fetchAssets(supabase),
+        fetchContracts(supabase),
+        fetchUsers(supabase),
+        fetchAssetTypes(supabase)
       ]);
       setCloudStatus("online");
       setNodes(normalizeDeep(nData || []));
@@ -2022,8 +2020,8 @@ export default function App() {
     
     // 1. Try regular admin/editor users from Supabase first
     try {
-      const { data: latestUsers, error: fErr } = await supabase.from('users').select('*');
-      if (!fErr && latestUsers) {
+      const latestUsers = await fetchUsers(supabase);
+      if (latestUsers) {
         const u = latestUsers.find(x => x.username.toLowerCase() === loginUser.toLowerCase() && x.password === loginPass);
         if (u) {
           const sessionUser = { 
@@ -2156,8 +2154,12 @@ export default function App() {
         if (error) {
           console.error("Delete error:", error);
           // Re-fetch users if cloud delete fails to restore UI state
-          const { data: latest } = await supabase.from('users').select('*');
-          if (latest) setUsers(latest);
+          try {
+            const latest = await fetchUsers(supabase);
+            if (latest) setUsers(latest);
+          } catch (fetchErr) {
+            console.error("Erro ao restaurar lista de usuários:", fetchErr);
+          }
           throw error;
         }
       }
@@ -2423,23 +2425,23 @@ export default function App() {
                     {isAdmin && (
                       <button className="dropdown-item" onClick={async () => {
                         if (supabase) {
-                          const { data, error } = await supabase
-                            .from('audit_logs')
-                            .select('*')
-                            .order('created_at', { ascending: false })
-                            .limit(500);
-                          if (data) {
-                            setLogs((data || []).map((l) => normalizeAuditLog({
-                              id: l.id,
-                              created_at: l.created_at,
-                              timestamp: new Date(l.created_at).toLocaleString('pt-BR'),
-                              user_name: l.user_name,
-                              user: l.user_name,
-                              action: l.action,
-                              entity_type: l.entity_type,
-                              entity_name: l.entity_name,
-                              details: l.details || {}
-                            })));
+                          try {
+                            const data = await fetchAuditLogs(supabase);
+                            if (data) {
+                              setLogs((data || []).map((l) => normalizeAuditLog({
+                                id: l.id,
+                                created_at: l.created_at,
+                                timestamp: new Date(l.created_at).toLocaleString('pt-BR'),
+                                user_name: l.user_name,
+                                user: l.user_name,
+                                action: l.action,
+                                entity_type: l.entity_type,
+                                entity_name: l.entity_name,
+                                details: l.details || {}
+                              })));
+                            }
+                          } catch (err) {
+                            console.error("Erro ao buscar logs:", err);
                           }
                         }
                         setOpenLogsDlg(true);
@@ -3326,8 +3328,8 @@ export default function App() {
                   logAction("Login Visualizador", "PERSON", p.name); return;
                 }
                 try {
-                  const { data: latestUsers, error: fErr } = await supabase.from('users').select('*');
-                  if (fErr || !latestUsers) return setLoginErr("Erro de conexão. Tente novamente.");
+                  const latestUsers = await fetchUsers(supabase);
+                  if (!latestUsers) return setLoginErr("Erro de conexão. Tente novamente.");
                   const u = latestUsers.find(x => x.username.toLowerCase() === loginUser.toLowerCase() && x.password === loginPass);
                   if (u) {
                     const sessionUser = { ...u, username: u.username || loginUser, role: u.role || (u.username.toLowerCase() === 'admin' ? 'admin' : 'editor') };
