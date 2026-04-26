@@ -3,8 +3,8 @@ import {
   FolderTree, Search, KeyRound, Download, Upload,
   Pencil, Trash2, Users, Building2, ClipboardList, Briefcase,
   Home, Plus, Save, Mail, Phone, Car, Wrench, X, Menu, LogOut,
-  ImagePlus, List, Network, MapPin, ChevronsDown, Undo2, FileText, Printer, PieChart, MessageCircle, Package, ArrowUp,
-  AlertTriangle, Info, Calendar, History, User, ChevronLeft, Eye, EyeOff, AlertCircle, Settings, Siren, ShieldCheck
+  ImagePlus, List, Network, MapPin, ChevronsDown, Undo2, FileText, Printer, PieChart, Package, ArrowUp,
+  AlertTriangle, Calendar, History, User, ChevronLeft, Eye, EyeOff, AlertCircle, Settings, Siren, ShieldCheck
 } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -276,7 +276,7 @@ function exportAssetsPdf(list, label, getPath, sort, nodesList) {
 
 function exportLogsPdf(logsList) {
   const w = window.open("", "_blank");
-  if (!w) { showSystemAlert("Permita pop-ups para exportar.", { title: "Atenção", type: "warning" }); return; }
+  if (!w) { alert("Permita pop-ups para exportar."); return; }
   
   const logoUrl = window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png";
 
@@ -334,7 +334,7 @@ function exportLogsPdf(logsList) {
 
 function generateDirectPdf(logsList) {
   if (typeof window.html2pdf === "undefined") {
-    showSystemAlert("Carregador PDF indisponível no momento. Usando módulo de impressão.", { title: "Atenção", type: "warning" });
+    alert("Carregador PDF indisponível no momento. Usando módulo de impressão.");
     exportLogsPdf(logsList);
     return;
   }
@@ -516,7 +516,7 @@ function normalizeDeep(value) {
 }
 
 
-/* ─€─€─€─€ APP ─€─€─€─€ */
+/* ================= APP ================= */
 export default function App() {
   const [nodes, setNodes] = useState(() => supabase ? [] : seedNodes);
   const [assets, setAssets] = useState(() => supabase ? [] : seedAssets);
@@ -1056,7 +1056,7 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [selectedId, viewMode, isLoadingCloud]);
 
-  // Auto-center on focus change ââ‚¬“ reset scroll first, then center
+  // Auto-center on focus change
   useEffect(() => {
     if (viewMode !== "tree") return;
     const vp = vpRef.current;
@@ -1128,7 +1128,7 @@ export default function App() {
   }, [viewMode, zoom, isLoadingCloud]);
 
 
-  // Select node ─ ”™ open detail
+  // Select node 
   const selectNode = useCallback((id) => {
     setSelectedId(id);
     setShowDetail(true);
@@ -1814,7 +1814,7 @@ export default function App() {
     pdf.text(`Objeto: ${c.objeto}`, 20, 30);
     pdf.text(`Empresa: ${c.empresa || "N/A"}`, 20, 35);
     pdf.text(`Unidade: ${node ? node.name : "N/A"}`, 20, 40);
-    pdf.text(`Vigência: ${c.dataInício || "N/A"} a ${c.dataTermino || "N/A"}`, 20, 45);
+    pdf.text(`Vigência: ${c.dataInicio || "N/A"} a ${c.dataTermino || "N/A"}`, 20, 45);
     
     pdf.line(20, 50, 190, 50);
     
@@ -1829,7 +1829,7 @@ export default function App() {
   const expJson = useCallback(() => { downloadFile("organograma-dmae.json", JSON.stringify({ nodes, assets }, null, 2)); flash("JSON exportado!"); }, [nodes, assets]);
   const expCsv = useCallback((nid) => {
     const sc = new Set(descendantIds(nid));
-    const rows = [["Categoria", "Nome", "Fabricante", "Modelo", "Ano", "Placa", "Patrim\u00f4nio", "OS", "Estrutura", "Obs"],
+    const rows = [["Categoria", "Nome", "Fabricante", "Modelo", "Ano", "Placa", "Patrimônio", "OS", "Estrutura", "Obs"],
     ...assets.filter((a) => sc.has(a.nodeId)).map((a) => [a.category, a.name, a.manufacturer, a.model, a.year, a.plate, a.patrimonio, a.os, nodePath(a.nodeId), a.notes])];
     downloadFile(`ativos-${(nodeMap.get(nid)?.name || "").toLowerCase()}.csv`, toCsv(rows), "text/csv;charset=utf-8;");
     flash("CSV exportado!");
@@ -1900,14 +1900,14 @@ export default function App() {
     if (pwdNew.length < 3) { showSystemAlert("A nova senha deve ter no mínimo 3 caracteres.", { title: "Senha curta", type: "warning" }); return; }
     if (pwdNew !== pwdConfirm) { showSystemAlert("A nova senha e a confirmação não coincidem.", { title: "Senhas não conferem", type: "warning" }); return; }
 
-    const u = users.find(x => x.username === currentUser);
+    const u = users.find(x => x.username === currentUser?.username);
     if (!u) return;
     if (u.password !== pwdCurrent && !forcePassMode) {
       showSystemAlert("Senha atual incorreta.", { title: "Erro de autenticação", type: "error" });
       return;
     }
 
-    setUsers(prev => prev.map(x => x.username === currentUser ? { ...x, password: pwdNew, firstLogin: false } : x));
+    setUsers(prev => prev.map(x => x.username === currentUser?.username ? { ...x, password: pwdNew, firstLogin: false } : x));
     setOpenPasswordDlg(false);
     setPwdCurrent(""); setPwdNew(""); setPwdConfirm("");
     showSystemAlert("Senha alterada com sucesso!", { title: "Senha alterada", type: "success" });
