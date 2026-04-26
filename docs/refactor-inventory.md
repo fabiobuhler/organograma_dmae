@@ -578,3 +578,140 @@ Fase 6 — serviços Supabase:
 - Não mexer em Dashboard/PDF/CSV sem fase específica.
 - Não mover funções Supabase ainda.
 - Não fazer push sem autorização.
+
+---
+
+## Checkpoint pós-Fase 5C — Detalhes de entidades
+
+### Estado atual
+- Branch atual: `refactor/app-split-phase-5c-asset-detail`
+- Último commit: `7296a60e` — Extrai detalhes de ativo
+- Linhas atuais do App.jsx: 4687
+- Working tree: Limpo
+
+### Fase 5A — PersonDetail
+- Extraído componente:
+  - src/components/people/PersonDetail.jsx
+- Responsável pela visualização/leitura de dados de pessoa.
+- Preservados no App.jsx:
+  - savePerson;
+  - edição de pessoa;
+  - exclusão;
+  - Supabase;
+  - regras de vínculo pessoa-node;
+  - contratos.
+
+### Fase 5B — ContractDetail
+- Extraído componente:
+  - src/components/contracts/ContractDetail.jsx
+- Responsável pela visualização/leitura de contrato.
+- Preservados no App.jsx:
+  - saveContract;
+  - edição de contrato;
+  - validação;
+  - Supabase;
+  - exportações/relatórios.
+- Ajuste adicional:
+  - exclusão de contrato passou a usar ConfirmDialog do sistema, removendo popup nativo.
+
+### Fase 5C — AssetDetail
+- Extraído componente:
+  - src/components/assets/AssetDetail.jsx
+- Responsável pela visualização/leitura de ativo.
+- Preservados no App.jsx:
+  - saveAsset;
+  - edição de ativo;
+  - validação;
+  - Supabase;
+  - exportações/relatórios;
+  - Dashboard/BI.
+- Ajuste adicional:
+  - exclusão de ativo passou a usar ConfirmDialog do sistema, removendo popup nativo.
+
+### Testes realizados
+- Visualização de pessoa pelo organograma.
+- Visualização de pessoa pelo cadastro.
+- WhatsApp/QR Code de pessoa.
+- Edição de pessoa abre normalmente.
+- Exclusão de pessoa abre confirmação.
+- Visualização de contrato.
+- Impressão/exportação de contrato.
+- Edição de contrato abre normalmente.
+- Exclusão de contrato usa ConfirmDialog.
+- Visualização de ativo próprio.
+- Visualização de ativo contratado.
+- Visualização de ativo de contingência.
+- Visualização de ativo em manutenção.
+- WhatsApp/QR Code de ativo.
+- Edição de ativo abre normalmente.
+- Exclusão de ativo usa ConfirmDialog.
+- Dashboard preservado.
+- Console sem erro.
+
+### Componentes extraídos até a Fase 5
+Common:
+- SystemAlertModal
+- ConfirmDialog
+- WhatsAppButton
+- WhatsAppQrButton
+
+Admin:
+- LogsModal
+- StatsModal
+
+Selectors:
+- NodeSelector
+- PersonSelector
+
+Org:
+- ListNode
+
+People:
+- PersonDetail
+
+Contracts:
+- ContractDetail
+
+Assets:
+- AssetTypesModal
+- AssetContactActions
+- AssetBadges
+- AssetDetail
+
+Utils:
+- phone.js
+- assetUtils.js
+- contractUtils.js
+
+### Áreas ainda preservadas para fases futuras
+- PersonForm;
+- NodeForm;
+- AssetForm;
+- ContractForm;
+- savePerson;
+- saveNode;
+- saveAsset;
+- saveContract;
+- loadCloudData;
+- serviços Supabase;
+- Dashboard/BI;
+- exportações principais PDF/CSV;
+- autenticação/login.
+
+### Próximas fases sugeridas
+Fase 6A — extrair PersonForm.
+Fase 6B — extrair NodeForm.
+Fase 6C — extrair AssetForm.
+Fase 6D — extrair ContractForm.
+Fase 6E — checkpoint documental da Fase 6.
+Fase 7 — serviços Supabase, somente após estabilização dos formulários.
+
+### Regras para a Fase 6
+- Um formulário por fase.
+- Não misturar refatoração com nova funcionalidade.
+- Não mover Supabase junto com formulário.
+- App.jsx continua dono do save.
+- Componentes recebem estados e callbacks por props.
+- Teste manual obrigatório antes do commit.
+- Atenção especial para validação, alertas e ConfirmDialog.
+- Não alterar Dashboard/PDF/CSV durante os formulários.
