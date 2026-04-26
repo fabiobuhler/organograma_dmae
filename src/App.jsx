@@ -56,7 +56,12 @@ import {
   upsertAsset,
   deleteAssetById,
   upsertContract,
-  deleteContractById
+  deleteContractById,
+  upsertAssetType,
+  deleteAssetTypeById,
+  upsertUser,
+  deleteUserById,
+  deleteUserByUsername
 } from "./services/supabaseWriteService";
 import { writeAuditLog } from "./services/auditService";
 
@@ -1423,16 +1428,16 @@ export default function App() {
     const payload = { category, name };
     try {
       let savedPayload = { ...payload, id: assetTypeForm.id || currentId, _localId: localId };
-      if (supabase) {
-        if (editAssetTypeId && assetTypeForm.id) {
-          const { data, error } = await supabase.from("asset_types").update(payload).eq("id", assetTypeForm.id).select().single();
-          if (error) throw error;
-          savedPayload = data || savedPayload;
-        } else {
-          const { data, error } = await supabase.from("asset_types").insert(payload).select().single();
-          if (error) throw error;
-          savedPayload = data || savedPayload;
+      try {
+        if (supabase) {
+          const saved = await upsertAssetType(supabase, {
+            ...payload,
+            ...(editAssetTypeId && assetTypeForm.id ? { id: assetTypeForm.id } : {})
+          });
+          savedPayload = saved || savedPayload;
         }
+      } catch (err) {
+        throw err;
       }
       setAssetTypes((current) => {
         if (editAssetTypeId) {
@@ -1473,8 +1478,7 @@ export default function App() {
       onConfirm: async () => {
         try {
           if (supabase && item.id) {
-            const { error } = await supabase.from("asset_types").delete().eq("id", item.id);
-            if (error) throw error;
+            await deleteAssetTypeById(supabase, item.id);
           }
           setAssetTypes((current) => current.filter((typeItem) => (typeItem.id || typeItem._localId || `${typeItem.category}-${typeItem.name}`) !== typeId));
           if (editAssetTypeId === typeId) resetAssetTypeForm();
@@ -2193,11 +2197,12 @@ export default function App() {
       // 2. BACKGROUND SYNC: Salva no banco de dados sem travar a tela
       try {
         if (supabase) {
-          const query = uid ? 
-            supabase.from('users').update({ password: pwdNew, must_change_password: false }).eq('id', uid) :
-            supabase.from('users').update({ password: pwdNew, must_change_password: false }).eq('username', uname);
+          if (uid) {
+            await upsertUser(supabase, { id: uid, password: pwdNew, must_change_password: false });
+          } else {
+            await supabase.from('users').update({ password: pwdNew, must_change_password: false }).eq('username', uname);
+          }
           
-          await query;
           logAction("PASSWORD_RESET_CLOUD", "USER", uname);
           loadCloudData(); // Refresh list in background
         }
@@ -2213,16 +2218,14 @@ export default function App() {
     if (users.some(u => u.username.toLowerCase() === newUser.toLowerCase())) { showSystemAlert("Usuário já existe!", { title: "Conflito", type: "warning" }); return; }
 
     try {
-      const { data, error } = await supabase.from('users').insert({ 
+      const data = await upsertUser(supabase, { 
         username: newUser, 
         password: newPass, 
         role: newIsAdmin ? 'admin' : 'editor',
         must_change_password: true
-      }).select();
+      });
 
-      if (error) throw error;
-
-      setUsers(prev => [...prev, data[0]]);
+      setUsers(prev => [...prev, data]);
       logAction('CREATE_USER', 'USER', newUser);
       setNewUser(""); setNewPass(""); setNewIsAdmin(false);
       flash("Usuário cadastrado com sucesso!");
@@ -2242,11 +2245,13 @@ export default function App() {
 
       // 2. Remove from Cloud
       if (supabase) {
-        // Use ID if available, fallback to username
-        const query = userId ? supabase.from('users').delete().eq('id', userId) : supabase.from('users').delete().eq('username', username);
-        const { error } = await query;
-        
-        if (error) {
+        try {
+          if (userId) {
+            await deleteUserById(supabase, userId);
+          } else {
+            await deleteUserByUsername(supabase, username);
+          }
+        } catch (error) {
           console.error("Delete error:", error);
           // Re-fetch users if cloud delete fails to restore UI state
           try {
@@ -2270,14 +2275,11 @@ export default function App() {
     const newRaw = "dmae123";
     try {
       if (supabase) {
-        const { error } = await supabase
-          .from('users')
-          .update({ 
-            password: newRaw,
-            must_change_password: true 
-          })
-          .eq('username', username);
-        if (error) throw error;
+        // Como o handleResetPass original não tinha ID, usamos username
+        await supabase.from('users').update({ 
+          password: newRaw,
+          must_change_password: true 
+        }).eq('username', username);
       }
       
       setUsers(prev => prev.map(u => u.username === username ? { ...u, password: newRaw, must_change_password: true } : u));

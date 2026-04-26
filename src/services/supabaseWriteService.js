@@ -118,3 +118,75 @@ export async function deleteContractById(supabase, id) {
   if (error) throw error;
   return true;
 }
+
+/**
+ * Persiste ou atualiza um tipo de ativo na tabela 'asset_types'.
+ */
+export async function upsertAssetType(supabase, payload) {
+  if (!supabase) return payload;
+  const { data, error } = await supabase
+    .from('asset_types')
+    .upsert(payload)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data || payload;
+}
+
+/**
+ * Exclui um tipo de ativo da tabela 'asset_types' pelo ID.
+ */
+export async function deleteAssetTypeById(supabase, id) {
+  if (!supabase) return true;
+  const { error } = await supabase
+    .from('asset_types')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+  return true;
+}
+
+/**
+ * Persiste ou atualiza um usuário na tabela 'users'.
+ */
+export async function upsertUser(supabase, payload) {
+  if (!supabase) return payload;
+  const { data, error } = await supabase
+    .from('users')
+    .upsert(payload)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data || payload;
+}
+
+/**
+ * Exclui um usuário da tabela 'users' pelo ID.
+ */
+export async function deleteUserById(supabase, id) {
+  if (!supabase) return true;
+  const { error } = await supabase
+    .from('users')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+  return true;
+}
+
+/**
+ * Exclui um usuário da tabela 'users' pelo nome de usuário.
+ */
+export async function deleteUserByUsername(supabase, username) {
+  if (!supabase) return true;
+  const { error } = await supabase
+    .from('users')
+    .delete()
+    .eq('username', username);
+
+  if (error) throw error;
+  return true;
+}
