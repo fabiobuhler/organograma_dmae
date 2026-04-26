@@ -58,6 +58,7 @@ import {
   upsertContract,
   deleteContractById
 } from "./services/supabaseWriteService";
+import { writeAuditLog } from "./services/auditService";
 
 const STORAGE_KEY = "dmae-orgchart-v16";
 const DEMO_USER = "admin";
@@ -841,19 +842,20 @@ export default function App() {
     };
   }, [supabase, currentUser]);
 
-  const logAction = async (action, type, name, details = {}) => {
+  const logAction = useCallback(async (action, type, name, details = {}) => {
     if (!supabase || !currentUser) return;
     try {
-      await supabase.from('audit_logs').insert({
-        user_name: currentUser.username,
+      await writeAuditLog(supabase, {
+        userName: currentUser.username || currentUser.name || "Sistema",
         action,
-        entity_type: type,
-        entity_name: name,
+        entityType: type,
+        entityName: name,
         details
       });
-      // Optionally fetch logs after action for admin
-    } catch (e) { console.error("Log error:", e); }
-  };
+    } catch (e) { 
+      console.warn("Falha ao registrar auditoria:", e); 
+    }
+  }, [supabase, currentUser]);
 
   const [newUser, setNewUser] = useState("");
   const [newPass, setNewPass] = useState("");
