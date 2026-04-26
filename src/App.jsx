@@ -3,7 +3,7 @@ import {
   FolderTree, Search, KeyRound, Download, Upload,
   Pencil, Trash2, Users, Building2, ClipboardList, Briefcase,
   Home, Plus, Save, Mail, Phone, Car, Wrench, X, Menu, LogOut,
-  ImagePlus, List, Network, MapPin, ChevronsDown, Undo2, FileText, Printer, PieChart, Package, ArrowUp,
+  ImagePlus, Image, List, Network, MapPin, ChevronsDown, Undo2, FileText, Printer, PieChart, Package, ArrowUp,
   AlertTriangle, History, ChevronLeft, Eye, Settings, Siren, ShieldCheck
 } from "lucide-react";
 import html2canvas from "html2canvas";
@@ -4031,7 +4031,14 @@ export default function App() {
                                         </div>
                                       )}
                                     </div>
-                                    <div style={{ fontSize: 10, color: "var(--n500)" }}>{a.type} • {a.model || "—"} {a.year && `(${a.year})`}</div>
+                                    <div style={{ fontSize: 10, color: "var(--n500)", display: "flex", alignItems: "center", gap: 6 }}>
+                                      {a.type} • {a.model || "—"} {a.year && `(${a.year})`}
+                                      {Array.isArray(a.photos) && a.photos.filter(Boolean).length > 0 && (
+                                        <span style={{ display: "inline-flex", alignItems: "center", gap: 3, color: "var(--n600)", fontWeight: 600 }} title="Possui fotos">
+                                          <Image size={10} /> Foto
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </td>

@@ -1,6 +1,6 @@
-import { 
-  X, Siren, AlertTriangle, Car, Wrench, Briefcase, 
-  Pencil, Trash2 
+import {
+  X, Siren, AlertTriangle, Car, Wrench, Briefcase,
+  Pencil, Trash2, Image
 } from "lucide-react";
 import AssetContactActions from "./AssetContactActions";
 import WhatsAppQrButton from "../common/WhatsAppQrButton";
@@ -33,7 +33,7 @@ export default function AssetDetail({
     <div className="modal-overlay" style={{ zIndex: 1600 }} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal-content">
         <button className="modal-close" onClick={onClose}><X size={12} /></button>
-        
+
         <div className="modal-header">
           <h2 style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {assetIcon(asset.category)} {asset.name}
@@ -53,19 +53,55 @@ export default function AssetDetail({
 
         <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {/* Photos Gallery */}
-          {asset.photos && asset.photos.length > 0 && (
-            <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8 }}>
-              {asset.photos.map((p, idx) => (
-                <img 
-                  key={idx} 
-                  src={p} 
-                  style={{ height: 160, borderRadius: 12, border: "1px solid var(--n200)", cursor: "zoom-in", objectFit: "cover" }} 
-                  onClick={() => setExpandedImage?.(p)}
-                  alt={`Foto ${idx + 1} de ${asset.name}`}
-                />
-              ))}
-            </div>
-          )}
+          {(() => {
+            const assetPhotos = Array.isArray(asset?.photos) ? asset.photos.filter(Boolean) : [];
+            if (assetPhotos.length === 0) return null;
+
+            return (
+              <div className="detail-section">
+                <h4 style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "var(--n600)", fontWeight: 800, textTransform: "uppercase", marginBottom: 10 }}>
+                  <Image size={14} />
+                  Fotos do Ativo
+                </h4>
+
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+                  gap: 10,
+                  marginTop: 4
+                }}>
+                  {assetPhotos.map((photo, index) => (
+                    <button
+                      key={`${photo}-${index}`}
+                      type="button"
+                      onClick={() => setExpandedImage?.(photo)}
+                      style={{
+                        border: "1px solid var(--n200)",
+                        borderRadius: 12,
+                        padding: 0,
+                        overflow: "hidden",
+                        background: "#fff",
+                        cursor: "zoom-in",
+                        aspectRatio: "4 / 3"
+                      }}
+                      title="Clique para ampliar"
+                    >
+                      <img
+                        src={photo}
+                        alt={`Foto ${index + 1} do ativo`}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          display: "block"
+                        }}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="asset-detail-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div className="detail-group">
