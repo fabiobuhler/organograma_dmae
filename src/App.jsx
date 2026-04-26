@@ -27,6 +27,7 @@ import NodeSelector from "./components/selectors/NodeSelector";
 import PersonSelector from "./components/selectors/PersonSelector";
 import ListNode from "./components/org/ListNode";
 import AssetTypesModal from "./components/assets/AssetTypesModal";
+import AssetContactActions from "./components/assets/AssetContactActions";
 
 const STORAGE_KEY = "dmae-orgchart-v16";
 const DEMO_USER = "admin";
@@ -2537,13 +2538,7 @@ export default function App() {
                       )}
                       {a.isEmergency && a.contatoAcionamento && (
                         <div style={{ display: "flex", gap: 4, marginLeft: 4 }}>
-                          <WhatsAppButton phone={a.contatoAcionamento} label="" />
-                          <WhatsAppQrButton 
-                            phone={a.contatoAcionamento} 
-                            responsible={a.contatoResponsavel} 
-                            label="" 
-                            title="QR Code para Acionamento de Contingência" 
-                          />
+                          <AssetContactActions phone={a.contatoAcionamento} responsible={a.contatoResponsavel} />
                         </div>
                       )}
                     </div>
@@ -2797,13 +2792,7 @@ export default function App() {
                           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                             <Siren size={16} color="#ef4444" strokeWidth={3} fill="#ef4444" fillOpacity={0.1} />
                             {a.isMaintenance && <AlertTriangle size={16} color="#d97706" strokeWidth={3} title="Ativo em Manutenção" />}
-                            <WhatsAppButton phone={a.contatoAcionamento} label="" />
-                            <WhatsAppQrButton 
-                              phone={a.contatoAcionamento} 
-                              responsible={a.contatoResponsavel} 
-                              label="" 
-                              title="QR Code para Acionamento de Contingência" 
-                            />
+                            <AssetContactActions phone={a.contatoAcionamento} responsible={a.contatoResponsavel} />
                           </div>
                         ) : <span style={{ color: "var(--n400)" }}>Não</span>}
                       </td>
@@ -2978,13 +2967,7 @@ export default function App() {
                                       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                                         <Siren size={16} color="#ef4444" strokeWidth={3} fill="#ef4444" fillOpacity={0.1} />
                                         {a.isMaintenance && <AlertTriangle size={16} color="#d97706" strokeWidth={3} title="Ativo em Manutenção" />}
-                                        <WhatsAppButton phone={a.contatoAcionamento} label="" />
-                                        <WhatsAppQrButton 
-                                          phone={a.contatoAcionamento} 
-                                          responsible={a.contatoResponsavel} 
-                                          label="" 
-                                          title="QR Code para Acionamento de Contingência" 
-                                        />
+                                        <AssetContactActions phone={a.contatoAcionamento} responsible={a.contatoResponsavel} />
                                       </div>
                                     )}
                                   </div>
@@ -4751,13 +4734,7 @@ export default function App() {
                                             <Siren size={10} /> Tel.: {a.contatoAcionamento || "Não informado"}
                                             {a.contatoAcionamento && (
                                               <>
-                                                <WhatsAppButton phone={a.contatoAcionamento} label="" />
-                                                <WhatsAppQrButton 
-                                                  phone={a.contatoAcionamento} 
-                                                  responsible={a.contatoResponsavel} 
-                                                  label="" 
-                                                  title="QR Code para Acionamento de Contingência" 
-                                                />
+                                                <AssetContactActions phone={a.contatoAcionamento} responsible={a.contatoResponsavel} />
                                               </>
                                             )}
                                           </div>
@@ -4931,13 +4908,7 @@ export default function App() {
                             {a.contatoAcionamento || "Não informado"}
                             {a.contatoAcionamento && (
                               <>
-                                <WhatsAppButton phone={a.contatoAcionamento} label="" />
-                                <WhatsAppQrButton 
-                                  phone={a.contatoAcionamento} 
-                                  responsible={a.contatoResponsavel} 
-                                  label="" 
-                                  title="QR Code para Acionamento de Contingência" 
-                                />
+                                <AssetContactActions phone={a.contatoAcionamento} responsible={a.contatoResponsavel} />
                               </>
                             )}
                           </p>
