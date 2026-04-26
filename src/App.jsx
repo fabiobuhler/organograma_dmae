@@ -19,6 +19,8 @@ import { maskPhone } from "./utils/phone";
 import WhatsAppButton from "./components/common/WhatsAppButton";
 import WhatsAppQrButton from "./components/common/WhatsAppQrButton";
 import { supabase } from "./lib/supabase";
+import SystemAlertModal from "./components/common/SystemAlertModal";
+import ConfirmDialog from "./components/common/ConfirmDialog";
 
 const STORAGE_KEY = "dmae-orgchart-v16";
 const DEMO_USER = "admin";
@@ -689,124 +691,6 @@ function normalizeDeep(value) {
   return fixMojibakeText(value);
 }
 
-function SystemAlertModal({ alert, onClose }) {
-  if (!alert) return null;
-
-  const isError = alert.type === "error";
-  const isSuccess = alert.type === "success";
-  const isWarning = alert.type === "warning";
-
-  return (
-    <div className="modal-overlay" style={{ zIndex: 5000 }}>
-      <div className="modal-content narrow system-alert-modal">
-        <div className="modal-header">
-          <h2>
-            {isError ? "Erro" : isSuccess ? "Concluído" : alert.title || "Atenção"}
-          </h2>
-          <p>
-            {isError
-              ? "Não foi possível concluir a operação."
-              : isSuccess
-                ? "Operação concluída."
-                : "Verifique as informações abaixo antes de continuar."}
-          </p>
-        </div>
-
-        <div className="modal-body">
-          <div className={`system-alert-box ${isError ? "error" : isSuccess ? "success" : "warning"}`}>
-            <div className="system-alert-icon">
-              {isError ? <AlertTriangle size={22} /> : isSuccess ? <ShieldCheck size={22} /> : <Info size={22} />}
-            </div>
-
-            <div className="system-alert-text">
-              <div className="system-alert-title">
-                {alert.title || (isError ? "Erro" : isSuccess ? "Concluído" : "Atenção")}
-              </div>
-
-              <div className="system-alert-message">
-                {String(alert.message || "")
-                  .split("\n")
-                  .map((line, idx) => (
-                    <p key={idx} style={{ margin: "0 0 6px" }}>{line}</p>
-                  ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="modal-footer">
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={onClose}
-            autoFocus
-          >
-            {alert.confirmText || "OK, entendi"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-function ConfirmDialog({ dialog, onCancel, onConfirm }) {
-  if (!dialog) return null;
-
-  const isDanger = dialog.type === "danger";
-
-  return (
-    <div className="modal-overlay" style={{ zIndex: 5200 }}>
-      <div className="modal-content narrow system-alert-modal">
-        <div className="modal-header">
-          <h2>{dialog.title || "Confirmar ação"}</h2>
-          <p>{dialog.subtitle || "Confirme antes de continuar."}</p>
-        </div>
-
-        <div className="modal-body" style={{ marginTop: 0 }}>
-          <div className={`system-alert-box ${isDanger ? "error" : "warning"}`} style={{ border: "none", background: "none", padding: 0 }}>
-            <div className="system-alert-icon" style={{ background: isDanger ? "#fee2e2" : "#fefce8", color: isDanger ? "#ef4444" : "#eab308" }}>
-              {isDanger ? <Trash2 size={22} /> : <AlertTriangle size={22} />}
-            </div>
-
-            <div className="system-alert-text">
-              <div className="system-alert-title" style={{ color: "var(--n800)" }}>
-                {dialog.title || "Confirmar ação"}
-              </div>
-
-              <div className="system-alert-message" style={{ color: "var(--n600)" }}>
-                {String(dialog.message || "")
-                  .split("\n")
-                  .map((line, idx) => (
-                    <p key={idx} style={{ marginBottom: 4 }}>{line}</p>
-                  ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="modal-footer" style={{ borderTop: "1px solid var(--n100)", paddingTop: 16 }}>
-          <button
-            type="button"
-            className="btn btn-outline btn-xs"
-            onClick={onCancel}
-          >
-            Cancelar
-          </button>
-
-          <button
-            type="button"
-            className={isDanger ? "btn btn-danger btn-xs" : "btn btn-primary btn-xs"}
-            onClick={onConfirm}
-            autoFocus
-          >
-            {dialog.confirmText || "Confirmar"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ─€─€─€─€ APP ─€─€─€─€ */
 export default function App() {
