@@ -138,7 +138,11 @@ export default function AssetDetail({
                 </div>
                 <div>
                   <label className="fl" style={{ fontSize: 8 }}>Contato Empresa</label>
-                  <div className="detail-val" style={{ fontSize: 11 }}>{asset.contatoAcionamento}</div>
+                  <div className="detail-val" style={{ fontSize: 11 }}>{asset.contatoEmpresa || "---"}</div>
+                </div>
+                <div>
+                  <label className="fl" style={{ fontSize: 8 }}>Responsável Direto</label>
+                  <div className="detail-val" style={{ fontSize: 11 }}>{asset.responsavelDireto || "---"}</div>
                 </div>
               </div>
             </div>
