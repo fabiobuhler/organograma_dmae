@@ -405,3 +405,109 @@ Seções a adicionar:
   - Formulários grandes (AssetForm, PersonForm, NodeForm)
 
 *Documento atualizado em 2026-04-26.*
+
+---
+
+## Checkpoint pós-Fase 3C
+
+### Estado atual
+- Branch atual: `refactor/app-split-phase-3c-asset-badges-use`
+- Último commit: `c8b7779a` — Aplica badges visuais de ativos
+- Linhas atuais do App.jsx: 5020 (Redução acumulada contínua)
+- Working tree: Limpo
+
+### Fases concluídas
+- Fase 0 — Segurança, .gitignore, .env fora do tracking e inventário.
+- Fase 1A — Consolidação de phone.js, WhatsAppButton e WhatsAppQrButton.
+- Fase 1B — Extração de SystemAlertModal e ConfirmDialog.
+- Fase 1C — Extração de utilitários puros de ativos e contratos.
+- Fase 2A — Extração de NodeSelector e PersonSelector.
+- Fase 2B — Extração de ListNode.
+- Fase 2C — Checkpoint documental pós-Fase 2B.
+- Fase 3A — Extração de AssetTypesModal.
+- Fase 3B — Extração de AssetContactActions e preparação de AssetBadges.
+- Fase 3C — Aplicação de AssetBadges em pontos visuais simples.
+
+### Arquivos criados/extraídos
+Common:
+- src/components/common/SystemAlertModal.jsx
+- src/components/common/ConfirmDialog.jsx
+- src/components/common/WhatsAppButton.jsx
+- src/components/common/WhatsAppQrButton.jsx
+
+Selectors:
+- src/components/selectors/NodeSelector.jsx
+- src/components/selectors/PersonSelector.jsx
+
+Org:
+- src/components/org/ListNode.jsx
+
+Assets:
+- src/components/assets/AssetTypesModal.jsx
+- src/components/assets/AssetContactActions.jsx
+- src/components/assets/AssetBadges.jsx
+
+Utils:
+- src/utils/phone.js
+- src/utils/assetUtils.js
+- src/utils/contractUtils.js
+
+### Testes já realizados
+- Login administrador.
+- Cadastro/edição de tipos de ativos.
+- Confirmação de exclusão com ConfirmDialog.
+- Alertas persistentes com SystemAlertModal.
+- Cadastro de estrutura com responsável.
+- Bloqueio de pessoa em mais de uma caixa/node.
+- Permissão de pessoa em múltiplos contratos.
+- Unidade vinculada em contrato.
+- Registro Centralizado de Ativos.
+- Ativos de contingência.
+- Ativos em manutenção.
+- WhatsApp e QR Code.
+- Visualização em lista.
+- Subir nível e fechar foco.
+- Árvore e Pan/Zoom.
+- Dashboard conferido visualmente.
+- PDF/CSV preservados.
+
+### Áreas preservadas até agora
+- Dashboard/BI complexo.
+- Exportação PDF.
+- Exportação Smart CSV.
+- loadCloudData.
+- saveAsset.
+- saveContract.
+- saveNode.
+- savePerson.
+- Autenticação/login.
+- Regras de permissões.
+- Supabase services.
+
+### Próximas fases sugeridas
+Fase 4A — extrair modais administrativos menos acoplados:
+- LogsModal;
+- StatsModal;
+- UsersModal, se estiver isolado.
+
+Fase 4B — extrair detalhes pequenos:
+- PersonDetail;
+- ContractDetail simples;
+- AssetDetail apenas se estiver claro e isolado.
+
+Fase 5 — formulários grandes:
+- PersonForm;
+- NodeForm;
+- AssetForm;
+- ContractForm.
+
+Fase 6 — serviços Supabase:
+- Somente depois dos componentes visuais estarem estáveis.
+
+### Regras para próximas fases
+- Não misturar refatoração com funcionalidade nova.
+- Um commit por fase.
+- Teste manual obrigatório antes de commit.
+- Não mexer em Dashboard/PDF/CSV sem fase específica.
+- Não mover funções Supabase ainda.
+- Não fazer push sem autorização.
