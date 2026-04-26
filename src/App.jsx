@@ -1,14 +1,15 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import {
-  FolderTree, Search, KeyRound, ShieldCheck, Download, Upload,
+  FolderTree, Search, KeyRound, Download, Upload,
   Pencil, Trash2, Users, Building2, ClipboardList, Briefcase,
-  Home, Plus, GitBranchPlus, Save, Mail, Phone, Car, Wrench, X, Menu, LogOut,
+  Home, Plus, Save, Mail, Phone, Car, Wrench, X, Menu, LogOut,
   ImagePlus, List, Network, MapPin, ChevronRight, ChevronDown, ChevronUp, ChevronsDown, Undo2, FileText, Printer, PieChart, CloudUpload, MessageCircle, Package, ArrowUp,
-  AlertTriangle, Info, Calendar, History, User, ChevronLeft, Eye, EyeOff, AlertCircle, Settings, Siren
+  AlertTriangle, Info, Calendar, History, User, ChevronLeft, Eye, EyeOff, AlertCircle, Settings, Siren, ShieldCheck
 } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { OrgBranch } from "./components/OrgNode";
+import PersonDetail from "./components/people/PersonDetail";
 import { seedNodes, seedAssets, seedPersons, seedContracts, seedAssetTypes } from "./data/seedData";
 import {
   makeId, initials, sortNodes, downloadFile, toCsv,
@@ -3961,139 +3962,21 @@ export default function App() {
 
       {/* ═─ ═─ ═─ PERSON DETAIL VIEW ═─ ═─ ═─ */}
       {showPersonDetail && (
-        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowPersonDetail(null); }}>
-          <div className="modal-content wide">
-            <button className="modal-close" onClick={() => setShowPersonDetail(null)}><X size={12} /></button>
-            {personMap.has(showPersonDetail) ? (
-              (() => {
-                const p = personMap.get(showPersonDetail);
-                if (!p) return <p>Pessoa não encontrada.</p>;
-                return (
-                  <>
-                    <div className="modal-header">
-                      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                        <div className="av av-lg" style={{ width: 64, height: 64, minWidth: 64 }}>
-                          {p.foto ? <img src={p.foto} alt="" /> : <span className="av-fb" style={{ fontSize: 20 }}>{initials(p.name)}</span>}
-                        </div>
-                        <div>
-                          <h2 style={{ margin: 0, lineHeight: 1.2 }}>{p.name}</h2>
-                          <p style={{ margin: 0, color: "var(--n500)" }}>{p.cargo} • Matrícula {p.matricula}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="modal-body">
-                      <div className="detail-grid" style={{ padding: 0, gridTemplateColumns: "1fr 1fr 1fr" }}>
-                        {(isProtected || canEdit) ? (
-                          <>
-                            <div className="dg-item">
-                              <div className="dg-label">E-mail</div>
-                              <div className="dg-val" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.email || "—"}</span>
-                                {p.email && <a href={`mailto:${p.email}`} className="btn-icon-xs" title="Enviar E-mail"><Mail size={12} /></a>}
-                              </div>
-                            </div>
-                            <div className="dg-item">
-                              <div className="dg-label">Telefone</div>
-                              <div className="dg-val" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                {p.telefone || "—"}
-                                {p.telefone && (
-                                  <>
-                                    <WhatsAppButton phone={p.telefone} label="" />
-                                    <WhatsAppQrButton 
-                                      phone={p.telefone} 
-                                      responsible={p.name} 
-                                      label="" 
-                                      title="QR Code WhatsApp" 
-                                    />
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                            <div className="dg-item"><div className="dg-label">Ramal</div><div className="dg-val">{p.ramal || "—"}</div></div>
-                            <div className="dg-item"><div className="dg-label">Regime</div><div className="dg-val">{p.regime || "—"}</div></div>
-                            <div className="dg-item"><div className="dg-label">Vínculo</div><div className="dg-val">{p.vinculo || "—"}</div></div>
-                            <div className="dg-item" style={{ gridColumn: "span 3" }}>
-                              <div className="dg-label">Endereço de Lotação (Herdado da Caixa)</div>
-                              <div className="dg-val" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                {(() => {
-                                  const pNode = nodes.find(n => n.personId === showPersonDetail);
-                                  const addr = resolveAddress(pNode?.id);
-                                  const full = `${addr.lotacao}${addr.complemento ? `, ${addr.complemento}` : ""}`;
-                                  return (
-                                    <>
-                                      <span style={{ fontSize: 11 }}>{full}</span>
-                                      <a 
-                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr.lotacao)}`} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="btn btn-outline btn-xs"
-                                        title="Ver no Google Maps"
-                                        style={{ padding: "1px 4px", minHeight: "auto", height: 18, display: "inline-flex", alignItems: "center" }}
-                                      >
-                                        <MapPin size={10} color="#ef4444" />
-                                      </a>
-                                    </>
-                                  );
-                                })()}
-                              </div>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="dg-item" style={{ gridColumn: "span 3", background: "var(--n50)", padding: 12, borderRadius: 8, textAlign: "center" }}>
-                            <div style={{ fontSize: 13, color: "var(--n600)" }}>
-                              🔒 <b>Dados Privados</b>. Para visualizar e-mail, telefone e localização, faça login com sua matrícula.
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {(isProtected || canEdit) && (
-                        <div className="asset-section" style={{ padding: 0, marginTop: 12 }}>
-                          <div className="asset-section-title"><ShieldCheck size={14} /> Contratos Vincuados (Gestor/Fiscal)</div>
-                          {(() => {
-                            const pContracts = contracts.filter(c =>
-                              c.gestor.titularId === showPersonDetail || c.gestor.suplenteId === showPersonDetail ||
-                              (c.fiscaisContrato || []).some(f => f.titularId === showPersonDetail || f.suplenteId === showPersonDetail) ||
-                              (c.fiscaisServico || []).some(f => f.titularId === showPersonDetail || f.suplenteId === showPersonDetail)
-                            );
-                            return pContracts.length > 0 ? pContracts.map((c) => (
-                              <div key={c.id} className="asset-mini" style={{ background: "var(--n50)" }}>
-                                <div className="asset-mini-name">{c.sei} <span className="badge badge-sec" style={{ marginLeft: "auto", fontSize: 9 }}>
-                                  {c.gestor.titularId === showPersonDetail || c.gestor.suplenteId === showPersonDetail ? "Gestor" :
-                                    (c.fiscaisContrato || []).some(f => f.titularId === showPersonDetail || f.suplenteId === showPersonDetail) ? "Fiscal Contrato" : "Fiscal Serviço"}
-                                </span></div>
-                                <div className="asset-mini-meta"><b>Objeto:</b> {c.objeto}</div>
-                                <div className="asset-mini-meta"><b>Papel:</b> {
-                                  c.gestor.titularId === showPersonDetail ? "Titular (Gestor)" :
-                                    c.gestor.suplenteId === showPersonDetail ? "Suplente (Gestor)" :
-                                      (c.fiscaisContrato || []).some(f => f.titularId === showPersonDetail) ? "Titular (Fiscal Contrato)" :
-                                        (c.fiscaisContrato || []).some(f => f.suplenteId === showPersonDetail) ? "Suplente (Fiscal Contrato)" :
-                                          (c.fiscaisServico || []).some(f => f.titularId === showPersonDetail) ? "Titular (Fiscal Serviço)" :
-                                            "Suplente (Fiscal Serviço)"
-                                }</div>
-                              </div>
-                            )) : <p style={{ fontSize: 12, color: "var(--n400)" }}>Nenhum contrato vinculado.</p>;
-                          })()}
-                        </div>
-                      )}
-
-                      <div className="asset-section" style={{ padding: 0, marginTop: 12 }}>
-                        <div className="asset-section-title"><Network size={14} /> Atuação no Organograma</div>
-                        {nodes.filter(n => n.personId === p.id).map(n => (
-                          <div key={n.id} className="asset-mini" style={{ cursor: "pointer" }} onClick={() => { selectNode(n.id); setFocusId(n.id); setShowPersonDetail(null); setShowDetail(true); }}>
-                            <div className="asset-mini-name">{n.name} - {n.description || n.cargo}</div>
-                            <div className="asset-mini-meta">Função: {n.funcao || "—"}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                );
-              })()
-            ) : <p>Pessoa não encontrada.</p>}
-            <div className="modal-footer"><button className="btn btn-primary btn-xs" onClick={() => setShowPersonDetail(null)}>Fechar</button></div>
-          </div>
-        </div>
+        <PersonDetail
+          person={personMap.get(showPersonDetail)}
+          nodes={nodes}
+          contracts={contracts}
+          isProtected={isProtected}
+          canEdit={canEdit}
+          onClose={() => setShowPersonDetail(null)}
+          onSelectNode={(id) => { 
+            selectNode(id); 
+            setFocusId(id); 
+            setShowPersonDetail(null); 
+            setShowDetail(true); 
+          }}
+          resolveAddress={resolveAddress}
+        />
       )}
 
       {/* ═─ ═─ ═─ CONTRACT DETAIL VIEW ═─ ═─ ═─ */}
