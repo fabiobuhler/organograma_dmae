@@ -859,6 +859,7 @@ export default function App() {
   const [loginPass, setLoginPass] = useState("");
   const [loginErr, setLoginErr] = useState("");
   const [zoom, setZoom] = useState(1);
+  const [centeredNodeId, setCenteredNodeId] = useState(null);
 
   const vpRef = useRef(null);
   const isDragging = useRef(false);
@@ -1066,22 +1067,93 @@ export default function App() {
   }, [selectedId, viewMode, isLoadingCloud]);
 
   // Auto-center on focus change
+  // --- AUTO-CENTER EFFECTS ---
   useEffect(() => {
-    if (viewMode !== "tree") return;
-    const vp = vpRef.current;
-    if (vp) vp.scrollTo(0, 0);
-    const timer = setTimeout(() => {
+    if (viewMode !== "tree" || !selectedId) return;
+    centerNodeInView(selectedId, { behavior: "smooth", attempts: 4, delay: 100 });
+  }, [selectedId, viewMode]);
+
+  useEffect(() => {
+    if (viewMode !== "tree" || !focusId) return;
+    // Quando o foco muda, centralizamos o novo nó raiz do foco
+    centerNodeInView(focusId, { behavior: "smooth", attempts: 5, delay: 150 });
+  }, [focusId, viewMode]);
+
+  /**
+   * Centraliza um nó no viewport do organograma de forma robusta.
+   * Unifica cálculos de zoom, pan e tentativas de renderização.
+   */
+  const centerNodeInView = useCallback((nodeId, options = {}) => {
+    if (!nodeId || viewMode !== "tree") return;
+
+    const {
+      behavior = "smooth",
+      attempts = 3,
+      delay = 80
+    } = options;
+
+    // Registra como último nó centralizado para preservação no zoom
+    setCenteredNodeId(nodeId);
+
+    const run = (remainingAttempts) => {
+      const vp = vpRef.current;
       if (!vp) return;
-      const first = vp.querySelector('.org-card');
-      if (first) {
-        const vpR = vp.getBoundingClientRect();
-        const elR = first.getBoundingClientRect();
-        const dx = elR.left - vpR.left + vp.scrollLeft - (vpR.width / 2) + (elR.width / 2);
-        vp.scrollTo({ left: Math.max(0, dx), top: 0, behavior: "smooth" });
+
+      // Seletor exato: .org-card que contém o data-node-id
+      const safeId = String(nodeId).replace(/"/g, '\\"');
+      const el = vp.querySelector(`.org-card[data-node-id="${safeId}"]`);
+
+      if (!el) {
+        if (remainingAttempts > 0) {
+          setTimeout(() => run(remainingAttempts - 1), delay);
+        }
+        return;
       }
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [focusId, viewMode, isLoadingCloud]);
+
+      const vpRect = vp.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+
+      // Centro exato da viewport (visual)
+      const viewportCenterX = vpRect.left + vpRect.width / 2;
+      const viewportCenterY = vpRect.top + vpRect.height / 2;
+
+      // Centro exato do nó (visual, já escalado pelo transform)
+      const nodeCenterX = elRect.left + elRect.width / 2;
+      const nodeCenterY = elRect.top + elRect.height / 2;
+
+      // Diferença visual em pixels de tela
+      const deltaX = nodeCenterX - viewportCenterX;
+      const deltaY = nodeCenterY - viewportCenterY;
+
+      const currentZoom = zoom || 1;
+
+      // Ajusta o scroll: somamos o deslocamento visual dividido pelo zoom
+      // porque scrollLeft/Top operam no espaço de layout (não escalado).
+      vp.scrollTo({
+        left: Math.max(0, vp.scrollLeft + deltaX / currentZoom),
+        top: Math.max(0, vp.scrollTop + deltaY / currentZoom),
+        behavior
+      });
+    };
+
+    requestAnimationFrame(() => run(attempts));
+  }, [viewMode, zoom]);
+
+  const zoomAndKeepCenter = useCallback((nextZoom) => {
+    const targetNodeId = centeredNodeId || selectedId || focusId;
+    setZoom(nextZoom);
+
+    if (targetNodeId) {
+      // Pequeno delay para o transform: scale ser aplicado antes do recalcular
+      setTimeout(() => {
+        centerNodeInView(targetNodeId, {
+          behavior: "auto", // Movimento instantâneo durante zoom para evitar lag visual
+          attempts: 5,
+          delay: 50
+        });
+      }, 150);
+    }
+  }, [centeredNodeId, selectedId, focusId, centerNodeInView]);
 
   // Drag-to-pan on tree viewport
   useEffect(() => {
@@ -1140,8 +1212,9 @@ export default function App() {
   // Select node 
   const selectNode = useCallback((id) => {
     setSelectedId(id);
+    centerNodeInView(id, { behavior: "smooth", attempts: 4, delay: 100 });
     setShowDetail(true);
-  }, []);
+  }, [centerNodeInView]);
 
 
 
@@ -2228,21 +2301,12 @@ export default function App() {
   }, [canEdit, openNewNode]);
 
   const handleExpand = useCallback((nodeId) => {
-    // data-node-id is ON the .org-card div itself, not a parent wrapper
-    // Wait for React to render expanded children before measuring positions
+    setSelectedId(nodeId);
+    // Aguarda a expansão do componente e centraliza o nó clicado
     setTimeout(() => {
-      const vp = vpRef.current;
-      if (!vp) return;
-      const el = vp.querySelector(`.org-card[data-node-id="${nodeId}"]`);
-      if (el) {
-        const vpRect = vp.getBoundingClientRect();
-        const elRect = el.getBoundingClientRect();
-        const dx = elRect.left - vpRect.left + vp.scrollLeft - (vpRect.width / 2) + (elRect.width / 2);
-        const dy = elRect.top - vpRect.top + vp.scrollTop - (vpRect.height / 2) + (elRect.height / 2);
-        vp.scrollTo({ left: Math.max(0, dx), top: Math.max(0, dy), behavior: "smooth" });
-      }
-    }, 400);
-  }, []);
+      centerNodeInView(nodeId, { behavior: "smooth", attempts: 5, delay: 120 });
+    }, 80);
+  }, [centerNodeInView]);
 
   const handleReturnFromFocus = useCallback(() => {
     setFocusId(null);
@@ -2251,20 +2315,12 @@ export default function App() {
   const handleExpandAllBelow = useCallback((nodeId) => {
     const ids = new Set(getDescendantIds(nodeId, getChildren));
     setExpandedSet(ids);
-    // center on the triggering node after render
+    setSelectedId(nodeId);
+    // Centralização com mais tentativas para lidar com múltiplos níveis abrindo
     setTimeout(() => {
-      const vp = vpRef.current;
-      if (!vp) return;
-      const el = vp.querySelector(`.org-card[data-node-id="${nodeId}"]`);
-      if (el) {
-        const vpRect = vp.getBoundingClientRect();
-        const elRect = el.getBoundingClientRect();
-        const dx = elRect.left - vpRect.left + vp.scrollLeft - vpRect.width / 2 + elRect.width / 2;
-        const dy = elRect.top - vpRect.top + vp.scrollTop - vpRect.height / 2 + elRect.height / 2;
-        vp.scrollTo({ left: Math.max(0, dx), top: Math.max(0, dy), behavior: "smooth" });
-      }
-    }, 600);
-  }, [getChildren]);
+      centerNodeInView(nodeId, { behavior: "smooth", attempts: 8, delay: 150 });
+    }, 100);
+  }, [getChildren, centerNodeInView]);
 
   const handleExportPdf = useCallback(async () => {
     const el = document.querySelector(".tree-viewport-inner");
@@ -2510,23 +2566,34 @@ export default function App() {
                 
                 {focused?.parentId && (
                   <button className="btn btn-outline btn-xs" 
-                    onClick={() => { setFocusId(focused.parentId); setSelectedId(focused.parentId); }}
+                    onClick={() => { 
+                      const pid = focused.parentId;
+                      setFocusId(pid); 
+                      setSelectedId(pid);
+                      setTimeout(() => centerNodeInView(pid, { behavior: "smooth", attempts: 5 }), 100);
+                    }}
                     style={{ marginLeft: 8, padding: "3px 10px", fontSize: 10, background: "rgba(255,255,255,0.15)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)" }}
                   >
                     <ArrowUp size={10} /> {"Subir Nível"}
                   </button>
                 )}
 
-                <button className="btn btn-outline btn-xs" onClick={handleReturnFromFocus}
+                <button className="btn btn-outline btn-xs" onClick={() => {
+                    handleReturnFromFocus();
+                    if (rootNode) {
+                      setSelectedId(rootNode.id);
+                      setTimeout(() => centerNodeInView(rootNode.id, { behavior: "smooth", attempts: 5 }), 120);
+                    }
+                  }}
                   style={{ marginLeft: 4, padding: "3px 10px", fontSize: 10, background: "rgba(255,255,255,0.15)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)" }}>
                   <Undo2 size={10} /> Sair do Foco
                 </button>
               </div>
             )}
             <div className="zoom-ctrls" style={{ position: "fixed", bottom: 80, left: 24, display: "flex", flexDirection: "column", gap: 8, zIndex: 50 }}>
-              <button className="btn btn-outline" title="Aumentar zoom" style={{ background: "#fff", width: 36, height: 36, padding: 0, justifyContent: "center" }} onClick={() => setZoom(z => Math.min(2, z + 0.1))}><span style={{ fontSize: 18, fontWeight: "bold" }}>+</span></button>
-              <button className="btn btn-outline" title="Zoom 100%" style={{ background: "#fff", width: 36, height: 36, padding: 0, justifyContent: "center" }} onClick={() => setZoom(1)}><span style={{ fontSize: 12, fontWeight: "bold" }}>{Math.round(zoom * 100)}%</span></button>
-              <button className="btn btn-outline" title="Diminuir zoom" style={{ background: "#fff", width: 36, height: 36, padding: 0, justifyContent: "center" }} onClick={() => setZoom(z => Math.max(0.3, z - 0.1))}><span style={{ fontSize: 18, fontWeight: "bold" }}>-</span></button>
+              <button className="btn btn-outline" title="Aumentar zoom" style={{ background: "#fff", width: 36, height: 36, padding: 0, justifyContent: "center" }} onClick={() => zoomAndKeepCenter(Math.min(2, zoom + 0.1))}><span style={{ fontSize: 18, fontWeight: "bold" }}>+</span></button>
+              <button className="btn btn-outline" title="Zoom 100%" style={{ background: "#fff", width: 36, height: 36, padding: 0, justifyContent: "center" }} onClick={() => zoomAndKeepCenter(1)}><span style={{ fontSize: 12, fontWeight: "bold" }}>{Math.round(zoom * 100)}%</span></button>
+              <button className="btn btn-outline" title="Diminuir zoom" style={{ background: "#fff", width: 36, height: 36, padding: 0, justifyContent: "center" }} onClick={() => zoomAndKeepCenter(Math.max(0.3, zoom - 0.1))}><span style={{ fontSize: 18, fontWeight: "bold" }}>-</span></button>
               <div style={{ height: 1, background: "var(--n200)", margin: "0 4px" }} />
               <button
                 className="btn btn-outline"
