@@ -52,7 +52,9 @@ import {
   upsertPerson,
   deletePersonById,
   upsertNode,
-  deleteNodeById
+  deleteNodeById,
+  upsertAsset,
+  deleteAssetById
 } from "./services/supabaseWriteService";
 
 const STORAGE_KEY = "dmae-orgchart-v16";
@@ -1526,47 +1528,46 @@ export default function App() {
       return;
     }
     
-    if (supabase) {
-      const assetToDb = {
-        id: normalizedAsset.id,
-        node_id: normalizedAsset.nodeId || null,
-        nodeId: normalizedAsset.nodeId || null,
-        category: normalizedAsset.category || "",
-        type: normalizedAsset.type || "",
-        name: normalizedAsset.name || "",
-        manufacturer: normalizedAsset.manufacturer || "",
-        model: normalizedAsset.model || "",
-        year: normalizedAsset.year || "",
-        plate: normalizedAsset.plate || "",
-        patrimonio: normalizedAsset.patrimonio || "",
-        os: normalizedAsset.os || "",
-        notes: normalizedAsset.notes || "",
-        tipo_vinculo: normalizedAsset.tipoVinculo || "Próprio",
-        is_emergency: Boolean(normalizedAsset.isEmergency),
-        is_maintenance: Boolean(normalizedAsset.isMaintenance),
-        maintenance_notes: normalizedAsset.maintenanceNotes || "",
-        maintenance_since: normalizedAsset.isMaintenance
-          ? normalizedAsset.maintenanceSince || new Date().toISOString()
-          : null,
-        numero_contrato: normalizedAsset.numeroContrato || "",
-        empresa_contratada: normalizedAsset.empresaContratada || "",
-        cnpj_contratada: normalizedAsset.cnpjContratada || "",
-        contato_fone: normalizedAsset.contatoFone || "",
-        contato_acionamento: normalizedAsset.contatoAcionamento || "",
-        contato_responsavel: normalizedAsset.contatoResponsavel || "",
-        contato_empresa: normalizedAsset.contatoEmpresa || "",
-        responsavel_direto: normalizedAsset.responsavelDireto || "",
-        fiscal_contrato: normalizedAsset.fiscalContrato || "",
-        matricula_fiscal: normalizedAsset.matriculaFiscal || "",
-        photos: normalizedAsset.photos || []
-      };
-      
-      const { error } = await supabase.from('assets').upsert(assetToDb).select();
-      if (error) {
-        console.error("Erro ao salvar ativo:", error, assetToDb);
-        showSystemAlert(`O ativo não pôde ser salvo.\n\nDetalhe técnico: ${error.message}`, { title: "Erro ao salvar ativo", type: "error" });
-        return;
-      }
+    const assetToDb = {
+      id: normalizedAsset.id,
+      node_id: normalizedAsset.nodeId || null,
+      nodeId: normalizedAsset.nodeId || null,
+      category: normalizedAsset.category || "",
+      type: normalizedAsset.type || "",
+      name: normalizedAsset.name || "",
+      manufacturer: normalizedAsset.manufacturer || "",
+      model: normalizedAsset.model || "",
+      year: normalizedAsset.year || "",
+      plate: normalizedAsset.plate || "",
+      patrimonio: normalizedAsset.patrimonio || "",
+      os: normalizedAsset.os || "",
+      notes: normalizedAsset.notes || "",
+      tipo_vinculo: normalizedAsset.tipoVinculo || "Próprio",
+      is_emergency: Boolean(normalizedAsset.isEmergency),
+      is_maintenance: Boolean(normalizedAsset.isMaintenance),
+      maintenance_notes: normalizedAsset.maintenanceNotes || "",
+      maintenance_since: normalizedAsset.isMaintenance
+        ? normalizedAsset.maintenanceSince || new Date().toISOString()
+        : null,
+      numero_contrato: normalizedAsset.numeroContrato || "",
+      empresa_contratada: normalizedAsset.empresaContratada || "",
+      cnpj_contratada: normalizedAsset.cnpjContratada || "",
+      contato_fone: normalizedAsset.contatoFone || "",
+      contato_acionamento: normalizedAsset.contatoAcionamento || "",
+      contato_responsavel: normalizedAsset.contatoResponsavel || "",
+      contato_empresa: normalizedAsset.contatoEmpresa || "",
+      responsavel_direto: normalizedAsset.responsavelDireto || "",
+      fiscal_contrato: normalizedAsset.fiscalContrato || "",
+      matricula_fiscal: normalizedAsset.matriculaFiscal || "",
+      photos: normalizedAsset.photos || []
+    };
+
+    try {
+      await upsertAsset(supabase, assetToDb);
+    } catch (error) {
+      console.error("Erro ao salvar ativo:", error, assetToDb);
+      showSystemAlert(`O ativo não pôde ser salvo.\n\nDetalhe técnico: ${error.message}`, { title: "Erro ao salvar ativo", type: "error" });
+      return;
     }
     
     setAssets((current) =>
@@ -1579,8 +1580,14 @@ export default function App() {
     showSystemAlert("Ativo salvo com sucesso.", { title: "Ativo salvo", type: "success" });
   }, [assetForm, editAssetId, logAction, supabase]);
 
-  const deleteAsset = useCallback((id, name) => {
-    if (supabase) supabase.from('assets').delete().eq('id', id).then(() => console.log("Asset deleted"));
+  const deleteAsset = useCallback(async (id, name) => {
+    try {
+      await deleteAssetById(supabase, id);
+      console.log("Asset deleted");
+    } catch (err) {
+      console.error("Error deleting asset:", err);
+      flash("Erro ao excluir ativo da nuvem.");
+    }
     setAssets((c) => c.filter((a) => a.id !== id));
     logAction("Excluir Ativo", "ASSET", name || id);
     flash("Ativo excluído");

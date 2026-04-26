@@ -60,3 +60,32 @@ export async function deleteNodeById(supabase, id) {
   if (error) throw error;
   return true;
 }
+
+/**
+ * Persiste ou atualiza um ativo na tabela 'assets'.
+ */
+export async function upsertAsset(supabase, payload) {
+  if (!supabase) return payload;
+  const { data, error } = await supabase
+    .from('assets')
+    .upsert(payload)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data || payload;
+}
+
+/**
+ * Exclui um ativo da tabela 'assets' pelo ID.
+ */
+export async function deleteAssetById(supabase, id) {
+  if (!supabase) return true;
+  const { error } = await supabase
+    .from('assets')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+  return true;
+}
