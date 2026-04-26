@@ -21,6 +21,8 @@ import WhatsAppQrButton from "./components/common/WhatsAppQrButton";
 import { supabase } from "./lib/supabase";
 import SystemAlertModal from "./components/common/SystemAlertModal";
 import ConfirmDialog from "./components/common/ConfirmDialog";
+import { getContractStatus, getDashboardStats, cleanRole, cleanRoleArray } from "./utils/contractUtils";
+import { groupAssetsByContract } from "./utils/assetUtils";
 
 const STORAGE_KEY = "dmae-orgchart-v16";
 const DEMO_USER = "admin";
@@ -100,36 +102,13 @@ function assetIcon(c) {
   return <Briefcase size={12} />;
 }
 
-/* --- Contract Helper --- */
-function getContractStatus(c) {
-  if (!c.dataTermino) return "active";
-  const end = new Date(c.dataTermino + "T00:00:00");
-  const diffDays = (end - new Date()) / (1000 * 3600 * 24);
-  if (diffDays < 0) return "expired";
-  if (diffDays <= 30) return "expiring";
-  return "active";
-}
-
-function getDashboardStats(contractList) {
-  let active = 0, expiring = 0, expired = 0;
-  contractList.forEach(c => {
-    const status = getContractStatus(c);
-    if (status === "expired") expired++;
-    else if (status === "expiring") expiring++;
-    else active++;
-  });
-  const total = active + expiring + expired;
-  const activePct = total > 0 ? (active / total) * 100 : 0;
-  const expiringPct = total > 0 ? (expiring / total) * 100 : 0;
-  const pieCss = total > 0 
-    ? `conic-gradient(#10b981 0% ${activePct}%, #f97316 ${activePct}% ${activePct + expiringPct}%, #ef4444 ${activePct + expiringPct}% 100%)`
-    : `conic-gradient(#e5e7eb 0% 100%)`;
-    
-  return { active, expiring, expired, total, pieCss };
-}/* --- PDF/Print export --- */
+/* --- PDF/Print export --- */
 function exportAssetsPdf(list, label, getPath, sort, nodesList) {
   const w = window.open("", "_blank");
-  if (!w) { showSystemAlert("Permita pop-ups para exportar.", { title: "Atenção", type: "warning" }); return; }
+  if (!w) {
+    alert("Permita pop-ups para exportar.");
+    return;
+  }
 
   const logoUrl = window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png";
 
@@ -184,14 +163,7 @@ function exportAssetsPdf(list, label, getPath, sort, nodesList) {
   const contratados = list.filter(a => a.tipoVinculo === "Contratado");
 
   // Group contratados: empresa → contrato → [ativos]
-  const byEmpresa = {};
-  contratados.forEach(a => {
-    const emp = a.empresaContratada || "Empresa não informada";
-    const ctt = a.numeroContrato    || "Contrato não informado";
-    if (!byEmpresa[emp]) byEmpresa[emp] = {};
-    if (!byEmpresa[emp][ctt]) byEmpresa[emp][ctt] = [];
-    byEmpresa[emp][ctt].push(a);
-  });
+  const byEmpresa = groupAssetsByContract(contratados);
 
   // Build Próprios section
   let propriosSection = "";
@@ -1787,15 +1759,6 @@ export default function App() {
   }, []);
 
   const saveContract = useCallback(async () => {
-    const cleanRole = (role) => ({
-      titularId: role?.titularId || "",
-      suplenteId: role?.suplenteId || ""
-    });
-
-    const cleanRoleArray = (list) =>
-      (Array.isArray(list) ? list : [])
-        .map(cleanRole)
-        .filter((item) => item.titularId || item.suplenteId);
 
     const normalizedContract = {
       ...contractForm,
