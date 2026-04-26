@@ -805,8 +805,200 @@ Toda ação iniciada em um modal ou listagem deve retornar à mesma tela de orig
 - Validação matemática de CNPJ e máscaras de campos;
 - Persistência de fotos e categorias dinâmicas.
 
+---
+
+## Checkpoint pós-Fase 8C — Bloco de exportações concluído
+
+### Estado atual
+- **Branch:** `refactor/app-split-phase-8c-contract-export-services`
+- **Último commit:** `5312cba4 refactor: padroniza exportacoes de contratos no exportService`
+- **Linhas do App.jsx:** 4.072
+- **Working tree:** clean (alterações pendentes apenas em `docs/`)
+
+### Service de exportação
+
+Arquivo consolidado: `src/services/exportService.js` (830 linhas)
+
+**Responsabilidade:**
+- Centralizar geração e download de arquivos PDF/CSV;
+- Receber dados prontos do App.jsx;
+- Gerar arquivos sem acessar Supabase;
+- Não controlar estado React;
+- Não chamar `logAction`;
+- Não chamar `showSystemAlert`;
+- Não aplicar regras de negócio.
+
+### Fase 8A — Exportações de logs/auditoria
+
+**Exportações movidas:**
+- `exportAuditLogsCsv` — CSV de logs/auditoria;
+- `exportAuditLogsPdf` — PDF/relatório de logs via janela de impressão;
+- `generateDirectLogsPdf` — geração direta de PDF via html2pdf.
+
+**Preservado no App.jsx:**
+- Filtros de logs;
+- `normalizeAuditLog`;
+- `LogsModal`;
+- Wrappers de exportação (`exportLogsCsv`, `exportLogsPdf`);
+- Decisão de qual lista exportar.
+
+**Preservado:**
+- Logs antigos compatíveis;
+- PDF/CSV funcionando;
+- Histórico de Modificações sem alteração visual.
+
+### Fase 8B — Exportações de ativos
+
+**Exportações movidas:**
+- `exportAssetsCsv` — CSV de ativos;
+- `exportAssetsPdf` — PDF/relatório de ativos com agrupamento hierárquico.
+
+**Preservado no App.jsx:**
+- Filtros de ativos;
+- Ordenação;
+- Lista pronta para exportação;
+- Wrappers de exportação;
+- Integração com Registro Centralizado de Ativos.
+
+**Pontos importantes — compatibilidade Excel:**
+- CSV de ativos precisou de compatibilidade especial com Excel;
+- UTF-8 com BOM (`\uFEFF`) não foi suficiente no ambiente testado;
+- BOM físico em bytes (`0xEF 0xBB 0xBF`) também não resolveu;
+- Adotado CSV em **UTF-16LE com BOM** (`0xFF 0xFE`) via `downloadExcelCsvFile`;
+- Acentuação validada em campos como: Identificação, Patrimônio, Vínculo, Veículo, Caminhão, Manutenção, Contingência.
+
+**Preservado:**
+- Fotos no detalhe do ativo;
+- Indicador visual de foto na listagem;
+- `AssetForm`, `AssetDetail`;
+- Supabase/CRUD;
+- Dashboard.
+
+### Fase 8C — Exportações de contratos
+
+**Exportações movidas/padronizadas:**
+- `exportContractDetailCsv` — CSV individual de contrato (UTF-16LE);
+- `exportContractDetailPdf` — PDF individual de contrato (Rich HTML);
+- `exportContractsCsv` — CSV geral/lista de contratos (UTF-16LE);
+- `exportContractsPdf` — PDF geral/lista de contratos (Rich HTML).
+
+**Ajustes realizados:**
+- Botão **Exportar CSV** adicionado no `ContractDetail` (ícone `FileSpreadsheet`);
+- PDF individual de contrato padronizado com layout visual profissional (Inter font, seções organizadas, grid-2, cards de fiscais, logo DMAE, status colorido);
+- CSV de contrato usa `downloadExcelCsvFile` (UTF-16LE com BOM);
+- Wrappers `exportContractDetailPdf` e `exportContractDetailCsv` permanecem no App.jsx.
+
+**Preservado no App.jsx:**
+- `ContractForm`;
+- `ContractDetail` como chamador visual;
+- CNPJ com máscara e validação matemática;
+- Retorno ao modal/listagem de origem;
+- Filtros/lista de contratos;
+- Supabase/CRUD.
+
+**Campos nas exportações de contrato:**
+Contrato SEI, Status, Objeto, Itens, Unidade vinculada, Empresa, CNPJ, Contato, Início, Término, Gestão (titular/suplente), Fiscalização de contrato (titular/suplente), Fiscalização de serviço (titular/suplente), Aditivos, Observações.
+
+### Funções do exportService.js
+
+| # | Função | Tipo | Fase |
+|---|--------|------|------|
+| 1 | `safeText` | Helper | 8A |
+| 2 | `escapeCsvValue` | Helper | 8A |
+| 3 | `downloadFile` | Helper | 8A |
+| 4 | `downloadCsvFile` | Helper (UTF-8 BOM) | 8A |
+| 5 | `downloadExcelCsvFile` | Helper (UTF-16LE BOM) | 8B |
+| 6 | `formatExportDateTime` | Helper | 8A |
+| 7 | `exportAuditLogsCsv` | Logs CSV | 8A |
+| 8 | `exportAuditLogsPdf` | Logs PDF | 8A |
+| 9 | `generateDirectLogsPdf` | Logs PDF (html2pdf) | 8A |
+| 10 | `exportAssetsCsv` | Ativos CSV | 8B |
+| 11 | `exportAssetsPdf` | Ativos PDF | 8B |
+| 12 | `exportContractsCsv` | Contratos lista CSV | 8C |
+| 13 | `exportContractDetailCsv` | Contrato individual CSV | 8C |
+| 14 | `exportContractDetailPdf` | Contrato individual PDF | 8C |
+| 15 | `exportContractsPdf` | Contratos lista PDF | 8C |
+
+Função interna (não exportada): `encodeUtf16LeWithBom` (usada por `downloadExcelCsvFile`).
+
+### Inventário de services
+
+| Arquivo | Linhas | Responsabilidade |
+|---------|--------|-----------------|
+| `auditService.js` | 60 | Escrita de audit_logs no Supabase |
+| `exportService.js` | 830 | Geração e download de PDF/CSV |
+| `supabaseReadService.js` | 76 | Leitura de todas as entidades do Supabase |
+| `supabaseWriteService.js` | 192 | Escrita/deleção de todas as entidades no Supabase |
+
+### Regra permanente — exportService puro
+
+O exportService deve:
+- Receber dados já filtrados e preparados;
+- Não acessar Supabase;
+- Não acessar estado React;
+- Não importar componentes;
+- Não chamar `logAction`;
+- Não chamar `showSystemAlert`;
+- Não controlar modais;
+- Não aplicar regra de negócio de salvamento;
+- Não alterar dados;
+- Apenas gerar e baixar/abrir arquivos.
+
+### Regra permanente — App.jsx como orquestrador de exportações
+
+Mesmo com o exportService, App.jsx continua responsável por:
+- Escolher a lista filtrada;
+- Montar opções auxiliares (`nodes`, `personMap`, `logoUrl`, `getContractStatus`);
+- Capturar erros;
+- Manter wrappers usados pelos componentes;
+- Preservar filtros e contexto visual.
+
+### Regra permanente — compatibilidade CSV/Excel
+
+Para arquivos CSV que serão abertos diretamente no Excel:
+- Usar separador `;`;
+- Usar `sep=;` na primeira linha quando aplicável;
+- Usar `downloadExcelCsvFile` (UTF-16LE com BOM) quando houver risco de mojibake;
+- Validar acentuação diretamente no Excel;
+- Validar colunas separadas corretamente.
+
+### Testes realizados no bloco 8
+
+- CSV de logs/auditoria;
+- PDF de logs/auditoria;
+- CSV de ativos;
+- PDF de ativos com agrupamento hierárquico;
+- Correção de acentuação no CSV de ativos (UTF-8 → UTF-16LE);
+- CSV individual de contrato;
+- PDF individual de contrato com layout profissional;
+- Botão Exportar CSV no detalhe do contrato;
+- Validação de layout do PDF de contrato;
+- Abertura dos CSVs no Excel sem mojibake;
+- Preservação dos filtros;
+- Preservação dos wrappers no App.jsx;
+- ContractForm e AssetForm sem regressão;
+- Supabase/CRUD sem alteração;
+- Console sem erros críticos nos fluxos testados.
+
 ### Próximos blocos
-- **Fase 8:** Export Services (Modularização de PDF/CSV).
-- **Fase 9:** Dashboard/BI modular e limpeza final.
+
+- **Fase 9A:** Dashboard/BI modular.
+- **Fase 9B:** Extração de cálculos e agregações do Dashboard.
+- **Fase 9C:** Componentes visuais do Dashboard.
+- **Fase 9D:** Checkpoint documental do Dashboard.
+- **Fase 10A:** Limpeza final de imports/lint.
+- **Fase 10B:** Revisão técnica final.
+- **Fase 10C:** Merge/release/deploy.
+
+### Regras para Fase 9
+
+- Não misturar Dashboard com exportações;
+- Não alterar Supabase;
+- Não alterar CRUD;
+- Não alterar formulários;
+- Preservar filtros e indicadores;
+- Extrair primeiro componentes visuais;
+- Extrair depois cálculos/agregações;
+- Commit sempre manual pelo usuário via PowerShell.
 
 *Documento atualizado em 2026-04-26.*
