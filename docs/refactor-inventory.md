@@ -718,120 +718,95 @@ Fase 7 — serviços Supabase, somente após estabilização dos formulários.
 
 ---
 
-## Checkpoint pós-Fase 7B.3 — Services Supabase
+## Checkpoint pós-Fase 7D — Bloco de services concluído
 
 ### Estado atual
-- Branch atual: `refactor/app-split-phase-7b3-write-contract-services`
-- Último commit: `cb27676e` (Fase 6E) + Alterações pendentes da Fase 7.
-- Linhas atuais do App.jsx: 4.238
-- Working tree: Alterações de escrita Supabase (Persons, Nodes, Assets, Contracts) pendentes de commit.
+- Branch atual: `refactor/app-split-phase-7d-auxiliary-services`
+- Último commit: `cb9594b6` (fix: torna categorias de tipos de ativos dinamicas) + Alterações pendentes.
+- Linhas atuais do App.jsx: 4.243
+- Working tree: Alterações de auditoria e services auxiliares pendentes de commit.
 
-### Fase 7A — Serviços de leitura Supabase
-Arquivo criado:
-- `src/services/supabaseReadService.js`
+### Services existentes
+Arquivos criados e consolidados em `src/services/`:
+- `supabaseReadService.js`: Consultas de leitura (SELECT).
+- `supabaseWriteService.js`: Operações de persistência (UPSERT/DELETE).
+- `auditService.js`: Persistência de logs de auditoria.
 
+### Fase 7A — supabaseReadService
 Responsabilidade:
-- centralizar consultas SELECT;
-- encapsular leitura das principais tabelas;
-- reduzir acoplamento direto entre App.jsx e Supabase.
+- centralizar leituras SELECT;
+- reduzir acoplamento direto do App.jsx com Supabase;
+- manter services puros (sem React, sem estado e sem UI).
 
 Funções extraídas:
 - `fetchNodes`, `fetchPersons`, `fetchAssets`, `fetchContracts`, `fetchUsers`, `fetchAssetTypes`, `fetchAuditLogs`.
 
-Preservado no App.jsx:
-- `loadCloudData` como orquestrador de carga inicial;
-- fallback para desenvolvimento local;
-- estados React globais.
+### Fase 7B — supabaseWriteService
+Responsabilidade:
+- centralizar operações de escrita e exclusão;
+- receber `supabase` e `payload/id` por parâmetro;
+- retornar os dados salvos ou status de sucesso;
+- não validar regras de negócio nem disparar alertas visuais.
 
-### Fase 7A.1 — Navegação do organograma
-Ajustes realizados:
-- centralização robusta de caixa expandida/focada (`centerNodeInView`);
-- preservação da caixa centralizada ao usar botões de zoom (`zoomAndKeepCenter`);
-- compensação de `transform: scale(zoom)` no cálculo de scroll;
-- retry automático para aguardar montagem do DOM.
+Entidades cobertas:
+- **Persons:** `upsertPerson`, `deletePersonById`.
+- **Nodes:** `upsertNode`, `deleteNodeById`.
+- **Assets:** `upsertAsset`, `deleteAssetById`.
+- **Contracts:** `upsertContract`, `deleteContractById`.
+- **Asset Types (Fase 7D):** `upsertAssetType`, `deleteAssetTypeById`.
+- **Users (Fase 7D):** `upsertUser`, `deleteUserById`, `deleteUserByUsername`.
 
-### Fase 7B.1 — Escrita Supabase de pessoas e estruturas
-Operações extraídas para `src/services/supabaseWriteService.js`:
-- `upsertPerson`, `deletePersonById`;
-- `upsertNode`, `deleteNodeById`.
+### Fase 7C — auditService
+Responsabilidade:
+- centralizar persistência de auditoria;
+- construir payload padronizado;
+- garantir que falhas de log não bloqueiem operações CRUD.
 
-Preservado no App.jsx:
-- `savePerson` e `saveNode` (orquestração);
-- montagem de payload e validações de campos obrigatórios;
-- regra de pessoa única por node;
-- registro de auditoria (`logAction`).
-
-### Fase 7B.2 — Escrita Supabase de ativos
-Operações extraídas para `src/services/supabaseWriteService.js`:
-- `upsertAsset`, `deleteAssetById`.
+Funções extraídas:
+- `buildAuditLogPayload`, `insertAuditLog`, `writeAuditLog`.
 
 Preservado no App.jsx:
-- `saveAsset` (orquestração);
-- independência entre contato de contrato e contato de contingência;
-- gestão de fotos e status de manutenção.
+- `logAction` como orquestrador de quando e o que logar;
+- `normalizeAuditLog` para compatibilidade visual e retroativa.
 
-### Correção pós-7B.2 — Fotos de ativos (7B.2.1)
-- Fotos cadastradas integradas ao `AssetDetail.jsx` com visualização em grade.
-- Adicionado indicador visual de foto na listagem do Registro Centralizado de Ativos.
-- Suporte a zoom/lightbox para imagens anexadas.
+### Fase 7D — services auxiliares e categorias dinâmicas
+Operações auxiliares extraídas:
+- Gestão de tipos de ativos e usuários migrada para services.
 
-### Fase 7B.3 — Escrita Supabase de contratos
-Operações extraídas para `src/services/supabaseWriteService.js`:
-- `upsertContract`, `deleteContractById`.
+Ajuste funcional:
+- Categorias/grupos de tipos de ativos tornaram-se dinâmicos.
+- Grupos padrão (Veículo, Equipamento, etc.) preservados.
+- Novos grupos cadastrados reaparecem como sugestão no `datalist` em tempo real e após recarga.
 
-Preservado no App.jsx:
-- `saveContract` (orquestração);
-- máscara e validação matemática de CNPJ;
-- regra de retorno para a listagem após salvar/cancelar.
+### Regra permanente — App.jsx como orquestrador
+O `App.jsx` continua sendo o núcleo da aplicação, responsável por:
+- Montar payloads e validar campos obrigatórios;
+- Controlar permissões e perfis de usuário;
+- Chamar alertas (`showSystemAlert`) e registrar logs (`logAction`);
+- Gerenciar o estado React global e a sincronização visual;
+- Coordenar a navegação e o retorno ao modal/listagem de origem.
 
-### Responsabilidade atual dos services
-**supabaseReadService.js:**
-- Executa somente leituras (SELECT);
-- Não altera estado React;
-- Não mostra alertas nem logs.
-
-**supabaseWriteService.js:**
-- Executa escrita (UPSERT/DELETE) nas tabelas principais;
-- Recebe a instância do `supabase` e o `payload` pronto;
-- Não valida regras de negócio nem monta payloads.
+### Regra permanente — services puros
+Os arquivos em `src/services/` devem permanecer desacoplados:
+- Não importam React nem hooks;
+- Não acessam o estado do App diretamente;
+- Não possuem lógica de interface (modais, alertas, cores);
+- Lançam erros para serem tratados pela camada de orquestração.
 
 ### Regra permanente — retorno ao modal de origem
-Quando uma ação for iniciada a partir de um modal/listagem, o sistema deve retornar para esse mesmo modal/listagem após salvar, cancelar, fechar, voltar, visualizar detalhe ou editar a partir do detalhe.
-- Fechar no modo registry/listagem: fecha o cadastro e volta para a árvore.
-- Voltar/Cancelar no modo edição iniciado pela listagem: retorna para a listagem.
-- Salvar no modo edição/criação iniciado pela listagem: retorna para a listagem.
+Toda ação iniciada em um modal ou listagem deve retornar à mesma tela de origem após salvar, cancelar ou fechar, garantindo fluidez na navegação administrativa.
 
-### Componentes extraídos até a Fase 7B.3
-- **Common:** `SystemAlertModal`, `ConfirmDialog`, `WhatsAppButton`, `WhatsAppQrButton`.
-- **Admin:** `LogsModal`, `StatsModal`.
-- **Selectors:** `NodeSelector`, `PersonSelector`.
-- **Org:** `ListNode`, `NodeForm`.
-- **People:** `PersonDetail`, `PersonForm`.
-- **Contracts:** `ContractDetail`, `ContractForm`.
-- **Assets:** `AssetTypesModal`, `AssetContactActions`, `AssetBadges`, `AssetDetail`, `AssetForm`.
-- **Utils:** `phone.js`, `cnpj.js`, `assetUtils.js`, `contractUtils.js`, `encoding.js`, `exportUtils.js`.
+### Testes realizados no bloco 7
+- Carregamento inicial via Supabase Cloud;
+- CRUD completo de todas as entidades (Pessoas, Estruturas, Ativos, Contratos, Tipos, Usuários);
+- Auditoria de todas as operações de escrita;
+- Geração de relatórios PDF/CSV de logs com dados reais;
+- Navegação do organograma com centralização automática e preservação de zoom;
+- Validação matemática de CNPJ e máscaras de campos;
+- Persistência de fotos e categorias dinâmicas.
 
-### Testes realizados
-- Carregamento inicial pelo Supabase;
-- Criação/edição/exclusão de pessoas, estruturas, ativos e contratos;
-- Contato de contrato separado de contato de contingência;
-- Fotos no detalhe de ativo e indicador de foto na listagem;
-- Validação e máscara de CNPJ;
-- Retorno ao modal/listagem de origem;
-- Logs de auditoria.
-
-### Áreas preservadas para fases futuras
-- `loadCloudData` (orquestração);
-- Dashboard/BI;
-- Exportações principais PDF/CSV;
-- Autenticação/login;
-- Auditoria (`logAction`).
-
-### Próximas fases sugeridas
-- **Fase 7C:** Audit Service / `logAction`.
-- **Fase 7D:** Asset Types, Users e serviços auxiliares.
-- **Fase 7E:** Export Services (PDF/CSV).
-- **Fase 8:** Dashboard/BI modular.
-- **Fase 9:** Limpeza final e merge.
+### Próximos blocos
+- **Fase 8:** Export Services (Modularização de PDF/CSV).
+- **Fase 9:** Dashboard/BI modular e limpeza final.
 
 *Documento atualizado em 2026-04-26.*
