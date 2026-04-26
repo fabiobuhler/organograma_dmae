@@ -980,25 +980,140 @@ Para arquivos CSV que serão abertos diretamente no Excel:
 - Supabase/CRUD sem alteração;
 - Console sem erros críticos nos fluxos testados.
 
-### Próximos blocos
+---
 
-- **Fase 9A:** Dashboard/BI modular.
-- **Fase 9B:** Extração de cálculos e agregações do Dashboard.
-- **Fase 9C:** Componentes visuais do Dashboard.
-- **Fase 9D:** Checkpoint documental do Dashboard.
+## Checkpoint pós-Fase 9C — Dashboard/BI modularizado
+
+### Estado atual
+- **Branch atual:** `refactor/app-split-phase-9c-dashboard-visual-final`
+- **Último commit:** `f71bb390 refactor: organiza componentes visuais finais do Dashboard BI`
+- **Linhas atuais do App.jsx:** 3.911
+- **Working tree:** clean (alterações apenas em docs)
+
+### Objetivo do bloco 9
+Modularizar o Dashboard/BI sem alterar:
+- Supabase;
+- CRUD;
+- Exportações;
+- Formulários;
+- Detalhes;
+- Filtros;
+- Regras de negócio.
+
+### Fase 9A — Componentes visuais iniciais
+**Componentes criados (`src/components/dashboard/`):**
+- `DashboardCard.jsx`
+- `DonutChart.jsx`
+- `DashboardAssetTable.jsx`
+
+**Responsabilidade:**
+- `DashboardCard` renderiza cards/KPIs visuais superiores;
+- `DonutChart` renderiza os gráficos circulares de status de contratos;
+- `DashboardAssetTable` renderiza tabelas de ativos no contexto detalhado do BI.
+
+**Preservado no App.jsx:**
+- Cálculos, filtros, agregações e o controle de escopo da unidade.
+- App.jsx manteve-se como o orquestrador do Dashboard.
+
+### Fase 9B — Métricas e agregações
+**Arquivo criado:**
+- `src/utils/dashboardMetrics.js`
+
+**Funções extraídas:**
+- `getPersonsInScope`
+- `getAssetsInScope`
+- `getContractsInScope`
+- `getStructuresInScope`
+- `getAssetEmergencyStats`
+
+**Responsabilidade:**
+- Concentrar funções puras de cálculo e agrupamento;
+- Filtrar dados por escopo de nó (direto vs. subordinado);
+- Calcular listas e estatísticas derivadas;
+- Não acessar React, Supabase, DOM ou UI.
+
+**Preservado no App.jsx:**
+- `useState`, `useMemo`, `getDashboardStats`, `getContractStatus`;
+- Filtros visuais, seleções, estado geral e orquestração.
+
+### Fase 9C — Organização visual final
+**Componentes criados (`src/components/dashboard/`):**
+- `DashboardHeader.jsx`
+- `DashboardContractStatusPanel.jsx`
+- `DashboardEmergencyMaintenancePanel.jsx`
+
+**Responsabilidade:**
+- `DashboardHeader` encapsula cabeçalho modal, metadados da unidade selecionada e ações de exportação do BI;
+- `DashboardContractStatusPanel` organiza os painéis/gráficos de status de contratos em grid-2;
+- `DashboardEmergencyMaintenancePanel` encapsula o visual complexo da tabela de ativos de contingência em manutenção/inoperantes.
+
+**Preservado:**
+- `dashboardMetrics.js` e funções de utilidades contratuais;
+- Supabase, CRUD, e exportações;
+- Formulários e detalhes mantidos idênticos.
+
+### Estrutura atual do Dashboard
+**Componentes:**
+- `DashboardCard`
+- `DonutChart`
+- `DashboardAssetTable`
+- `DashboardHeader`
+- `DashboardContractStatusPanel`
+- `DashboardEmergencyMaintenancePanel`
+
+**Utilitário:**
+- `dashboardMetrics.js`
+
+### Regra permanente — Dashboard visual
+Componentes de Dashboard devem:
+- Ser preferencialmente apresentacionais (puros);
+- Receber dados processados por props;
+- Não acessar Supabase, services ou exportService;
+- Não chamar `logAction` ou `showSystemAlert`;
+- Não controlar fluxo de salvamento ou alterar dados.
+
+### Regra permanente — dashboardMetrics puro
+`dashboardMetrics.js` deve:
+- Conter apenas funções puras de JavaScript;
+- Receber arrays, IDs e funções auxiliares estritamente por parâmetro;
+- Não importar React, DOM, window ou document;
+- Não acessar serviços externos (Supabase, logs);
+- Retornar estruturas novas sem alterar a referência original (imutabilidade).
+
+### Regra permanente — App.jsx como orquestrador do BI
+`App.jsx` continua responsável por:
+- Gerenciar o estado base do Dashboard (`dashboardView`, `dashboardNodeId`);
+- Aplicar os utilitários de métricas via `useMemo` com base nos dados base (`nodes`, `assets`, `contracts`, `persons`);
+- Passar dados limpos e callbacks para os componentes visuais;
+- Fazer a ponte entre os componentes visuais de listagem e os módulos de exportação (`exportExcel`, `exportPDF`);
+- Preservar o contexto da árvore organizacional para navegação.
+
+### Testes realizados no bloco 9
+- Abertura perfeita do Dashboard/BI nos diferentes níveis da hierarquia;
+- Validado renderização visual dos cards superiores, sem alteração de valores das agregações;
+- Expansão de listagens via tabelas integradas;
+- DonutChart renderizando as categorias perfeitamente conforme escopo;
+- Identificação exata de contratos, ativos próprios/contratados, ativos de contingência e manutenção;
+- Troca de escopo e reinicialização dos cálculos com sucesso;
+- Callbacks de exportações para PDF/CSV pelo painel funcionando;
+- Zero erros críticos ou de exceção de quebra de render (Console limpo exceto os PropTypes conhecidos).
+
+### Próximos blocos
 - **Fase 10A:** Limpeza final de imports/lint.
 - **Fase 10B:** Revisão técnica final.
-- **Fase 10C:** Merge/release/deploy.
+- **Fase 10C:** Documentação final de arquitetura.
+- **Fase 10D:** Merge/release/deploy.
 
-### Regras para Fase 9
-
-- Não misturar Dashboard com exportações;
-- Não alterar Supabase;
-- Não alterar CRUD;
-- Não alterar formulários;
-- Preservar filtros e indicadores;
-- Extrair primeiro componentes visuais;
-- Extrair depois cálculos/agregações;
+### Regras para Fase 10
+- Fazer limpeza em fases pequenas.
+- Não misturar lint com novas funcionalidades.
+- Não alterar comportamento visual sem teste.
+- Priorizar remoção de imports não usados e código morto.
+- Tratar `prop-types` como decisão de projeto:
+  - corrigir;
+  - ou configurar regra;
+  - ou documentar como dívida técnica aceitável.
+- Rodar testes manuais críticos antes do merge final.
 - Commit sempre manual pelo usuário via PowerShell.
 
 *Documento atualizado em 2026-04-26.*
