@@ -89,3 +89,32 @@ export async function deleteAssetById(supabase, id) {
   if (error) throw error;
   return true;
 }
+
+/**
+ * Persiste ou atualiza um contrato na tabela 'contracts'.
+ */
+export async function upsertContract(supabase, payload) {
+  if (!supabase) return payload;
+  const { data, error } = await supabase
+    .from('contracts')
+    .upsert(payload)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data || payload;
+}
+
+/**
+ * Exclui um contrato da tabela 'contracts' pelo ID.
+ */
+export async function deleteContractById(supabase, id) {
+  if (!supabase) return true;
+  const { error } = await supabase
+    .from('contracts')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+  return true;
+}

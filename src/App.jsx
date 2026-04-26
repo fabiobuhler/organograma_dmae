@@ -54,7 +54,9 @@ import {
   upsertNode,
   deleteNodeById,
   upsertAsset,
-  deleteAssetById
+  deleteAssetById,
+  upsertContract,
+  deleteContractById
 } from "./services/supabaseWriteService";
 
 const STORAGE_KEY = "dmae-orgchart-v16";
@@ -1931,8 +1933,9 @@ export default function App() {
         aditivos: normalizedContract.aditivos || []
       };
 
-      const { error } = await supabase.from('contracts').upsert(contractToDb).select();
-      if (error) {
+      try {
+        await upsertContract(supabase, contractToDb);
+      } catch (error) {
         console.error("Erro ao salvar contrato:", error);
         showSystemAlert(`O contrato não pôde ser salvo.\n\nDetalhe técnico: ${error.message}`, { title: "Erro ao salvar contrato", type: "error" });
         return;
@@ -1961,8 +1964,14 @@ export default function App() {
     showSystemAlert("Contrato salvo com sucesso.", { title: "Contrato salvo", type: "success" });
   }, [contractForm, editContractId, contractReturnTarget, logAction]);
 
-  const deleteContract = useCallback((id, sei) => {
-    if (supabase) supabase.from('contracts').delete().eq('id', id).then(() => console.log("Contract removed from cloud"));
+  const deleteContract = useCallback(async (id, sei) => {
+    try {
+      await deleteContractById(supabase, id);
+      console.log("Contract removed from cloud");
+    } catch (err) {
+      console.error("Error deleting contract:", err);
+      flash("Erro ao excluir contrato da nuvem.");
+    }
     setContracts((prev) => prev.filter((c) => c.id !== id));
     logAction("Excluir Contrato", "CONTRACT", sei || id);
     showSystemAlert("Contrato excluído com sucesso.", { title: "Concluído", type: "success" });
