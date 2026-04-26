@@ -42,6 +42,13 @@ import DonutChart from "./components/dashboard/DonutChart";
 import DashboardAssetTable from "./components/dashboard/DashboardAssetTable";
 import { maskCnpj, isValidCnpj, getCnpjValidationMessage } from "./utils/cnpj";
 import {
+  getPersonsInScope,
+  getAssetsInScope,
+  getContractsInScope,
+  getStructuresInScope,
+  getAssetEmergencyStats
+} from "./utils/dashboardMetrics";
+import {
   fetchNodes,
   fetchPersons,
   fetchAssets,
@@ -2811,25 +2818,15 @@ export default function App() {
         const descIds = getDescendantIds(dashboardNodeId, getChildren).filter(x => x !== dashboardNodeId);
         
         // Data Collections
-        const dContracts = contracts.filter(c => c.nodeId === dashboardNodeId);
-        const sContracts = contracts.filter(c => descIds.includes(c.nodeId));
-        
-        const dPersons = nodes.filter(n => n.id === dashboardNodeId && n.personId).map(n => persons.find(p => p.id === n.personId)).filter(Boolean);
-        const sPersons = nodes.filter(n => descIds.includes(n.id) && n.personId).map(n => persons.find(p => p.id === n.personId)).filter(Boolean);
-        
-        const dAssets = assets.filter(a => a.nodeId === dashboardNodeId);
-        const sAssets = assets.filter(a => descIds.includes(a.nodeId));
-        
-        const dStructures = getChildren(dashboardNodeId);
-        const sStructures = nodes.filter(n => descIds.includes(n.id));
+        const { direct: dContracts, sub: sContracts } = getContractsInScope(contracts, dashboardNodeId, descIds);
+        const { direct: dPersons, sub: sPersons } = getPersonsInScope(nodes, persons, dashboardNodeId, descIds);
+        const { direct: dAssets, sub: sAssets } = getAssetsInScope(assets, dashboardNodeId, descIds);
+        const { direct: dStructures, sub: sStructures } = getStructuresInScope(nodes, dashboardNodeId, descIds, getChildren);
 
         const dStats = getDashboardStats(dContracts);
         const cStats = getDashboardStats(sContracts);
 
-        const dEmergency = dAssets.filter(a => a.isEmergency).length;
-        const sEmergency = sAssets.filter(a => a.isEmergency).length;
-        const dEmergencyMaintenance = dAssets.filter(a => a.isEmergency && a.isMaintenance).length;
-        const sEmergencyMaintenance = sAssets.filter(a => a.isEmergency && a.isMaintenance).length;
+        const { dEmergency, sEmergency, dEmergencyMaintenance, sEmergencyMaintenance } = getAssetEmergencyStats(dAssets, sAssets);
 
         const exportPDF = async () => {
           // If in a list view, use the professional tabular report format
