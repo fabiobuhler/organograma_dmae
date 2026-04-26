@@ -19,6 +19,24 @@ export default function AssetTypesModal({
 }) {
   if (!open || !isAdmin) return null;
 
+  const DEFAULT_ASSET_GROUPS = [
+    "Veículo",
+    "Equipamento",
+    "Ferramenta",
+    "Equipamento Leve",
+    "Equipamento Pesado"
+  ];
+
+  const assetGroupOptions = Array.from(
+    new Set([
+      ...DEFAULT_ASSET_GROUPS,
+      ...(Array.isArray(assetTypes)
+        ? assetTypes.map((item) => item.category).filter(Boolean)
+        : []),
+      assetTypeForm?.category
+    ].filter(Boolean).map((item) => String(item).trim()).filter(Boolean))
+  ).sort();
+
   return (
     <div className="modal-overlay" style={{ zIndex: 1600 }} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal-content">
@@ -43,11 +61,9 @@ export default function AssetTypesModal({
                   onChange={(e) => setAssetTypeForm(prev => ({ ...prev, category: e.target.value }))}
                 />
                 <datalist id="cat-list">
-                  <option value="Veículo" />
-                  <option value="Equipamento" />
-                  <option value="Ferramenta" />
-                  <option value="Equipamento Leve" />
-                  <option value="Equipamento Pesado" />
+                  {assetGroupOptions.map(group => (
+                    <option key={group} value={group} />
+                  ))}
                 </datalist>
               </div>
               <div className="fg" style={{ flex: 1 }}>
