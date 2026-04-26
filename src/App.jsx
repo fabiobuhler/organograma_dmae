@@ -48,6 +48,12 @@ import {
   fetchAssetTypes,
   fetchAuditLogs
 } from "./services/supabaseReadService";
+import {
+  upsertPerson,
+  deletePersonById,
+  upsertNode,
+  deleteNodeById
+} from "./services/supabaseWriteService";
 
 const STORAGE_KEY = "dmae-orgchart-v16";
 const DEMO_USER = "admin";
@@ -1297,10 +1303,7 @@ export default function App() {
 
     try {
       // 1. Persistir no Supabase ANTES de atualizar o estado local
-      if (supabase) {
-        const { error } = await supabase.from('nodes').upsert(n);
-        if (error) throw error;
-      }
+      await upsertNode(supabase, n);
 
       // 2. Atualizar estado local após confirmação do banco
       setNodes((c) => {
@@ -1711,7 +1714,17 @@ export default function App() {
       return;
     }
     const p = { ...personForm, email: emailVal, id: editPersonId || makeId("person") };
-    if (supabase) supabase.from('persons').upsert(p).then(() => console.log("Person synced"));
+    
+    (async () => {
+      try {
+        await upsertPerson(supabase, p);
+        console.log("Person synced");
+      } catch (err) {
+        console.error("Person sync error:", err);
+        flash("Erro ao sincronizar com nuvem.");
+      }
+    })();
+
     setPersons(editPersonId ? (c) => c.map((x) => x.id === editPersonId ? p : x) : (c) => [...c, p]);
     logAction(editPersonId ? "Editar Pessoa" : "Criar Pessoa", "PERSON", p.name);
     
@@ -1731,7 +1744,7 @@ export default function App() {
       setPendingPersonNodeForm(null);
       setTimeout(() => setOpenNodeDlg(true), 100);
     }
-  }, [personForm, editPersonId, logAction, pendingPersonNodeForm]);
+  }, [personForm, editPersonId, logAction, pendingPersonNodeForm, personReturnTarget, showSystemAlert, supabase, flash]);
   const requestDeletePerson = useCallback((id) => {
     if (!canEdit) { flash("Entre no modo edição para excluir."); return; }
     const p = personMap.get(id);
@@ -1755,10 +1768,7 @@ export default function App() {
       if (assets.some((a) => a.nodeId === id)) { flash("Remova ativos vinculados antes."); setDeleteRequest(null); return; }
 
       try {
-        if (supabase) {
-          const { error } = await supabase.from('nodes').delete().eq('id', id);
-          if (error) throw error;
-        }
+        await deleteNodeById(supabase, id);
         setNodes((c) => c.filter((x) => x.id !== id));
         if (selectedId === id) { setSelectedId(nodeRecord.parentId); setFocusId(nodeRecord.parentId); setShowDetail(false); }
         if (editNodeId === id) { setOpenNodeDlg(false); setEditNodeId(null); }
@@ -1770,10 +1780,7 @@ export default function App() {
       }
     } else if (type === "person") {
       try {
-        if (supabase) {
-          const { error } = await supabase.from('persons').delete().eq('id', id);
-          if (error) throw error;
-        }
+        await deletePersonById(supabase, id);
         setPersons((c) => c.filter((p) => p.id !== id));
         logAction("Excluir Pessoa", "PERSON", name || id);
         showSystemAlert("Pessoa excluída com sucesso.", { title: "Concluído", type: "success" });
@@ -1987,10 +1994,7 @@ export default function App() {
     if (assets.some((a) => a.nodeId === targetId)) { flash("Remova ativos vinculados antes."); setDeleteRequest(null); return; }
 
     try {
-      if (supabase) {
-        const { error } = await supabase.from('nodes').delete().eq('id', targetId);
-        if (error) throw error;
-      }
+      await deleteNodeById(supabase, targetId);
       setNodes((c) => c.filter((x) => x.id !== targetId));
       if (selectedId === targetId) { setSelectedId(nodeRecord.parentId); setFocusId(nodeRecord.parentId); setShowDetail(false); }
       if (editNodeId === targetId) { setOpenNodeDlg(false); setEditNodeId(null); }
