@@ -1251,12 +1251,12 @@ export default function App() {
 
       if (editNodeId) {
         setSelectedId(editNodeId);
-        logAction("Editar Caixa", n.name);
+        logAction("Editar Caixa", "NODE", n.name);
         showSystemAlert("Caixa atualizada com sucesso!", { title: "Concluído", type: "success" });
       } else {
         setSelectedId(n.id);
         setFocusId(n.parentId || n.id);
-        logAction("Criar Caixa", n.name);
+        logAction("Criar Caixa", "NODE", n.name);
         showSystemAlert("Caixa criada com sucesso!", { title: "Concluído", type: "success" });
       }
 
@@ -1289,7 +1289,7 @@ export default function App() {
       setShowDetail(false);
     }
     
-    logAction("Excluir Caixa", nodeName);
+    logAction("Excluir Caixa", "NODE", nodeName);
     flash("Excluída");
   }, [selected, canEdit, nodes, nodeMap, logAction]);
 
@@ -1350,6 +1350,7 @@ export default function App() {
         return [...current, { ...savedPayload }];
       });
       resetAssetTypeForm();
+      logAction(editAssetTypeId ? "Editar Tipo de Ativo" : "Criar Tipo de Ativo", "ASSET_TYPE", `${category} / ${name}`);
       showSystemAlert(editAssetTypeId ? "Tipo de ativo atualizado com sucesso." : "Tipo de ativo adicionado com sucesso.", { title: editAssetTypeId ? "Tipo atualizado" : "Tipo adicionado", type: "success" });
     } catch (error) {
       console.error("Erro ao salvar tipo de ativo:", error);
@@ -1383,6 +1384,7 @@ export default function App() {
           }
           setAssetTypes((current) => current.filter((typeItem) => (typeItem.id || typeItem._localId || `${typeItem.category}-${typeItem.name}`) !== typeId));
           if (editAssetTypeId === typeId) resetAssetTypeForm();
+          logAction("Excluir Tipo de Ativo", "ASSET_TYPE", `${item.category} / ${item.name}`);
           showSystemAlert("Tipo de ativo excluído com sucesso.", { title: "Tipo excluído", type: "success" });
         } catch (error) {
           console.error("Erro ao excluir tipo de ativo:", error);
@@ -1482,7 +1484,7 @@ export default function App() {
         ? current.map((item) => item.id === editAssetId ? normalizedAsset : item)
         : [...current, normalizedAsset]
     );
-    logAction(editAssetId ? "Editar Ativo" : "Cadastrar Ativo", "ASSET", normalizedAsset.name);
+    logAction(editAssetId ? "Editar Ativo" : "Criar Ativo", "ASSET", normalizedAsset.name);
     setOpenAssetDlg(false); setEditAssetId(null); setAssetForm(emptyAsset);
     showSystemAlert("Ativo salvo com sucesso.", { title: "Ativo salvo", type: "success" });
   }, [assetForm, editAssetId, logAction, supabase]);
@@ -1491,7 +1493,7 @@ export default function App() {
     if (!confirm("Excluir ativo?")) return;
     if (supabase) supabase.from('assets').delete().eq('id', id).then(() => console.log("Asset deleted"));
     setAssets((c) => c.filter((a) => a.id !== id));
-    logAction("Excluir Ativo", name || id);
+    logAction("Excluir Ativo", "ASSET", name || id);
     flash("Ativo excluído");
   }, [logAction]);
 
@@ -1515,7 +1517,7 @@ export default function App() {
     const p = { ...personForm, email: emailVal, id: editPersonId || makeId("person") };
     if (supabase) supabase.from('persons').upsert(p).then(() => console.log("Person synced"));
     setPersons(editPersonId ? (c) => c.map((x) => x.id === editPersonId ? p : x) : (c) => [...c, p]);
-    logAction(editPersonId ? "Editar Pessoa" : "Cadastrar Pessoa", p.name);
+    logAction(editPersonId ? "Editar Pessoa" : "Criar Pessoa", "PERSON", p.name);
     setOpenPersonDlg(false);
     showSystemAlert(editPersonId ? "Pessoa atualizada!" : "Pessoa cadastrada!", { title: "Pessoa salva", type: "success" });
     // If we were in the middle of assigning this person to a node, restore the node dialog
@@ -1555,7 +1557,7 @@ export default function App() {
         setNodes((c) => c.filter((x) => x.id !== id));
         if (selectedId === id) { setSelectedId(nodeRecord.parentId); setFocusId(nodeRecord.parentId); setShowDetail(false); }
         if (editNodeId === id) { setOpenNodeDlg(false); setEditNodeId(null); }
-        logAction("Excluir Caixa", nodeRecord.name || id);
+        logAction("Excluir Caixa", "NODE", nodeRecord.name || id);
         flash("Excluída");
       } catch (err) {
         console.error("Delete node error:", err);
@@ -1568,7 +1570,7 @@ export default function App() {
           if (error) throw error;
         }
         setPersons((c) => c.filter((p) => p.id !== id));
-        logAction("Excluir Pessoa", name || id);
+        logAction("Excluir Pessoa", "PERSON", name || id);
         showSystemAlert("Pessoa excluída com sucesso.", { title: "Concluído", type: "success" });
       } catch (err) {
         console.error("Delete person error:", err);
@@ -1678,7 +1680,7 @@ export default function App() {
         : [...current, normalizedContract]
     );
 
-    logAction(editContractId ? "Editar Contrato" : "Cadastrar Contrato", normalizedContract.sei);
+    logAction(editContractId ? "Editar Contrato" : "Criar Contrato", "CONTRACT", normalizedContract.sei);
     setOpenContractDlg(false); 
     setEditContractId(null);
     setContractForm(emptyContract);
@@ -1689,7 +1691,7 @@ export default function App() {
     if (!confirm(`Excluir contrato ${sei}?`)) return;
     if (supabase) supabase.from('contracts').delete().eq('id', id).then(() => console.log("Contract removed from cloud"));
     setContracts((prev) => prev.filter((c) => c.id !== id));
-    logAction("Excluir Contrato", sei || id);
+    logAction("Excluir Contrato", "CONTRACT", sei || id);
     showSystemAlert("Contrato excluído com sucesso.", { title: "Concluído", type: "success" });
   }, [logAction]);
 
@@ -1717,7 +1719,7 @@ export default function App() {
       setNodes((c) => c.filter((x) => x.id !== targetId));
       if (selectedId === targetId) { setSelectedId(nodeRecord.parentId); setFocusId(nodeRecord.parentId); setShowDetail(false); }
       if (editNodeId === targetId) { setOpenNodeDlg(false); setEditNodeId(null); }
-      logAction("Excluir Caixa", nodeRecord.name || targetId);
+      logAction("Excluir Caixa", "NODE", nodeRecord.name || targetId);
       flash("Excluída");
     } catch (err) {
       console.error("Delete error:", err);
@@ -1759,7 +1761,7 @@ export default function App() {
           return [...prev, ...filtered];
         });
         flash(`${newP.length} pessoas processadas.`);
-        logAction("Importar Pessoas", `${newP.length} servidores importados.`);
+        logAction("Importar Pessoas", "IMPORT", `${newP.length} servidores importados.`);
       }
     };
     reader.readAsText(file);
@@ -1806,7 +1808,7 @@ export default function App() {
   const handleImport = useCallback((e) => {
     const f = e.target.files?.[0]; if (!f) return;
     const r = new FileReader();
-    r.onload = () => { try { const p = JSON.parse(String(r.result)); if (!Array.isArray(p?.nodes) || !p.nodes.length) throw 0; setNodes(p.nodes); setAssets(Array.isArray(p.assets) ? p.assets : []); setSelectedId(null); setFocusId(null); logAction("Importar Base JSON", "Substituição completa"); showSystemAlert("Importado com sucesso!", { title: "Concluído", type: "success" }); } catch { showSystemAlert("Arquivo inválido.", { title: "Erro na importação", type: "error" }); } };
+    r.onload = () => { try { const p = JSON.parse(String(r.result)); if (!Array.isArray(p?.nodes) || !p.nodes.length) throw 0; setNodes(p.nodes); setAssets(Array.isArray(p.assets) ? p.assets : []); setSelectedId(null); setFocusId(null); logAction("Importar Base JSON", "IMPORT", "Substituição completa"); showSystemAlert("Importado com sucesso!", { title: "Concluído", type: "success" }); } catch { showSystemAlert("Arquivo inválido.", { title: "Erro na importação", type: "error" }); } };
     r.readAsText(f); e.target.value = "";
   }, [logAction]);
 
@@ -1875,7 +1877,7 @@ export default function App() {
     setOpenPasswordDlg(false);
     setPwdCurrent(""); setPwdNew(""); setPwdConfirm("");
     showSystemAlert("Senha alterada com sucesso!", { title: "Senha alterada", type: "success" });
-    logAction("Trocar Senha", `A conta ${currentUser} realizou alteração de senha.`);
+    logAction("Trocar Senha", "AUTH", currentUser?.username || "Usuário");
 
     if (forcePassMode) {
       if (!pwdNew || pwdNew.length < 4) return showSystemAlert("Sua senha deve ter no mínimo 4 caracteres.", { title: "Senha curta", type: "warning" });
@@ -1956,7 +1958,7 @@ export default function App() {
         }
       }
       
-      logAction("Excluir Usuário", `Apagado: ${username}`);
+      logAction("Excluir Usuário", "USER", username);
       showSystemAlert("Usuário removido com sucesso.", { title: "Concluído", type: "success" });
     } catch (err) {
       showSystemAlert("Erro crítico ao excluir usuário: " + err.message, { title: "Erro crítico", type: "error" });
