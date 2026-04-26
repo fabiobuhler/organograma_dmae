@@ -40,6 +40,9 @@ import ContractForm from "./components/contracts/ContractForm";
 import DashboardCard from "./components/dashboard/DashboardCard";
 import DonutChart from "./components/dashboard/DonutChart";
 import DashboardAssetTable from "./components/dashboard/DashboardAssetTable";
+import DashboardHeader from "./components/dashboard/DashboardHeader";
+import DashboardContractStatusPanel from "./components/dashboard/DashboardContractStatusPanel";
+import DashboardEmergencyMaintenancePanel from "./components/dashboard/DashboardEmergencyMaintenancePanel";
 import { maskCnpj, isValidCnpj, getCnpjValidationMessage } from "./utils/cnpj";
 import {
   getPersonsInScope,
@@ -2964,30 +2967,14 @@ export default function App() {
             <div className="modal-content wide bi-dash" id="bi-dashboard-content" style={{ maxWidth: 1000 }}>
               <button className="modal-close no-print" onClick={() => { setDashboardNodeId(null); setShowDetail(true); }}><X size={12} /></button>
               
-              <div className="modal-header bi-header">
-                <div style={{display:"flex", alignItems:"center", gap: 12}}>
-                   {dashboardView !== "summary" ? (
-                     <button className="btn btn-outline btn-icon btn-sm no-print" onClick={() => setDashboardView("summary")} title="Voltar para Resumo">
-                        <ChevronLeft size={18} />
-                     </button>
-                   ) : (
-                     <PieChart size={28} color="var(--p600)" />
-                   )}
-                   <div>
-                      <h2 style={{margin:0, fontSize: 22}}>
-                        {dashboardView === "emergencyMaintenanceAssets" ? "Ativos de Contingência Inoperantes" : 
-                         dashboardView === "allAssets" ? "Inventário Geral de Ativos" :
-                         dashboardView === "emergencyAssets" ? "Inventário de Contingência" :
-                         "Dashboard de Governança e BI"}
-                      </h2>
-                      <p style={{margin:0, opacity:0.8, fontSize: 13}}>Unidade: <b>{dNode.name}</b> {descIds.length > 0 && `(+ ${descIds.length} subunidades)`}</p>
-                   </div>
-                </div>
-                <div className="bi-header-actions no-print" style={{ display: "flex", gap: 6 }}>
-                   <button className="btn btn-outline btn-xs" onClick={exportExcel}><FileText size={14} /> Exportar Excel</button>
-                   <button className="btn btn-primary btn-xs" onClick={exportPDF}><Download size={14} /> Exportar PDF</button>
-                </div>
-              </div>
+              <DashboardHeader 
+                dashboardView={dashboardView} 
+                setDashboardView={setDashboardView} 
+                dNodeName={dNode.name} 
+                subUnitsCount={descIds.length} 
+                onExportExcel={exportExcel} 
+                onExportPdf={exportPDF} 
+              />
 
               <div className="modal-body bi-body">
                 {dashboardView === "summary" && (
@@ -3017,16 +3004,7 @@ export default function App() {
                           subtitle={`Nível 1: ${dStructures.length} | Profundas: ${sStructures.length}`} />
                      </div>
 
-                    <div className="bi-row" style={{marginTop: 30, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                       <div style={{ background: "#fff", padding: 20, borderRadius: 12, border: "1px solid var(--n200)" }}>
-                          <h3 className="bi-section-title" style={{ marginBottom: 15, fontSize: 14 }}>Status dos Contratos (Diretos)</h3>
-                          <DonutChart stats={dStats} title="Foco: Unidade Atual" />
-                       </div>
-                       <div style={{ background: "#fff", padding: 20, borderRadius: 12, border: "1px solid var(--n200)" }}>
-                          <h3 className="bi-section-title" style={{ marginBottom: 15, fontSize: 14 }}>Status dos Contratos (Subordinados)</h3>
-                          <DonutChart stats={cStats} title="Foco: Hierarquia Abaixo" />
-                       </div>
-                    </div>
+                    <DashboardContractStatusPanel dStats={dStats} cStats={cStats} />
 
                     <div style={{ marginTop: 25, padding: 15, background: "var(--n50)", borderRadius: 10, fontSize: 12, color: "var(--n600)", border: "1px dashed var(--n300)" }}>
                        <b>Nota de BI:</b> Os dados acima representam uma consolidação em tempo real da estrutura selecionada. Ativos marcados como <i>Contingência</i> recebem prioridade de manutenção e reposição conforme política do DMAE.
@@ -3035,59 +3013,10 @@ export default function App() {
                 )}
 
                 {dashboardView === "emergencyMaintenanceAssets" && (
-                  <div className="bi-list-view">
-                    <div className="bi-alert-critical" style={{ background: "#fee2e2", border: "1px solid #ef4444", padding: 12, borderRadius: 8, marginBottom: 20, display: "flex", alignItems: "center", gap: 10, color: "#b91c1c" }}>
-                      <Siren size={20} />
-                      <div style={{ fontSize: 13, fontWeight: 700 }}>ATENÇÃO: Existem ativos estratégicos fora de operação nesta ramificação.</div>
-                    </div>
-                    
-                    <div style={{ border: "1px solid var(--n200)", borderRadius: 12, overflow: "hidden" }}>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                        <thead style={{ background: "var(--n50)" }}>
-                          <tr>
-                            <th style={{ padding: 12, textAlign: "left" }}>Ativo</th>
-                            <th style={{ padding: 12, textAlign: "left" }}>Tipo</th>
-                            <th style={{ padding: 12, textAlign: "left" }}>Unidade</th>
-                            <th style={{ padding: 12, textAlign: "left" }}>Responsável pela Contingência</th>
-                            <th style={{ padding: 12, textAlign: "left" }}>Telefone de Emergência</th>
-                            <th style={{ padding: 12, textAlign: "left" }}>Observação da Manutenção</th>
-                            <th style={{ padding: 12, textAlign: "center" }}>Desde</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {[...dAssets, ...sAssets].filter(a => a.isEmergency && a.isMaintenance).length > 0 ? (
-                            [...dAssets, ...sAssets].filter(a => a.isEmergency && a.isMaintenance).map(a => (
-                              <tr key={a.id} style={{ borderTop: "1px solid var(--n100)" }}>
-                                <td style={{ padding: 12 }}>
-                                  <div style={{ fontWeight: 700, color: "#b91c1c" }}>{a.name}</div>
-                                </td>
-                                <td style={{ padding: 12 }}>{a.type || "—"}</td>
-                                <td style={{ padding: 12 }}>{nodes.find(n => n.id === a.nodeId)?.name || "—"}</td>
-                                <td style={{ padding: 12, fontWeight: 600 }}>{a.contatoResponsavel || "—"}</td>
-                                <td style={{ padding: 12 }}>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                    <span>{a.contatoAcionamento || "—"}</span>
-                                    {a.contatoAcionamento && (
-                                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                        <AssetBadges asset={a} compact showText={false} />
-                                        <AssetContactActions phone={a.contatoAcionamento} responsible={a.contatoResponsavel} />
-                                      </div>
-                                    )}
-                                  </div>
-                                </td>
-                                <td style={{ padding: 12, fontSize: 10 }}>{a.maintenanceNotes || "—"}</td>
-                                <td style={{ padding: 12, textAlign: "center" }}>
-                                  {a.maintenanceSince ? new Date(a.maintenanceSince).toLocaleDateString('pt-BR') : "—"}
-                                </td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr><td colSpan={7} style={{ padding: 30, textAlign: "center", color: "var(--n400)" }}>Nenhum ativo de contingência em manutenção.</td></tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                  <DashboardEmergencyMaintenancePanel 
+                    list={[...dAssets, ...sAssets].filter(a => a.isEmergency && a.isMaintenance)} 
+                    nodes={nodes} 
+                  />
                 )}
 
                 {dashboardView === "allAssets" && (
