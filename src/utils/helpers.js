@@ -234,28 +234,4 @@ export function hslToHex(h, s, l) {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
-export function maskPhone(value) {
-  if (!value) return "";
-  let v = value.replace(/\D/g, "");
-  if (v.length > 11) v = v.substring(0, 11);
-  if (v.length > 10) {
-    return v.replace(/^(\d{2})(\d{5})(\d{4}).*/, "($1) $2-$3");
-  } else if (v.length > 5) {
-    return v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, "($1) $2-$3");
-  } else if (v.length > 2) {
-    return v.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
-  }
-  return v;
-}
 
-export function hasValidPhone(value) {
-  if (!value) return false;
-  return value.replace(/\D/g, "").length >= 10;
-}
-
-export function buildWhatsAppUrl(phone) {
-  if (!phone) return "";
-  const raw = phone.replace(/\D/g, "");
-  if (raw.length < 10) return "";
-  return `https://wa.me/55${raw}`;
-}
