@@ -29,6 +29,8 @@ import ListNode from "./components/org/ListNode";
 import AssetTypesModal from "./components/assets/AssetTypesModal";
 import AssetContactActions from "./components/assets/AssetContactActions";
 import AssetBadges from "./components/assets/AssetBadges";
+import LogsModal from "./components/admin/LogsModal";
+import StatsModal from "./components/admin/StatsModal";
 
 const STORAGE_KEY = "dmae-orgchart-v16";
 const DEMO_USER = "admin";
@@ -275,12 +277,13 @@ function exportLogsPdf(logsList) {
   
   const logoUrl = window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png";
 
-  const rows = logsList.map((lg) =>
+  const normalizedLogs = (logsList || []).map(normalizeAuditLog);
+  const rows = normalizedLogs.map((lg) =>
     `<tr>
       <td style="white-space: nowrap;">${lg.timestamp}</td>
       <td><b>${lg.user}</b></td>
       <td><span style="padding:4px 8px;background:#e2e8f0;color:#334155;border-radius:4px;font-size:11px;font-weight:600;">${lg.action}</span></td>
-      <td>${lg.target}</td>
+      <td>${lg.target || "—"}</td>
     </tr>`
   ).join("");
   
@@ -334,12 +337,13 @@ function generateDirectPdf(logsList) {
   }
   const logoUrl = window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png";
   
-  const rows = logsList.map((lg) =>
+  const normalizedLogs = (logsList || []).map(normalizeAuditLog);
+  const rows = normalizedLogs.map((lg) =>
     `<tr>
       <td style="border-bottom:1px solid #e2e8f0;padding:12px 10px;white-space:nowrap;">${lg.timestamp}</td>
       <td style="border-bottom:1px solid #e2e8f0;padding:12px 10px;"><b>${lg.user}</b></td>
       <td style="border-bottom:1px solid #e2e8f0;padding:12px 10px;"><span style="padding:4px 8px;background:#e2e8f0;color:#334155;border-radius:4px;font-size:11px;font-weight:600;">${lg.action}</span></td>
-      <td style="border-bottom:1px solid #e2e8f0;padding:12px 10px;width:100%">${lg.target}</td>
+      <td style="border-bottom:1px solid #e2e8f0;padding:12px 10px;width:100%">${lg.target || "—"}</td>
     </tr>`
   ).join("");
   const content = document.createElement("div");
@@ -377,8 +381,71 @@ function generateDirectPdf(logsList) {
   window.html2pdf().set(opt).from(content).save();
 }
 
+function getLogTarget(log) {
+  if (!log) return "—";
+
+  const details = log.details && typeof log.details === "object" ? log.details : {};
+
+  const candidates = [
+    log.target,
+    log.entity_name,
+    log.entityName,
+    details.target,
+    details.name,
+    details.nome,
+    details.entity_name,
+    details.entityName,
+    details.message,
+    log.entity_type,
+    log.entityType
+  ];
+
+  const found = candidates.find((value) => {
+    if (value === undefined || value === null) return false;
+    const text = String(value).trim();
+    return text && text !== "undefined" && text !== "undefined: undefined" && text !== "null";
+  });
+
+  return found ? String(found).trim() : "—";
+}
+
+function getLogEntityType(log) {
+  if (!log) return "";
+
+  const details = log.details && typeof log.details === "object" ? log.details : {};
+
+  const candidates = [
+    log.entityType,
+    details.entityType,
+    details.entity_type
+  ];
+
+  const found = candidates.find((value) => {
+    if (value === undefined || value === null) return false;
+    const text = String(value).trim();
+    return text && text !== "undefined" && text !== "null";
+  });
+
+  return found ? String(found).trim() : "";
+}
+
+function normalizeAuditLog(log) {
+  const target = getLogTarget(log);
+  const entityType = getLogEntityType(log);
+
+  return {
+    ...log,
+    timestamp: log.timestamp || new Date(log.created_at || log.createdAt || Date.now()).toLocaleString("pt-BR"),
+    user: log.user || log.user_name || log.userName || "—",
+    action: log.action || "—",
+    target,
+    entityType
+  };
+}
+
 function exportLogsCsv(logsList) {
-  const rows = [["Data/Hora", "Operador", "Acao", "Detalhes"], ...logsList.map((lg) => [lg.timestamp, lg.user, lg.action, lg.target])];
+  const normalizedLogs = (logsList || []).map(normalizeAuditLog);
+  const rows = [["Data/Hora", "Operador", "Acao", "Detalhes"], ...normalizedLogs.map((lg) => [lg.timestamp, lg.user, lg.action, lg.target || "—"])];
   downloadFile(`auditoria-logs.csv`, toCsv(rows), "text/csv;charset=utf-8;");
 }
 
@@ -849,7 +916,7 @@ export default function App() {
         if (ts > eTs) return false;
       }
       return true;
-    });
+    }).map(normalizeAuditLog);
   }, [logs, logFilterStart, logFilterEnd]);
 
   const getChildren = useCallback((id) => childrenMap.get(id) || [], [childrenMap]);
@@ -2156,12 +2223,16 @@ export default function App() {
                             .order('created_at', { ascending: false })
                             .limit(500);
                           if (data) {
-                            setLogs(data.map(l => ({
+                            setLogs((data || []).map((l) => normalizeAuditLog({
                               id: l.id,
+                              created_at: l.created_at,
                               timestamp: new Date(l.created_at).toLocaleString('pt-BR'),
+                              user_name: l.user_name,
                               user: l.user_name,
                               action: l.action,
-                              target: `${l.target_type}: ${l.target_name}`
+                              entity_type: l.entity_type,
+                              entity_name: l.entity_name,
+                              details: l.details || {}
                             })));
                           }
                         }
@@ -3578,53 +3649,18 @@ export default function App() {
       )}
 
       {/* ═─ ═─ ═─ LOGS MODAL ═─ ═─ ═─ */}
-      {openLogsDlg && (
-        <div className="modal-overlay" style={{ zIndex: 1500 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setOpenLogsDlg(false); }}>
-          <div className="modal-content wide">
-            <button className="modal-close" onClick={() => setOpenLogsDlg(false)}><X size={12} /></button>
-            <div className="modal-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-              <div><h2 style={{ lineHeight: 1.2 }}>Histórico de Modificações</h2><p>Registro de auditoria.</p></div>
-              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                <div style={{ display: "flex", gap: 4, alignItems: "center", background: "var(--n50)", padding: "4px 8px", borderRadius: 6, border: "1px solid var(--n200)" }}>
-                  <label className="fl" style={{ margin: 0 }}>De:</label><input className="fi" type="date" value={logFilterStart} onChange={(e) => setLogFilterStart(e.target.value)} style={{ padding: "4px 8px", height: 28, width: 110 }} />
-                  <label className="fl" style={{ margin: 0, marginLeft: 4 }}>Até:</label><input className="fi" type="date" value={logFilterEnd} onChange={(e) => setLogFilterEnd(e.target.value)} style={{ padding: "4px 8px", height: 28, width: 110 }} />
-                </div>
-                {filteredLogs.length > 0 && (
-                  <>
-                    <button className="btn btn-outline btn-xs" onClick={() => exportLogsCsv(filteredLogs)} style={{ height: 32 }}><FileText size={12} style={{ marginRight: 4 }} /> CSV</button>
-                    <button className="btn btn-outline btn-xs" onClick={() => generateDirectPdf(filteredLogs)} style={{ height: 32 }}><Download size={12} style={{ marginRight: 4 }} /> Baixar PDF</button>
-                    <button className="btn btn-outline btn-xs" onClick={() => exportLogsPdf(filteredLogs)} style={{ height: 32 }}><FileText size={12} style={{ marginRight: 4 }} /> Imprimir</button>
-                  </>
-                )}
-              </div>
-            </div>
-            <div className="modal-body">
-              {filteredLogs.length === 0 ? <p style={{ color: "var(--n500)" }}>Nenhuma modificação registrada neste período.</p> : (
-                <div style={{ maxHeight: 400, overflowY: "auto", border: "1px solid var(--n200)", borderRadius: 8 }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, textAlign: "left" }}>
-                    <thead style={{ position: "sticky", top: 0, background: "var(--n100)" }}>
-                      <tr><th style={{ padding: "8px 12px", borderBottom: "1px solid var(--n200)" }}>Data</th><th style={{ padding: "8px 12px", borderBottom: "1px solid var(--n200)" }}>Usuário</th><th style={{ padding: "8px 12px", borderBottom: "1px solid var(--n200)" }}>Ação</th><th style={{ padding: "8px 12px", borderBottom: "1px solid var(--n200)" }}>Detalhes</th></tr>
-                    </thead>
-                    <tbody>
-                      {filteredLogs.map(lg => (
-                        <tr key={lg.id} style={{ borderBottom: "1px solid var(--n100)" }}>
-                          <td style={{ padding: "8px 12px", whiteSpace: "nowrap" }}>{lg.timestamp}</td>
-                          <td style={{ padding: "8px 12px" }}><b>{lg.user}</b></td>
-                          <td style={{ padding: "8px 12px" }}><span className="badge badge-sec" style={{ fontSize: 10, fontWeight: 700 }}>{lg.action}</span></td>
-                          <td style={{ padding: "8px 12px", width: "100%" }}>{lg.target}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-primary btn-xs" onClick={() => setOpenLogsDlg(false)}>Fechar</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <LogsModal
+        open={openLogsDlg}
+        onClose={() => setOpenLogsDlg(false)}
+        logFilterStart={logFilterStart}
+        setLogFilterStart={setLogFilterStart}
+        logFilterEnd={logFilterEnd}
+        setLogFilterEnd={setLogFilterEnd}
+        filteredLogs={filteredLogs}
+        exportLogsCsv={exportLogsCsv}
+        generateDirectPdf={generateDirectPdf}
+        exportLogsPdf={exportLogsPdf}
+      />
 
       {/* ═─ ═─ ═─ USUARIOS MODAL ═─ ═─ ═─ */}
       {openUsersDlg && isAdmin && (
@@ -3750,51 +3786,11 @@ export default function App() {
       )}
       
       {/* ═─ ═─ ═─ ESTATÍSTICAS DE ACESSO (ADM) ═─ ═─ ═─ */}
-      {openStatsDlg && isAdmin && (
-        <div className="modal-overlay" style={{ zIndex: 1600 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setOpenStatsDlg(false); }}>
-          <div className="modal-content" style={{ maxWidth: 500 }}>
-            <button className="modal-close" onClick={() => setOpenStatsDlg(false)}><X size={12} /></button>
-            <div className="modal-header">
-              <h2 style={{ display: "flex", alignItems: "center", gap: 10 }}><PieChart color="var(--p500)" /> Estatísticas de Acesso</h2>
-              <p>Resumo de tráfego e atividade administrativa.</p>
-            </div>
-            <div className="modal-body">
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
-                <div style={{ background: "var(--n100)", padding: 16, borderRadius: 12, textAlign: "center" }}>
-                  <div style={{ fontSize: 10, color: "var(--n600)", textTransform: "uppercase", fontWeight: 700 }}>Acessos Hoje</div>
-                  <div style={{ fontSize: 32, fontWeight: 800, color: "var(--p600)" }}>{Math.floor(logs.length * 1.5) + 12}</div>
-                </div>
-                <div style={{ background: "var(--n100)", padding: 16, borderRadius: 12, textAlign: "center" }}>
-                  <div style={{ fontSize: 10, color: "var(--n600)", textTransform: "uppercase", fontWeight: 700 }}>Ações no BD</div>
-                  <div style={{ fontSize: 32, fontWeight: 800, color: "var(--p600)" }}>{logs.length}</div>
-                </div>
-              </div>
-              
-              <h4 style={{ fontSize: 12, marginBottom: 8 }}>Atividade Recente (por tipo)</h4>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {['CREATE', 'UPDATE', 'DELETE', 'LOGIN'].map(type => {
-                  const count = logs.filter(l => l.action.includes(type)).length;
-                  const pct = logs.length > 0 ? (count / logs.length) * 100 : 0;
-                  return (
-                    <div key={type} style={{ fontSize: 11 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-                        <span>{type}</span>
-                        <b>{count}</b>
-                      </div>
-                      <div style={{ height: 4, background: "var(--n200)", borderRadius: 2 }}>
-                        <div style={{ height: "100%", width: `${pct}%`, background: "var(--p500)", borderRadius: 2 }}></div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-primary btn-xs" onClick={() => setOpenStatsDlg(false)}>Fechar</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <StatsModal
+        open={openStatsDlg && isAdmin}
+        onClose={() => setOpenStatsDlg(false)}
+        logs={logs}
+      />
 
       
       {/* ═─ ═─ ═─ GESTÃO DE TIPOS DE ATIVOS ═─ ═─ ═─ */}
