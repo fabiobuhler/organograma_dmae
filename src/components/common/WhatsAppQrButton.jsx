@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { QrCode, X, MessageCircle } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { buildWhatsAppUrl, hasValidPhone } from "../../utils/phone";

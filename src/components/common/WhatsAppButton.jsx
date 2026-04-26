@@ -1,4 +1,3 @@
-import React from "react";
 import { MessageCircle } from "lucide-react";
 import { buildWhatsAppUrl, hasValidPhone } from "../../utils/phone";
 
