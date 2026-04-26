@@ -37,6 +37,9 @@ import StatsModal from "./components/admin/StatsModal";
 import NodeForm from "./components/org/NodeForm";
 import AssetForm from "./components/assets/AssetForm";
 import ContractForm from "./components/contracts/ContractForm";
+import DashboardCard from "./components/dashboard/DashboardCard";
+import DonutChart from "./components/dashboard/DonutChart";
+import DashboardAssetTable from "./components/dashboard/DashboardAssetTable";
 import { maskCnpj, isValidCnpj, getCnpjValidationMessage } from "./utils/cnpj";
 import {
   fetchNodes,
@@ -2952,78 +2955,12 @@ export default function App() {
           document.body.removeChild(link);
         };
 
+
         const AssetTable = ({ list, title }) => (
-          <div style={{ marginBottom: 30 }}>
-            <h3 style={{ fontSize: 14, marginBottom: 12, display: "flex", alignItems: "center", gap: 8, color: "var(--n700)" }}>
-              <Package size={16} /> {title} ({list.length})
-            </h3>
-            <div style={{ border: "1px solid var(--n200)", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-                <thead style={{ background: "var(--n50)" }}>
-                  <tr>
-                    <th style={{ padding: 10, textAlign: "left" }}>Ativo</th>
-                    <th style={{ padding: 10, textAlign: "left" }}>Categoria / Modelo</th>
-                    <th style={{ padding: 10, textAlign: "left" }}>Unidade</th>
-                    <th style={{ padding: 10, textAlign: "left" }}>Patrimônio / Placa</th>
-                    <th style={{ padding: 10, textAlign: "left" }}>Contingência</th>
-                    <th style={{ padding: 10, textAlign: "center" }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.length > 0 ? list.map(a => (
-                    <tr key={a.id} style={{ borderTop: "1px solid var(--n100)" }}>
-                      <td style={{ padding: 10 }}>
-                        <div style={{ fontWeight: 700 }}>{a.name}</div>
-                        {a.tipoVinculo === "Contratado" && <div style={{ fontSize: 9, color: "#0369a1", fontWeight: 600 }}>{a.empresaContratada || "Contratado"}</div>}
-                      </td>
-                      <td style={{ padding: 10 }}>
-                        {a.category || "—"} / {a.model || "—"}
-                      </td>
-                      <td style={{ padding: 10 }}>{nodeMap.get(a.nodeId)?.name || "—"}</td>
-                      <td style={{ padding: 10 }}>
-                        {a.patrimonio || "—"} / {a.plate || "—"}
-                      </td>
-                      <td style={{ padding: 10 }}>
-                        {a.isEmergency ? (
-                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                            <AssetBadges asset={a} compact showText={false} />
-                            <AssetContactActions phone={a.contatoAcionamento} responsible={a.contatoResponsavel} />
-                          </div>
-                        ) : <span style={{ color: "var(--n400)" }}>Não</span>}
-                      </td>
-                      <td style={{ padding: 10, textAlign: "center" }}>
-                        {a.isMaintenance ? (
-                          <span className="badge badge-danger" style={{ fontSize: 9, padding: "2px 6px" }}>Em Manutenção</span>
-                        ) : (
-                          <span className="badge badge-success" style={{ fontSize: 9, padding: "2px 6px" }}>Operacional</span>
-                        )}
-                      </td>
-                    </tr>
-                  )) : (
-                    <tr><td colSpan={6} style={{ padding: 20, textAlign: "center", color: "var(--n400)" }}>Nenhum ativo encontrado.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <DashboardAssetTable list={list} title={title} nodeMap={nodeMap} />
         );
 
-        const DonutChart = ({ stats, title }) => (
-          <div className="bi-chart-box">
-             <div className="bi-chart-container">
-                <div className="bi-donut" style={{ background: stats.pieCss }}>
-                   <div className="bi-donut-hole" />
-                </div>
-                <div className="bi-total-abs">{stats.total}</div>
-             </div>
-             <div className="bi-chart-info">
-                <h4>{title}</h4>
-                <div className="bi-legend-item"><span className="dot" style={{background:"#10b981"}} /> Ativos: <b>{stats.active}</b></div>
-                <div className="bi-legend-item"><span className="dot" style={{background:"#f97316"}} /> A Vencer: <b>{stats.expiring}</b></div>
-                <div className="bi-legend-item"><span className="dot" style={{background:"#ef4444"}} /> Vencidos: <b>{stats.expired}</b></div>
-             </div>
-          </div>
-        );
+
 
         return (
           <div className="modal-overlay">
@@ -3060,52 +2997,27 @@ export default function App() {
                   <>
                     {/* TOP METRIC CARDS */}
                      <div className="bi-grid-cards" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
-                        <div className="bi-card people">
-                           <div className="bi-card-icon" style={{background:"#dbeafe", color:"#2563eb"}}><Users size={18} /></div>
-                           <div className="bi-card-data">
-                              <div className="bi-card-label">Força de Trabalho</div>
-                              <div className="bi-card-main">{dPersons.length + sPersons.length}</div>
-                              <div className="bi-card-sub">Direto: {dPersons.length} | Indireto: {sPersons.length}</div>
-                           </div>
-                        </div>
-                        <div className="bi-card assets" style={{ cursor: "pointer" }} onClick={() => setDashboardView("allAssets")}>
-                           <div className="bi-card-icon" style={{background:"#fef3c7", color:"#d97706"}}><Package size={18} /></div>
-                           <div className="bi-card-data">
-                              <div className="bi-card-label">Patrimônio / Ativos</div>
-                              <div className="bi-card-main">{dAssets.length + sAssets.length}</div>
-                              <div className="bi-card-sub">Direto: {dAssets.length} | Indireto: {sAssets.length}</div>
-                           </div>
-                        </div>
-                        <div className="bi-card emergency" 
-                             style={{ borderColor: dEmergency + sEmergency > 0 ? "#ef4444" : "var(--n200)", cursor: "pointer" }}
-                             onClick={() => setDashboardView("emergencyAssets")}
-                        >
-                           <div className="bi-card-icon" style={{background:"#fee2e2", color:"#ef4444"}}><Siren size={18} /></div>
-                           <div className="bi-card-data">
-                              <div className="bi-card-label">Ativos de Contingência</div>
-                              <div className="bi-card-main" style={{ color: dEmergency + sEmergency > 0 ? "#ef4444" : "inherit" }}>{dEmergency + sEmergency}</div>
-                              <div className="bi-card-sub">Direto: {dEmergency} | Indireto: {sEmergency}</div>
-                           </div>
-                        </div>
-                        <div className="bi-card maintenance" 
-                             style={{ borderColor: (dEmergencyMaintenance + sEmergencyMaintenance) > 0 ? "#f59e0b" : "var(--n200)", cursor: "pointer" }}
-                             onClick={() => setDashboardView("emergencyMaintenanceAssets")}
-                        >
-                           <div className="bi-card-icon"><AlertTriangle size={18} /></div>
-                           <div className="bi-card-data">
-                              <div className="bi-card-label">Contingência em Manutenção</div>
-                              <div className="bi-card-main">{(dEmergencyMaintenance + sEmergencyMaintenance)}</div>
-                              <div className="bi-card-sub">Críticos Inoperantes: {(dEmergencyMaintenance + sEmergencyMaintenance)}</div>
-                           </div>
-                        </div>
-                        <div className="bi-card units">
-                           <div className="bi-card-icon" style={{background:"#dcfce7", color:"#16a34a"}}><Building2 size={18} /></div>
-                           <div className="bi-card-data">
-                              <div className="bi-card-label">Subunidades</div>
-                              <div className="bi-card-main">{dStructures.length + sStructures.length}</div>
-                              <div className="bi-card-sub">Nível 1: {dStructures.length} | Profundas: {sStructures.length}</div>
-                           </div>
-                        </div>
+                        <DashboardCard icon={Users} iconBg="#dbeafe" iconColor="#2563eb" className="people"
+                          label="Força de Trabalho" value={dPersons.length + sPersons.length}
+                          subtitle={`Direto: ${dPersons.length} | Indireto: ${sPersons.length}`} />
+                        <DashboardCard icon={Package} iconBg="#fef3c7" iconColor="#d97706" className="assets"
+                          label="Patrimônio / Ativos" value={dAssets.length + sAssets.length}
+                          subtitle={`Direto: ${dAssets.length} | Indireto: ${sAssets.length}`}
+                          onClick={() => setDashboardView("allAssets")} />
+                        <DashboardCard icon={Siren} iconBg="#fee2e2" iconColor="#ef4444" className="emergency"
+                          label="Ativos de Contingência" value={dEmergency + sEmergency}
+                          valueColor={dEmergency + sEmergency > 0 ? "#ef4444" : undefined}
+                          borderColor={dEmergency + sEmergency > 0 ? "#ef4444" : "var(--n200)"}
+                          subtitle={`Direto: ${dEmergency} | Indireto: ${sEmergency}`}
+                          onClick={() => setDashboardView("emergencyAssets")} />
+                        <DashboardCard icon={AlertTriangle} className="maintenance"
+                          label="Contingência em Manutenção" value={dEmergencyMaintenance + sEmergencyMaintenance}
+                          borderColor={(dEmergencyMaintenance + sEmergencyMaintenance) > 0 ? "#f59e0b" : "var(--n200)"}
+                          subtitle={`Críticos Inoperantes: ${dEmergencyMaintenance + sEmergencyMaintenance}`}
+                          onClick={() => setDashboardView("emergencyMaintenanceAssets")} />
+                        <DashboardCard icon={Building2} iconBg="#dcfce7" iconColor="#16a34a" className="units"
+                          label="Subunidades" value={dStructures.length + sStructures.length}
+                          subtitle={`Nível 1: ${dStructures.length} | Profundas: ${sStructures.length}`} />
                      </div>
 
                     <div className="bi-row" style={{marginTop: 30, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
