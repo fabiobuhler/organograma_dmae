@@ -7,16 +7,36 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Build e dependencias
+node_modules/
+dist/
+dist-ssr/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Backups e temporarios
+backup/
+backup_recovery/
+scratch/
+src/backup_layout/
+*.bak
+*.tmp
+
+# Arquivos gerados ou locais
+On_line/
+eslint_results.txt
+lista.txt
+update.json
+Thumbs.db
+.DS_Store
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
