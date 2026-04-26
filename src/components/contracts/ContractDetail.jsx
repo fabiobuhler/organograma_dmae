@@ -1,6 +1,6 @@
 import { 
   X, Printer, FileText, Siren, Package, 
-  Calendar, Briefcase, ShieldCheck, Trash2 
+  Calendar, Briefcase, ShieldCheck, Trash2, FileSpreadsheet
 } from "lucide-react";
 import { getContractStatus } from "../../utils/contractUtils";
 
@@ -17,6 +17,7 @@ export default function ContractDetail({
   onClose,
   onPrint,
   onExportPdf,
+  onExportCsv,
   onDeleteRequest
 }) {
   if (!contract) return null;
@@ -53,6 +54,11 @@ export default function ContractDetail({
             <button className="btn btn-outline btn-xs" onClick={() => onExportPdf && onExportPdf(contract)}>
               <FileText size={12} /> Exportar PDF
             </button>
+            {onExportCsv && (
+              <button className="btn btn-outline btn-xs" onClick={() => onExportCsv(contract)}>
+                <FileSpreadsheet size={12} /> Exportar CSV
+              </button>
+            )}
           </div>
         </div>
 

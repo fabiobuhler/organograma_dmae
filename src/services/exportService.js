@@ -1,4 +1,4 @@
-/**
+﻿/**
  * exportService.js
  * Centraliza a lógica de exportação de arquivos PDF e CSV.
  * Este serviço é puro: não usa React, não acessa estado e não altera a UI diretamente.
@@ -498,5 +498,333 @@ export function exportAssetsPdf(list = [], options = {}) {
   <script>setTimeout(() => window.print(), 900);</script>
 </body>
 </html>`);
+  w.document.close();
+}
+
+/**
+ * Exporta lista de contratos para CSV.
+ */
+export function exportContractsCsv(contracts = [], options = {}) {
+  const {
+    filename = "contratos-export.csv",
+    nodes = [],
+    personMap = new Map(),
+    getContractStatus
+  } = options;
+
+  const headers = [
+    "Número/SEI", "Status", "Objeto", "Empresa", "CNPJ", "Contato", "Unidade",
+    "Início", "Término", "Itens", "Aditivos", 
+    "Gestor Titular", "Gestor Suplente",
+    "Fiscal Contrato Titular", "Fiscal Contrato Suplente",
+    "Fiscal Serviço Titular", "Fiscal Serviço Suplente"
+  ];
+
+  const rows = contracts.map((c) => {
+    const node = nodes.find((n) => n.id === c.nodeId);
+    const status = getContractStatus ? getContractStatus(c) : "";
+    const statusText = status === "active" ? "Ativo" : status === "expiring" ? "A Vencer" : "Vencido";
+    
+    const aditivosStr = (c.aditivos || []).map((ad, idx) => `Aditivo ${idx+1}: ${ad.aditivoInício} a ${ad.aditivoTermino}`).join(" | ");
+
+    return [
+      c.sei,
+      statusText,
+      c.objeto,
+      c.empresa || "",
+      c.cnpj || "",
+      c.contato || "",
+      node?.name || "",
+      c.dataInicio || "",
+      c.dataTermino || "",
+      c.itens || "",
+      aditivosStr,
+      personMap.get(c.gestor?.titularId)?.name || "",
+      personMap.get(c.gestor?.suplenteId)?.name || "",
+      (c.fiscaisContrato || []).map(f => personMap.get(f.titularId)?.name || "").join(", "),
+      (c.fiscaisContrato || []).map(f => personMap.get(f.suplenteId)?.name || "").join(", "),
+      (c.fiscaisServico || []).map(f => personMap.get(f.titularId)?.name || "").join(", "),
+      (c.fiscaisServico || []).map(f => personMap.get(f.suplenteId)?.name || "").join(", ")
+    ];
+  });
+
+  const csvContent = [
+    headers.map(escapeCsvValue).join(";"),
+    ...rows.map((row) => row.map(escapeCsvValue).join(";"))
+  ].join("\n");
+
+  downloadExcelCsvFile(filename, csvContent, {
+    includeSeparatorHint: true,
+    separator: ";"
+  });
+}
+
+/**
+ * Exporta um contrato individual para CSV.
+ */
+export function exportContractDetailCsv(contract, options = {}) {
+  if (!contract) return;
+
+  const {
+    filename = `contrato-${safeText(contract.sei || contract.id || "export", "export")}.csv`,
+    nodes = [],
+    personMap = new Map(),
+    getContractStatus
+  } = options;
+
+  const node = nodes.find((n) => n.id === contract.nodeId);
+  const status = getContractStatus ? getContractStatus(contract) : "";
+  const statusText = status === "active" ? "Ativo" : status === "expiring" ? "A Vencer" : "Vencido";
+
+  const aditivosStr = (contract.aditivos || []).map((ad, idx) => `Aditivo ${idx+1}: ${ad.aditivoInício} a ${ad.aditivoTermino}`).join(" | ");
+
+  const headers = [
+    "Contrato SEI", "Status", "Objeto", "Unidade vinculada", "Empresa", "CNPJ", "Contato",
+    "Início", "Término", "Itens", "Aditivos", "Observações",
+    "Gestor titular", "Gestor suplente",
+    "Fiscal contrato titular", "Fiscal contrato suplente",
+    "Fiscal serviço titular", "Fiscal serviço suplente"
+  ];
+
+  const row = [
+    contract.sei || "—",
+    statusText || "—",
+    contract.objeto || "—",
+    node?.name || "—",
+    contract.empresa || "—",
+    contract.cnpj || "—",
+    contract.contato || "—",
+    contract.dataInicio || "—",
+    contract.dataTermino || "—",
+    contract.itens || "—",
+    aditivosStr || "—",
+    contract.observacoes || "—",
+    personMap.get(contract.gestor?.titularId)?.name || "—",
+    personMap.get(contract.gestor?.suplenteId)?.name || "—",
+    (contract.fiscaisContrato || []).map(f => personMap.get(f.titularId)?.name || "—").join(", ") || "—",
+    (contract.fiscaisContrato || []).map(f => personMap.get(f.suplenteId)?.name || "—").join(", ") || "—",
+    (contract.fiscaisServico || []).map(f => personMap.get(f.titularId)?.name || "—").join(", ") || "—",
+    (contract.fiscaisServico || []).map(f => personMap.get(f.suplenteId)?.name || "—").join(", ") || "—"
+  ];
+
+  const csvContent = [
+    headers.map(escapeCsvValue).join(";"),
+    row.map(escapeCsvValue).join(";")
+  ].join("\n");
+
+  downloadExcelCsvFile(filename, csvContent, {
+    includeSeparatorHint: true,
+    separator: ";"
+  });
+}
+
+/**
+ * Exporta um contrato individual para PDF (Layout Rich HTML).
+ */
+export function exportContractDetailPdf(contract, options = {}) {
+  if (!contract) return;
+
+  const {
+    title = "Relat\u00f3rio do Contrato " + (contract.sei || ""),
+    subtitle = "Espelho e Detalhamento da Contrata\u00e7\u00e3o",
+    logoUrl = "",
+    nodes = [],
+    personMap = new Map(),
+    getContractStatus
+  } = options;
+
+  const w = window.open("", "_blank");
+  if (!w) {
+    throw new Error("Pop-up bloqueado. Permita pop-ups para exportar.");
+  }
+
+  const node = nodes.find((n) => n.id === contract.nodeId);
+  const status = getContractStatus ? getContractStatus(contract) : "";
+  const statusLabel = status === "active" ? "Ativo" : status === "expiring" ? "A Vencer" : "Vencido";
+  const statusColor = status === "active" ? "#065f46" : status === "expiring" ? "#9a3412" : "#991b1b";
+  const statusBg = status === "active" ? "#d1fae5" : status === "expiring" ? "#ffedd5" : "#fee2e2";
+
+  const vigIni = contract.dataInicio ? new Date(contract.dataInicio + "T12:00:00").toLocaleDateString("pt-BR") : "\u2014";
+  const vigFim = contract.dataTermino ? new Date(contract.dataTermino + "T12:00:00").toLocaleDateString("pt-BR") : "\u2014";
+
+  const aditivosHtml = (contract.aditivos || []).length > 0
+    ? (contract.aditivos || []).map(function(ad, idx) {
+        const ini = ad.aditivoIn\u00edcio ? new Date(ad.aditivoIn\u00edcio + "T12:00:00").toLocaleDateString("pt-BR") : "\u2014";
+        const fim = ad.aditivoTermino ? new Date(ad.aditivoTermino + "T12:00:00").toLocaleDateString("pt-BR") : "\u2014";
+        return "<li><b>Aditivo " + (idx+1) + ":</b> " + ini + " a " + fim + "</li>";
+      }).join("")
+    : "<li>Nenhum aditivo registrado.</li>";
+
+  function buildPersonCard(label, f, idx) {
+    var parts = [];
+    parts.push('<div class="person-card">');
+    parts.push('<p class="person-title">' + label + " (Equipe " + (idx+1) + ")</p>");
+    parts.push("<p><b>Titular:</b> " + safeText(personMap.get(f.titularId)?.name || "\u2014") + "</p>");
+    parts.push("<p><b>Suplente:</b> " + safeText(personMap.get(f.suplenteId)?.name || "\u2014") + "</p>");
+    parts.push("</div>");
+    return parts.join("");
+  }
+
+  const fiscaisContratoHtml = (contract.fiscaisContrato || []).map(function(f, idx) {
+    return buildPersonCard("Fiscal de Contrato", f, idx);
+  }).join("");
+
+  const fiscaisServicoHtml = (contract.fiscaisServico || []).map(function(f, idx) {
+    return buildPersonCard("Fiscal de Servi\u00e7o", f, idx);
+  }).join("");
+
+  const logoHtml = logoUrl ? '<img src="' + logoUrl + '" alt="Logo">' : "<div></div>";
+  const dtNow = new Date().toLocaleDateString("pt-BR") + " " + new Date().toLocaleTimeString("pt-BR");
+
+  const html = [
+    "<!DOCTYPE html><html><head>",
+    "<title>" + safeText(title) + "</title>",
+    "<style>",
+    "@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');",
+    "body{font-family:'Inter',sans-serif;padding:40px;color:#1e293b;background:#fff;margin:0;line-height:1.5}",
+    ".header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #e2e8f0;padding-bottom:20px;margin-bottom:24px}",
+    ".header img{height:55px;object-fit:contain}",
+    ".header-titles h2{margin:0;font-size:24px;color:#0f172a;letter-spacing:-0.5px}",
+    ".header-titles p{margin:6px 0 0;font-size:14px;color:#64748b}",
+    ".meta{display:flex;justify-content:space-between;font-size:13px;color:#475569;margin-bottom:24px;background:#f8fafc;padding:12px 16px;border-radius:8px;border:1px solid #e2e8f0}",
+    ".section{margin-bottom:24px;background:#fafaf9;border:1px solid #e2e8f0;border-radius:8px;padding:16px}",
+    ".section-title{font-size:16px;font-weight:700;color:#334155;margin-top:0;margin-bottom:12px;border-bottom:1px solid #e2e8f0;padding-bottom:8px}",
+    ".grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}",
+    ".info-group{margin-bottom:12px}",
+    ".info-group label{display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:4px}",
+    ".info-group div{font-size:13px;color:#0f172a}",
+    ".person-card{background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:10px;margin-bottom:10px;font-size:13px}",
+    ".person-title{font-weight:700;color:#475569;margin-top:0;margin-bottom:6px;border-bottom:1px solid #f1f5f9;padding-bottom:4px;font-size:12px}",
+    ".person-card p{margin:4px 0}",
+    "ul{margin:0;padding-left:20px;font-size:13px}",
+    "li{margin-bottom:4px}",
+    "</style></head><body>",
+    '<div class="header">' + logoHtml,
+    '<div class="header-titles" style="text-align:right">',
+    "<h2>" + safeText(title) + "</h2>",
+    "<p>" + safeText(subtitle) + "</p>",
+    "</div></div>",
+    '<div class="meta">',
+    "<span>Emiss\u00e3o: <b>" + dtNow + "</b></span>",
+    '<span>Status atual: <span style="color:' + statusColor + ";background:" + statusBg + ';padding:2px 6px;border-radius:4px;font-weight:bold">' + statusLabel + "</span></span>",
+    "</div>",
+    '<div class="section">',
+    '<h3 class="section-title">Dados B\u00e1sicos do Contrato</h3>',
+    '<div class="info-group"><label>Objeto</label><div>' + safeText(contract.objeto || "\u2014") + "</div></div>",
+    '<div class="info-group"><label>Itens (Materiais/Servi\u00e7os)</label><div>' + safeText(contract.itens || "\u2014") + "</div></div>",
+    '<div class="grid-2">',
+    '<div class="info-group"><label>Unidade Vinculada</label><div>' + safeText(node?.name || "\u2014") + "</div></div>",
+    '<div class="info-group"><label>Vig\u00eancia Original</label><div>' + vigIni + " a " + vigFim + "</div></div>",
+    "</div></div>",
+    '<div class="grid-2">',
+    '<div class="section">',
+    '<h3 class="section-title">Empresa Contratada</h3>',
+    '<div class="info-group"><label>Raz\u00e3o Social</label><div>' + safeText(contract.empresa || "\u2014") + "</div></div>",
+    '<div class="info-group"><label>CNPJ</label><div>' + safeText(contract.cnpj || "\u2014") + "</div></div>",
+    '<div class="info-group"><label>Contato</label><div>' + safeText(contract.contato || "\u2014") + "</div></div>",
+    "</div>",
+    '<div class="section">',
+    '<h3 class="section-title">Aditivos</h3>',
+    "<ul>" + aditivosHtml + "</ul>",
+    "</div></div>",
+    '<div class="section">',
+    '<h3 class="section-title">Gest\u00e3o e Fiscaliza\u00e7\u00e3o</h3>',
+    '<div class="grid-2"><div>',
+    '<div class="person-card" style="border-left:3px solid #3b82f6">',
+    '<p class="person-title" style="color:#1e40af">Gestor do Contrato</p>',
+    "<p><b>Titular:</b> " + safeText(personMap.get(contract.gestor?.titularId)?.name || "\u2014") + "</p>",
+    "<p><b>Suplente:</b> " + safeText(personMap.get(contract.gestor?.suplenteId)?.name || "\u2014") + "</p>",
+    "</div></div>",
+    "<div>" + fiscaisContratoHtml + fiscaisServicoHtml + "</div>",
+    "</div></div>",
+    "<script>setTimeout(function(){window.print()},800)</script>",
+    "</body></html>"
+  ].join("\n");
+
+  w.document.write(html);
+  w.document.close();
+}
+
+
+/**
+ * Exporta lista de contratos para PDF (Layout Rich HTML).
+ */
+export function exportContractsPdf(contracts = [], options = {}) {
+  const {
+    title = "Relatório de Contratos",
+    subtitle = "Lista de Contratos Cadastrados",
+    logoUrl = "",
+    nodes = [],
+    personMap = new Map(),
+    getContractStatus
+  } = options;
+
+  const w = window.open("", "_blank");
+  if (!w) {
+    throw new Error("Pop-up bloqueado. Permita pop-ups para exportar.");
+  }
+
+  function buildContractRow(c) {
+    const node = nodes.find((n) => n.id === c.nodeId);
+    const status = getContractStatus ? getContractStatus(c) : "";
+    const statusLabel = status === "active" ? "Ativo" : status === "expiring" ? "A Vencer" : "Vencido";
+    const statusColor = status === "active" ? "#065f46" : status === "expiring" ? "#9a3412" : "#991b1b";
+    const statusBg = status === "active" ? "#d1fae5" : status === "expiring" ? "#ffedd5" : "#fee2e2";
+    const vigIni = c.dataInicio ? new Date(c.dataInicio + "T12:00:00").toLocaleDateString("pt-BR") : "\u2014";
+    const vigFim = c.dataTermino ? new Date(c.dataTermino + "T12:00:00").toLocaleDateString("pt-BR") : "\u2014";
+
+    const parts = [];
+    parts.push("<tr>");
+    parts.push('<td style="white-space:nowrap"><b>' + safeText(c.sei) + "</b>");
+    parts.push(' <span style="display:block;font-size:10px;color:' + statusColor + ";background:" + statusBg + ';padding:2px 4px;border-radius:4px;font-weight:bold;margin-top:2px">' + statusLabel + "</span></td>");
+    parts.push("<td><b>" + safeText(c.empresa || "\u2014") + "</b>");
+    parts.push(' <span style="display:block;color:#64748b;font-size:10px;margin-top:2px">CNPJ: ' + safeText(c.cnpj || "\u2014") + "</span></td>");
+    parts.push("<td>" + safeText(c.objeto) + "</td>");
+    parts.push("<td>" + safeText(node?.name || "\u2014") + "</td>");
+    parts.push('<td style="white-space:nowrap">' + vigIni + " a " + vigFim + "</td>");
+    parts.push("<td>" + safeText(personMap.get(c.gestor?.titularId)?.name || "\u2014") + "</td>");
+    parts.push("</tr>");
+    return parts.join("");
+  }
+
+  const rowsHtml = contracts.map(buildContractRow).join("");
+
+  const logoHtml = logoUrl ? '<img src="' + logoUrl + '" alt="Logo">' : "<div></div>";
+  const dtNow = new Date().toLocaleDateString("pt-BR") + " " + new Date().toLocaleTimeString("pt-BR");
+
+  const html = [
+    "<!DOCTYPE html><html><head>",
+    "<title>" + safeText(title) + "</title>",
+    "<style>",
+    "@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');",
+    "body{font-family:'Inter',sans-serif;padding:40px;color:#1e293b;background:#fff;margin:0}",
+    ".header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #e2e8f0;padding-bottom:20px;margin-bottom:24px}",
+    ".header img{height:55px;object-fit:contain}",
+    ".header-titles h2{margin:0;font-size:24px;color:#0f172a;letter-spacing:-0.5px}",
+    ".header-titles p{margin:6px 0 0;font-size:14px;color:#64748b}",
+    ".meta{display:flex;justify-content:space-between;font-size:13px;color:#475569;margin-bottom:20px;background:#f8fafc;padding:12px 16px;border-radius:8px;border:1px solid #e2e8f0}",
+    "table{width:100%;border-collapse:collapse;font-size:11px}",
+    "th,td{border-bottom:1px solid #e2e8f0;padding:10px;text-align:left;vertical-align:top}",
+    "th{background:#f1f5f9;font-weight:700;color:#334155;text-transform:uppercase;font-size:10px;border-top:1px solid #e2e8f0}",
+    "tr:nth-child(even){background:#fafaf9}",
+    "</style></head><body>",
+    '<div class="header">' + logoHtml,
+    '<div class="header-titles" style="text-align:right">',
+    "<h2>" + safeText(title) + "</h2>",
+    "<p>" + safeText(subtitle) + "</p>",
+    "</div></div>",
+    '<div class="meta">',
+    "<span>Emiss\u00e3o: <b>" + dtNow + "</b></span>",
+    "<span>Total de Contratos: <b>" + contracts.length + "</b></span>",
+    "</div>",
+    "<table><thead><tr>",
+    "<th>SEI / Status</th><th>Empresa</th><th>Objeto</th><th>Unidade</th><th>Vig\u00eancia</th><th>Gestor Titular</th>",
+    "</tr></thead>",
+    "<tbody>" + rowsHtml + "</tbody></table>",
+    "<script>setTimeout(function(){window.print()},800)</script>",
+    "</body></html>"
+  ].join("\n");
+
+  w.document.write(html);
   w.document.close();
 }

@@ -68,7 +68,11 @@ import {
   exportAuditLogsPdf, 
   generateDirectLogsPdf,
   exportAssetsCsv,
-  exportAssetsPdf
+  exportAssetsPdf,
+  exportContractsCsv as exportContractsCsvFile,
+  exportContractsPdf as exportContractsPdfFile,
+  exportContractDetailCsv as exportContractDetailCsvFile,
+  exportContractDetailPdf as exportContractDetailPdfFile
 } from "./services/exportService";
 
 const STORAGE_KEY = "dmae-orgchart-v16";
@@ -1836,28 +1840,68 @@ export default function App() {
   }, [flash, logAction]);
 
   // Export / Import
-  const exportContractPdf = useCallback((c) => {
-    const pdf = new jsPDF("p", "mm", "a4");
-    const node = nodes.find(n => n.id === c.nodeId);
-    
-    pdf.setFontSize(18);
-    pdf.text(`Contrato SEI: ${c.sei}`, 20, 20);
-    
-    pdf.setFontSize(10);
-    pdf.text(`Objeto: ${c.objeto}`, 20, 30);
-    pdf.text(`Empresa: ${c.empresa || "N/A"}`, 20, 35);
-    pdf.text(`Unidade: ${node ? node.name : "N/A"}`, 20, 40);
-    pdf.text(`Vigência: ${c.dataInicio || "N/A"} a ${c.dataTermino || "N/A"}`, 20, 45);
-    
-    pdf.line(20, 50, 190, 50);
-    
-    pdf.text("GESTÃO E FISCALIZAÇÃO", 20, 60);
-    pdf.text(`Gestor Titular: ${personMap.get(c.gestor.titularId)?.name || "N/A"}`, 20, 65);
-    pdf.text(`Gestor Suplente: ${personMap.get(c.gestor.suplenteId)?.name || "N/A"}`, 20, 70);
-    
-    pdf.save(`contrato-${c.sei}.pdf`);
-    flash("PDF Gerado!");
-  }, [nodes, personMap]);
+  const exportContractDetailPdf = useCallback((c) => {
+    if (!c) return;
+    try {
+      exportContractDetailPdfFile(c, {
+        nodes,
+        personMap,
+        logoUrl: window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png",
+        getContractStatus
+      });
+      flash("PDF Gerado!");
+    } catch (e) {
+      console.error(e);
+      window.alert("Não foi possível gerar o PDF do contrato.");
+    }
+  }, [nodes, personMap, flash]);
+
+  const exportContractDetailCsv = useCallback((c) => {
+    if (!c) return;
+    try {
+      exportContractDetailCsvFile(c, {
+        nodes,
+        personMap,
+        getContractStatus
+      });
+      flash("CSV Gerado!");
+    } catch (e) {
+      console.error(e);
+      window.alert("Não foi possível gerar o CSV do contrato.");
+    }
+  }, [nodes, personMap, flash]);
+
+  const exportContractsCsv = useCallback((contractsList) => {
+    try {
+      exportContractsCsvFile(contractsList, {
+        filename: "contratos-export.csv",
+        nodes,
+        personMap,
+        getContractStatus
+      });
+      flash("CSV Gerado!");
+    } catch (e) {
+      console.error(e);
+      window.alert("Não foi possível gerar o CSV de contratos.");
+    }
+  }, [nodes, personMap, flash]);
+
+  const exportContractsPdf = useCallback((contractsList) => {
+    try {
+      exportContractsPdfFile(contractsList, {
+        title: "Relatório de Contratos",
+        subtitle: "Lista de Contratos Cadastrados",
+        logoUrl: window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png",
+        nodes,
+        personMap,
+        getContractStatus
+      });
+      flash("PDF Gerado!");
+    } catch (e) {
+      console.error(e);
+      window.alert("Não foi possível gerar o PDF de contratos.");
+    }
+  }, [nodes, personMap, flash]);
 
   const expJson = useCallback(() => { downloadFile("organograma-dmae.json", JSON.stringify({ nodes, assets }, null, 2)); flash("JSON exportado!"); }, [nodes, assets]);
   const expCsv = useCallback((nid) => {
@@ -3471,7 +3515,8 @@ export default function App() {
           personMap={personMap}
           canEdit={canEdit}
           onClose={() => setShowContractDetail(null)}
-          onExportPdf={exportContractPdf}
+          onExportPdf={exportContractDetailPdf}
+          onExportCsv={exportContractDetailCsv}
           onPrint={() => window.print()}
           onDeleteRequest={requestDeleteContract}
         />
