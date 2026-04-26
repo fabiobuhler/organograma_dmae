@@ -370,5 +370,38 @@ Seções a adicionar:
 
 ---
 
-*Documento gerado automaticamente. Nenhum arquivo de produção foi alterado.*  
-*Nenhum commit ou push foi realizado.*
+
+---
+
+## Checkpoint pós-Fase 2B
+
+- **Branch atual:** `refactor/app-split-phase-2b-listnode`
+- **Último commit:** `7da75b85` — Extrai componente de lista do organograma
+- **Linhas atuais do App.jsx:** 5.151 (Redução de ~260 linhas)
+- **Componentes extraídos:**
+  - `WhatsAppButton` (em `src/components/common/WhatsAppButton.jsx`)
+  - `WhatsAppQrButton` (em `src/components/common/WhatsAppQrButton.jsx`)
+  - `SystemAlertModal` (em `src/components/common/SystemAlertModal.jsx`)
+  - `ConfirmDialog` (em `src/components/common/ConfirmDialog.jsx`)
+  - `NodeSelector` (em `src/components/selectors/NodeSelector.jsx`)
+  - `PersonSelector` (em `src/components/selectors/PersonSelector.jsx`)
+  - `ListNode` (em `src/components/org/ListNode.jsx`)
+- **Utilitários extraídos:**
+  - `phone.js` (lógica de máscara e WhatsApp)
+  - `assetUtils.js` (agrupamento e status de ativos)
+  - `contractUtils.js` (status e estatísticas de contratos)
+- **Testes realizados (Pelo Usuário):**
+  - ✅ Login administrador e troca de senha
+  - ✅ CRUD de Ativos (Proprios e Contratados)
+  - ✅ CRUD de Contratos (Gestores e Fiscais)
+  - ✅ WhatsApp/QR Code em ativos de contingência
+  - ✅ Modais de Alerta e Confirmação
+  - ✅ Modo Lista (Navegação recursiva)
+  - ✅ Árvore/Pan/Zoom (Integridade mantida)
+- **Áreas ainda não mexidas (Pendentes):**
+  - Dashboard/BI (Lógica complexa)
+  - PDF/CSV (Exportação de logs e ativos)
+  - Supabase services (loadCloudData e mutations)
+  - Formulários grandes (AssetForm, PersonForm, NodeForm)
+
+*Documento atualizado em 2026-04-26.*
