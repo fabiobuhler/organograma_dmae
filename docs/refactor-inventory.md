@@ -404,6 +404,73 @@ Seções a adicionar:
   - Supabase services (loadCloudData e mutations)
   - Formulários grandes (AssetForm, PersonForm, NodeForm)
 
+
+---
+
+## Checkpoint pós-Fase 4B — Auditoria e Administração
+
+### Estado atual
+- Branch atual: `refactor/app-split-phase-4b-logaction-standard`
+- Último commit: `d88d16c3` — Padroniza chamadas futuras de auditoria
+- Linhas atuais do App.jsx: 5018
+- Working tree: Limpo (clean)
+
+### Fase 4A
+- Extraído LogsModal para `src/components/admin/LogsModal.jsx`.
+- Extraído StatsModal para `src/components/admin/StatsModal.jsx`.
+- Criada normalização de logs com `normalizeAuditLog`.
+- Corrigido fetch de `audit_logs` para usar os campos reais do schema:
+  - `entity_type`
+  - `entity_name`
+  - `details`
+- Corrigida visualização de Detalhes/Alvo.
+- Corrigidos PDF, impressão e CSV do histórico.
+
+### Fase 4B
+- Padronizadas chamadas futuras de `logAction`.
+- Tipos padronizados:
+  - USER
+  - AUTH
+  - NODE
+  - PERSON
+  - ASSET
+  - ASSET_TYPE
+  - CONTRACT
+  - IMPORT
+  - EXPORT
+  - SYNC
+  - SYSTEM
+- Mantida compatibilidade com logs antigos por fallback.
+- Nenhuma alteração no schema Supabase.
+- Nenhuma migration aplicada.
+
+### Testes realizados
+- Histórico de Modificações.
+- Detalhes/Alvo na tela.
+- Logs antigos por fallback.
+- Novos logs com `entity_type`/`entity_name`.
+- PDF do histórico.
+- CSV do histórico.
+- Login/logout.
+- Edição de caixa.
+- Edição de ativo.
+- Edição de contrato.
+
+### Áreas preservadas
+- Dashboard/BI.
+- Exportações principais de ativos/contratos.
+- Supabase services.
+- Formulários grandes.
+- `loadCloudData`.
+- `saveAsset`/`saveContract`/`saveNode`/`savePerson`.
+
+### Próximas fases sugeridas
+Fase 5A — extrair modal/detalhe de pessoa, se estiver isolado.
+Fase 5B — extrair modal/detalhe de contrato, sem salvar contrato ainda.
+Fase 5C — extrair modal/detalhe de ativo, sem AssetForm ainda.
+Fase 6 — formulários grandes.
+Fase 7 — serviços Supabase.
+
 *Documento atualizado em 2026-04-26.*
 
 ---
