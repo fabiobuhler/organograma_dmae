@@ -40,6 +40,7 @@ Os elementos abaixo são a "alma" visual do sistema e só devem ser alterados so
 - **Sincronização de Tipos de Ativos**: Operações de persistência (INSERT/UPDATE) devem sempre verificar as restrições de RLS. Devido ao uso de chaves *anon*, as tabelas públicas de ativos devem estar com RLS desativado ou corretamente configuradas. Efetue sempre `.select()` após `insert()` ou `update()` para confirmar efetivação.
 - **Formatação e Máscaras**: Campos como telefone e CPF/CNPJ devem ser formatados e validados dinamicamente para garantir a uniformidade (ex: `maskPhone`).
 - **Integração Externa (WhatsApp)**: Sempre que houver um telefone de contato responsável, o sistema deve apresentar um atalho de redirecionamento dinâmico no formato `https://wa.me/55[numero]`.
+- **Limpeza de Código (Lint)**: A limpeza deve ser **CONSERVADORA**. Nunca remova ícones do `lucide-react` baseando-se apenas no JSX principal; verifique sempre funções auxiliares (ex: `assetIcon`) e mapeamentos condicionais. A remoção de ícones usados em helpers causa `ReferenceError` imediato e impede o carregamento do App.
 
 ## 5. Estatísticas e BI
 - **Dashboard de BI**: Deve consolidar dados recursivamente (unidade + descendentes).
@@ -47,4 +48,4 @@ Os elementos abaixo são a "alma" visual do sistema e só devem ser alterados so
 
 ---
 **Desenvolvido por:** Fábio Bühler  
-**Versão Atual:** 1.0.2026.04241700
+**Versão Atual:** 1.0.2026.04270145 (Phase 10 Cleanup Complete)

@@ -70,4 +70,4 @@ npm run build
 
 ---
 **Desenvolvido por:** Fábio Bühler  
-**Versão Atual:** 1.0.2026.04241700
+**Versão Atual:** 1.0.2026.04270145

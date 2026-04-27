@@ -28,7 +28,7 @@ Antes de qualquer alteração:
 Versão estável de referência:
 
 ```txt
-1.0.2026.04241700
+1.0.2026.04270145
 ```
 
 Commit de recuperação importante:
@@ -498,6 +498,12 @@ Não mover no começo:
 - `saveContract`;
 - Pan/Zoom;
 - dashboard completo.
+- centralização robusta do organograma.
+
+### Fase 10 — Finalização e Limpeza
+- Extração de `exportService`.
+- Modularização final do Dashboard/BI.
+- Limpeza conservadora de lint e remoção de arquivos temporários.
 
 ---
 
