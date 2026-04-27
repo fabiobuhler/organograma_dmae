@@ -67,13 +67,13 @@ git checkout -b recovery/c03db094 c03db094
 Nunca iniciar refatoração na `main`.
 
 Fluxo recomendado para novas tarefas:
- 
+
  ```bash
  git checkout main
  git pull origin main
  git checkout -b feature/nova-funcionalidade
  ```
- 
+
  > [!IMPORTANT]
  > Nunca execute alterações diretamente na `main`. O comando `git checkout main` deve ser usado apenas como base para criação de novas branches.
 

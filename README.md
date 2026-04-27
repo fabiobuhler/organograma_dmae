@@ -16,7 +16,7 @@ Sistema avançado para visualização da estrutura organizacional do DMAE, integ
   - Monitoramento de vigência de contratos (Ativo, A Vencer, Vencido).
   - Gestão de fiscais e gestores de contrato.
 - **Governança e Segurança**:
-  - **Quatro Níveis de Acesso**: 
+  - **Quatro Níveis de Acesso**:
     - **Público**: Visualiza apenas a estrutura básica e ativos (dados de contrato ocultos).
     - **Público Interno**: Visualização completa de dados liberados internamente, sem permissão de edição.
     - **Editor**: Edição de dados, gestão de ativos, pessoas, contratos e tipos de ativos.
@@ -38,7 +38,7 @@ Sistema avançado para visualização da estrutura organizacional do DMAE, integ
 - **Estilização**: Vanilla CSS (DMAE Design System).
 - **Ícones**: Lucide-React.
 - **Banco de Dados**: Supabase (PostgreSQL) com Realtime Presence.
-- **Bibliotecas Auxiliares**: 
+- **Bibliotecas Auxiliares**:
   - `html2canvas` / `jspdf` para relatórios.
   - `react-zoom-pan-pinch` para navegação no organograma.
 
@@ -71,5 +71,5 @@ npm run build
 ```
 
 ---
-**Desenvolvido por:** Fábio Bühler  
+**Desenvolvido por:** Fábio Bühler
 **Versão Atual:** 1.0.2026.04270956
