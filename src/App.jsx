@@ -79,8 +79,6 @@ import {
   generateDirectLogsPdf,
   exportAssetsCsv,
   exportAssetsPdf,
-  exportContractsCsv as exportContractsCsvFile,
-  exportContractsPdf as exportContractsPdfFile,
   exportContractDetailCsv as exportContractDetailCsvFile,
   exportContractDetailPdf as exportContractDetailPdfFile
 } from "./services/exportService";
@@ -700,7 +698,7 @@ export default function App() {
   const directEmergencyMaintenanceCount = useCallback((nid) => (assetsByNode.get(nid) || []).filter(a => a.isEmergency && a.isMaintenance).length, [assetsByNode]);
   const parentChain = useCallback((id) => getParentChain(id, nodeMap), [nodeMap]);
   const descendantIds = useCallback((rid) => getDescendantIds(rid, getChildren), [getChildren]);
-  const nodePath = useCallback((nid) => parentChain(nid).map((x) => x.name).join(" / "), [parentChain]);
+
 
   const breadcrumb = selected ? parentChain(selected.id) : (focused ? parentChain(focused.id) : []);
 
@@ -1409,7 +1407,7 @@ export default function App() {
     showSystemAlert(editPersonId ? "Pessoa atualizada!" : "Pessoa cadastrada!", { title: "Pessoa salva", type: "success" });
     // If we were in the middle of assigning this person to a node, restore the node dialog
     if (pendingPersonNodeForm) {
-      setNodeForm(prev => ({ ...pendingPersonNodeForm, personId: p.id, responsavel: p.name, matricula: p.matricula, cargo: p.cargo }));
+      setNodeForm(() => ({ ...pendingPersonNodeForm, personId: p.id, responsavel: p.name, matricula: p.matricula, cargo: p.cargo }));
       setPendingPersonNodeForm(null);
       setTimeout(() => setOpenNodeDlg(true), 100);
     }

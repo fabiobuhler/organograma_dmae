@@ -168,8 +168,7 @@ export function computeNodeColor(node, parentHex) {
   // Fundo do card: clareado apenas 15% acima do baseHex.
   // Menos clareamento = diferença de 12%/nível fica visível entre hierarquias.
   const bg = lightenHex(baseHex, 15);
-  // Borda do card: a própria cor base (sólida, visível)
-  const borderHex = baseHex;
+
 
   return {
     bg,
