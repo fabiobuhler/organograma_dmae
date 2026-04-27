@@ -6,7 +6,7 @@ Sistema avançado para visualização da estrutura organizacional do DMAE, integ
 
 - **Visualização Dinâmica de Organograma**:
   - **Modo Árvore**: Navegação interativa com Zoom e Pan.
-  - **Modo Lista**: Visualização hierárquica compacta com bordas coloridas por unidade e expansão recursiva.
+  - **Modo Lista**: Visualização hierárquica compacta com bordas coloridas seguindo a hierarquia de 5% de suavização e expansão recursiva.
 - **Gestão de Ativos Centralizada**:
   - Cadastro de ativos com suporte a até 3 fotos.
   - Categorização por tipos e grupos (Editores agora gerenciam tipos de ativos).
@@ -16,10 +16,12 @@ Sistema avançado para visualização da estrutura organizacional do DMAE, integ
   - Monitoramento de vigência de contratos (Ativo, A Vencer, Vencido).
   - Gestão de fiscais e gestores de contrato.
 - **Governança e Segurança**:
-  - **Três Níveis de Acesso**: 
+  - **Quatro Níveis de Acesso**: 
     - **Público**: Visualiza apenas a estrutura básica e ativos (dados de contrato ocultos).
-    - **Editor**: Edição de dados, gestão de ativos e tipos de ativos.
+    - **Público Interno**: Visualização completa de dados liberados internamente, sem permissão de edição.
+    - **Editor**: Edição de dados, gestão de ativos, pessoas, contratos e tipos de ativos.
     - **Administrador**: Gestão de usuários, logs e estatísticas.
+
   - **Monitoramento em Tempo Real**: Contador de usuários on-line no rodapé via Supabase Presence.
   - **Estatísticas de BI**: Painel de BI por unidade e painel de estatísticas de acesso para ADM.
   - **Logs de Auditoria Imutáveis**: Registro de todas as ações, acessível apenas por administradores (sem opção de exclusão via UI).
@@ -70,4 +72,4 @@ npm run build
 
 ---
 **Desenvolvido por:** Fábio Bühler  
-**Versão Atual:** 1.0.2026.04270145
+**Versão Atual:** 1.0.2026.04270956

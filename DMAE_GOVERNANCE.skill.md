@@ -25,10 +25,16 @@ Antes de qualquer alteração:
 9. Não misturar refatoração com funcionalidade nova.
 10. Registrar exatamente quais arquivos foram alterados.
 
-Versão estável de referência:
+Última versão estável de referência:
 
 ```txt
 1.0.2026.04270145
+```
+
+Versão de trabalho atual (branch `fix/governance-skill-sync`):
+
+```txt
+1.0.2026.04270956
 ```
 
 Commit de recuperação importante:
@@ -60,13 +66,16 @@ git checkout -b recovery/c03db094 c03db094
 
 Nunca iniciar refatoração na `main`.
 
-Fluxo recomendado:
-
-```bash
-git checkout main
-git pull origin main
-git checkout -b refactor/app-split-phase-1
-```
+Fluxo recomendado para novas tarefas:
+ 
+ ```bash
+ git checkout main
+ git pull origin main
+ git checkout -b feature/nova-funcionalidade
+ ```
+ 
+ > [!IMPORTANT]
+ > Nunca execute alterações diretamente na `main`. O comando `git checkout main` deve ser usado apenas como base para criação de novas branches.
 
 ### Commit e Push
 
@@ -99,6 +108,9 @@ git reset --hard
 git clean -fd
 git checkout main
 ```
+
+> [!CAUTION]
+> Não execute `git checkout main` se houver alterações pendentes na branch atual que devam ser preservadas.
 
 Quando o usuário estiver testando localmente, preferir orientar e aguardar retorno/print.
 
@@ -164,6 +176,15 @@ Regras:
 - usar `.select()` após `insert`, `update` ou `upsert` quando o retorno for necessário;
 - usar Supabase Presence para contador real de usuários on-line;
 - não substituir Presence por contador simulado.
+
+### Supabase Auth
+- O Supabase Auth é a fonte oficial de autenticação.
+- A tabela `users` representa o perfil operacional dentro do sistema.
+- Usuários liberados devem possuir vínculo com `auth_user_id`.
+- Não excluir usuários por nome, e-mail ou matrícula; use UUID.
+- Reset de senha temporária deve forçar `must_change_password: true`.
+- Operações administrativas do Auth não devem ser feitas no frontend com `service_role`.
+- O frontend deve usar apenas `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
 
 ### Variáveis de ambiente
 
@@ -254,7 +275,7 @@ Não trocar fonte para corrigir encoding. Não aplicar scripts globais de substi
 Verificação sugerida:
 
 ```powershell
-Select-String -Path src\App.jsx -Pattern "Ã|Â|ðŸ|�|GestÃ|AÃ|VÃ|ContingÃ|ManutenÃ" -Context 1,1
+Select-String -Path src\App.jsx -Pattern "Ã|Â|ðŸ||GestÃ|AÃ|VÃ|ContingÃ|ManutenÃ" -Context 1,1
 ```
 
 ---
@@ -284,10 +305,11 @@ Ativos/unidades críticas devem usar:
 
 As caixas do organograma seguem herança de cor:
 
-- caixa raiz pode ter cor própria;
-- subordinadas herdam cor da superior com suavização progressiva;
-- se uma caixa recebe cor própria, ela vira nova origem da herança;
-- subestruturas de apoio podem suavizar mais;
+- o campo `color` é canônico; o campo `cor` é legado;
+- se uma caixa possui `color`, ela passa a ser a nova base da hierarquia;
+- se não possui `color`, herda a cor efetiva da caixa superior;
+- a suavização padrão deve ser de **5%** por nível de profundidade (regra universal);
+- modo Árvore e modo Lista devem usar a mesma função de cálculo de cor (`computeNodeColor`);
 - bordas e conectores devem acompanhar a hierarquia de cor.
 
 ---
@@ -428,82 +450,16 @@ Exclusões:
 
 ---
 
-## 17. Refatoração do App.jsx
+## 17. Histórico de Refatoração e Regras Permanentes
 
-O `App.jsx` chegou a mais de 5.200 linhas e deve ser reduzido por fases.
+### Histórico de Refatoração (Fases 1 a 10)
+O `App.jsx` foi reduzido de mais de 5.200 linhas para o estado modular atual. As fases de extração de componentes, seletores, formulários e serviços foram concluídas na versão `1.0.2026.04270145`.
 
-Não reescrever tudo. Não mover Supabase nas primeiras fases. Não misturar refatoração com funcionalidade.
-
-### Fase 1 — Baixo risco
-
-Extrair:
-
-- `SystemAlertModal`;
-- `ConfirmDialog`;
-- `WhatsAppButton`;
-- `utils/phone.js`;
-- `utils/encoding.js`;
-- `utils/assetUtils.js`;
-- `utils/contractUtils.js`.
-
-### Fase 2 — Seletores e lista
-
-Extrair:
-
-- `NodeSelector`;
-- `PersonSelector`;
-- `ListNode`.
-
-### Fase 3 — Formulários
-
-Extrair:
-
-- `AssetForm`;
-- `ContractForm`;
-- `PersonForm`;
-- `NodeForm`;
-- `AssetTypesModal`.
-
-### Fase 4 — Detalhes e Dashboard
-
-Extrair:
-
-- `AssetDetail`;
-- `ContractDetail`;
-- `PersonDetail`;
-- `Dashboard`;
-- tabelas do BI.
-
-### Fase 5 — Serviços Supabase
-
-Somente após estabilização:
-
-- `assetsService`;
-- `contractsService`;
-- `nodesService`;
-- `personsService`;
-- `assetTypesService`;
-- `auditService`.
-
-### Áreas de alto risco
-
-Não mover no começo:
-
-- `loadCloudData`;
-- autenticação;
-- reset de senha;
-- Supabase Presence;
-- `saveNode`;
-- `saveAsset`;
-- `saveContract`;
-- Pan/Zoom;
-- dashboard completo.
-- centralização robusta do organograma.
-
-### Fase 10 — Finalização e Limpeza
-- Extração de `exportService`.
-- Modularização final do Dashboard/BI.
-- Limpeza conservadora de lint e remoção de arquivos temporários.
+### Regras Permanentes de Modularização
+- Não reintroduzir lógica complexa diretamente no `App.jsx`.
+- Novos componentes devem ser criados em `src/components/`.
+- Novas utilidades devem ser criadas em `src/utils/`.
+- Serviços de persistência devem residir em `src/services/`.
 
 ---
 

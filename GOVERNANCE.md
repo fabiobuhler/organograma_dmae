@@ -8,7 +8,7 @@ Os elementos abaixo são a "alma" visual do sistema e só devem ser alterados so
 - **Sinalização de Contingência**: Ativos ou unidades críticas DEVEM exibir a **Sirene Vermelha** (`Siren` do lucide-react) dentro de um círculo com **Borda Amarela** (`2px solid #eab308`). O preenchimento da sirene deve ter opacidade leve (`fillOpacity={0.1}`).
 - **Logotipo DMAE**: Presente no cabeçalho e favicon, vinculado dinamicamente ao nó raiz (DMAE).
 - **Rodapé e Versão**: O rodapé deve conter o nome do desenvolvedor ("Fábio Bühler"), a versão no formato `1.0.YYYY.MMDDHHmm` e o **Contador de Usuários Real-time**.
-- **Hierarquia Visual**: O sistema suporta visualização em Árvore (Tree) e Lista. No modo Lista, as bordas dos cards herdam a cor da unidade correspondente.
+- **Hierarquia Visual**: O sistema suporta visualização em Árvore (Tree) e Lista. Ambas as visualizações DEVEM utilizar a mesma lógica de cálculo de cores (`computeNodeColor`), garantindo suavização de 5% por nível de profundidade.
 - **Governança de Ativos de Contingência**: Ativos de contingência (is_emergency) EXIGEM preenchimento obrigatório de **Responsável pela Contingência** e **Telefone de Acionamento**. A visualização deve priorizar o contato direto via WhatsApp.
 
 ## 2. Governança de Dados e Privacidade
@@ -19,11 +19,23 @@ Os elementos abaixo são a "alma" visual do sistema e só devem ser alterados so
 ## 3. Segurança e Auditoria
 - **Imutabilidade de Logs**: O histórico de auditoria (`audit_logs`) é permanente. A interface administrativa NÃO deve permitir a exclusão de registros de log. Limpezas só devem ocorrer via console direto do banco de dados por pessoal autorizado.
 - **Níveis de Acesso (RBAC)**: 
-  - **Editores**: Podem gerenciar a estrutura, ativos, pessoas e **Tipos de Ativos**.
+  - **Público**: Visualização básica de estrutura e ativos.
+  - **Público Interno**: Visualização completa de dados liberados internamente (sem edição).
+  - **Editores**: Podem gerenciar a estrutura, ativos, pessoas, contratos e **Tipos de Ativos**.
   - **Administradores**: Acesso exclusivo a Gestão de Usuários, Logs e Estatísticas de Acesso.
 - **Gestão de Usuários**: 
   - Exclusão de usuários deve ser feita via UUID (ID) para evitar erros de homônimos ou formatação.
   - O Reset de Senha (padrão `dmae123`) deve forçar o estado `must_change_password: true`.
+
+### Supabase Auth
+- O Supabase Auth é a fonte oficial de autenticação.
+- A tabela `users` representa o perfil operacional dentro do sistema.
+- Usuários liberados devem possuir vínculo com `auth_user_id`.
+- Não excluir usuários por nome, e-mail ou matrícula.
+- Exclusão e reset devem usar UUID/id seguro.
+- Reset de senha temporária deve forçar `must_change_password: true`.
+- Operações administrativas do Auth não devem ser feitas no frontend com `service_role`.
+- O frontend deve usar apenas `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
 
 ## 4. Fluxo de Trabalho (Workflow do Agente)
 - **Interação com Usuário**: Priorize pedir ao usuário que realize ações manuais ou forneça prints em vez de tentar navegar autonomamente no browser, devido à precisão e agilidade.
@@ -42,10 +54,19 @@ Os elementos abaixo são a "alma" visual do sistema e só devem ser alterados so
 - **Integração Externa (WhatsApp)**: Sempre que houver um telefone de contato responsável, o sistema deve apresentar um atalho de redirecionamento dinâmico no formato `https://wa.me/55[numero]`.
 - **Limpeza de Código (Lint)**: A limpeza deve ser **CONSERVADORA**. Nunca remova ícones do `lucide-react` baseando-se apenas no JSX principal; verifique sempre funções auxiliares (ex: `assetIcon`) e mapeamentos condicionais. A remoção de ícones usados em helpers causa `ReferenceError` imediato e impede o carregamento do App.
 
-## 5. Estatísticas e BI
-- **Dashboard de BI**: Deve consolidar dados recursivamente (unidade + descendentes).
-- **Estatísticas de ADM**: Devem ser geradas dinamicamente a partir da tabela `audit_logs`, sem necessidade de contadores redundantes no banco de dados.
+## 5. Estatísticas, BI e Auditoria Operacional
+- O Dashboard de BI deve consolidar dados recursivamente: unidade + descendentes.
+- As estatísticas administrativas devem ser geradas dinamicamente a partir da tabela `audit_logs`.
+- Não criar contadores redundantes no banco de dados sem necessidade.
+- Indicadores de contingência em manutenção devem considerar apenas ativos com `isEmergency === true && isMaintenance === true`.
+- Ativos comuns em manutenção não devem ser contados como contingência em manutenção.
+
+## 6. Hierarquia de Cores e Herança
+- **Cor Canônica**: O campo `color` é a fonte oficial da cor do nó. O campo `cor` é mantido apenas para compatibilidade legada.
+- **Base da Herança**: Se um nó possui `color` definida, ele torna-se a nova origem da herança para seus descendentes.
+- **Suavização (Fade)**: Nós que não possuem cor própria herdam a cor efetiva do pai clareada em exatos **5%**. Esta regra é universal para subordinadas e unidades de apoio.
+- **Consistência**: Bordas, conectores e fundos de cards devem respeitar esta hierarquia para manter a coesão visual.
 
 ---
 **Desenvolvido por:** Fábio Bühler  
-**Versão Atual:** 1.0.2026.04270145 (Phase 10 Cleanup Complete)
+**Versão Atual:** 1.0.2026.04270956 (Governance and Color Sync)
