@@ -332,7 +332,6 @@ export default function App() {
   const [assets, setAssets] = useState(() => supabase ? [] : seedAssets);
   const [persons, setPersons] = useState(() => supabase ? [] : seedPersons);
   const [contracts, setContracts] = useState(() => supabase ? [] : seedContracts);
-  const [toast, setToast] = useState(null);
   const [systemAlert, setSystemAlert] = useState(null);
   const showSystemAlert = useCallback((message, options = {}) => {
     setSystemAlert({
@@ -373,10 +372,9 @@ export default function App() {
   const [assetTypeForm, setAssetTypeForm] = useState({ id: "", category: "", name: "" });
   const [editAssetTypeId, setEditAssetTypeId] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
-  const [personFilter, setPersonFilter] = useState("");
   const [openAssetDlg, setOpenAssetDlg] = useState(false);
   const [openPersonDlg, setOpenPersonDlg] = useState(false); 
-  const [personReturnTarget, setPersonReturnTarget] = useState(null); // null | "registry"
+  const [personReturnTarget, setPersonReturnTarget] = useState(null);
   const [registryFilter, setRegistryFilter] = useState("");
   const [contractFilter, setContractFilter] = useState("");
   const [openContractDlg, setOpenContractDlg] = useState(false);
@@ -391,13 +389,8 @@ export default function App() {
   const [personForm, setPersonForm] = useState(emptyPerson);
   const [contractForm, setContractForm] = useState(emptyContract);
   const [dashboardView, setDashboardView] = useState("summary"); // "summary" | "assets" | "people" | "structures"
-  const [assetTableFilter, setAssetTableFilter] = useState({ type: "all", category: "all", search: "", emergencyOnly: false });
-  const [peopleTableFilter, setPeopleTableFilter] = useState({ search: "", role: "all" });
-  const [structureTableFilter, setStructureTableFilter] = useState({ type: "all", search: "" });
-  const [showAssetContractModal, setShowAssetContractModal] = useState(null); // id of asset to show contract
   const [deleteRequest, setDeleteRequest] = useState(null); // { type, id, name }
 
-  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
   const [cloudStatus, setCloudStatus] = useState("checking"); // "online" | "offline" | "checking"
 
   // --- SUPABASE CLOUD DATA LOAD (PAGINATED) ---
@@ -482,89 +475,6 @@ export default function App() {
     loadCloudData();
   }, [loadCloudData]);
 
-  // --- INITIAL CLOUD SYNC METHOD (ULTRA-RESILIENT) ---
-  const syncToCloud = async () => {
-    if (!supabase) { showSystemAlert("Configuração do Supabase não encontrada no .env", { title: "Configuração ausente", type: "error" }); return; }
-    if (!confirm("EXECUTAR SINCRONIZAÇÃO MESTRE?\n\nIsso enviará todos os dados originais (Pessoas, Estruturas e Contratos) para a nuvem. Use isso para popular o banco de dados pela primeira vez.")) return;
-    setIsCloudSyncing(true);
-    
-    const chunkArray = (arr, size) => {
-      const res = [];
-      for (let i = 0; i < arr.length; i += size) res.push(arr.slice(i, i + size));
-      return res;
-    };
-
-    try {
-      // Use state data, but fallback to seedData if state is empty
-      const dataToSync = {
-        p: persons.length > 5 ? persons : seedPersons,
-        n: nodes.length > 5 ? nodes : seedNodes,
-        a: assets.length > 0 ? assets : seedAssets,
-        c: contracts.length > 0 ? contracts : seedContracts
-      };
-
-      console.log("🚀 Iniciando Sincronização Mestre...", dataToSync);
-
-      // 1. Persons
-      if (dataToSync.p.length > 0) {
-        console.log(`- Subindo ${dataToSync.p.length} pessoas...`);
-        const chunks = chunkArray(dataToSync.p, 50);
-        for (let i = 0; i < chunks.length; i++) {
-          const { error } = await supabase.from('persons').upsert(chunks[i]);
-          if (error) throw new Error(`Lote ${i+1} Pessoas: ` + error.message);
-          console.log(`  [Pessoas] Lote ${i+1}/${chunks.length} ok`);
-        }
-      }
-
-      // 2. Nodes
-      if (dataToSync.n.length > 0) {
-        console.log(`- Subindo ${dataToSync.n.length} estruturas...`);
-        const chunks = chunkArray(dataToSync.n.map(n => ({...n, atribuicoes: n.atribuicoes || ""})), 50);
-        for (let i = 0; i < chunks.length; i++) {
-          const { error } = await supabase.from('nodes').upsert(chunks[i]);
-          if (error) throw new Error(`Lote ${i+1} Nodes: ` + error.message);
-          console.log(`  [Nodes] Lote ${i+1}/${chunks.length} ok`);
-        }
-      }
-
-      // 3. Assets
-      if (dataToSync.a.length > 0) {
-        console.log(`- Subindo ${dataToSync.a.length} ativos...`);
-        const chunks = chunkArray(dataToSync.a, 50);
-        for (let i = 0; i < chunks.length; i++) {
-          const { error } = await supabase.from('assets').upsert(chunks[i]);
-          if (error) throw new Error(`Lote ${i+1} Assets: ` + error.message);
-          console.log(`  [Assets] Lote ${i+1}/${chunks.length} ok`);
-        }
-      }
-
-      // 4. Contracts
-      if (dataToSync.c.length > 0) {
-        console.log(`- Subindo ${dataToSync.c.length} contratos...`);
-        const dbC = dataToSync.c.map(c => ({
-           id: c.id, sei: c.sei, tipo: c.tipo, objeto: c.objeto,
-           empresa: c.empresa, cnpj: c.cnpj, contato: c.contato,
-           data_inicio: c.dataInicio || c.dataInício || c.vigencia_inicio, 
-           data_fim: c.dataTermino || c.vigencia_fim,
-           gestor: c.gestor, aditivos: c.aditivos || [],
-           fiscais_contrato: c.fiscaisContrato, fiscais_servico: c.fiscaisServico
-        }));
-        const chunks = chunkArray(dbC, 50);
-        for (let i = 0; i < chunks.length; i++) {
-          const { error } = await supabase.from('contracts').upsert(chunks[i]);
-          if (error) throw new Error(`Lote ${i+1} Contratos: ` + error.message);
-          console.log(`  [Contratos] Lote ${i+1}/${chunks.length} ok`);
-        }
-      }
-      
-      showSystemAlert("✅ SINCRONIZAÇÃO MESTRE CONCLUÍDA!\n\nTodos os dados foram enviados para a nuvem. Verifique o Table Editor do Supabase.", { title: "Sincronização concluída", type: "success" });
-      window.location.reload(); // Hard refresh to see cloud data
-    } catch (err) {
-      console.error("ERRO CRÍTICO NA SINCRONIZAÇÃO:", err);
-      showSystemAlert("ERRO CRÍTICO NA SINCRONIZAÇÃO: " + err.message, { title: 'Erro', type: 'error' });
-    }
-    setIsCloudSyncing(false);
-  };
   const [expandedImage, setExpandedImage] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dashboardNodeId, setDashboardNodeId] = useState(null);
@@ -643,6 +553,7 @@ export default function App() {
   const [newUser, setNewUser] = useState("");
   const [newPass, setNewPass] = useState("");
   const [newIsAdmin, setNewIsAdmin] = useState(false);
+
 
   const [pwdCurrent, setPwdCurrent] = useState("");
   const [pwdNew, setPwdNew] = useState("");
@@ -1051,19 +962,6 @@ export default function App() {
     setOpenNodeDlg(true);
   }, [nodeMap, nodes]);
 
-  const openEditNode = useCallback(() => {
-    if (!selected || !canEdit) return;
-    setEditNodeId(selected.id);
-    // Normaliza cor -> color para garantir campo canônico
-    const normalizedNode = {
-      ...selected,
-      color: normalizeHex(selected.color || selected.cor || ""),
-      parentId: selected.parentId || "none",
-    };
-    setNodeForm(normalizedNode);
-    setOpenNodeDlg(true);
-  }, [selected, canEdit]);
-
   const saveNode = useCallback(async () => {
     if (nodeForm.tipo === "estrutura" && (!nodeForm.name || !nodeForm.name.trim())) {
       showSystemAlert("Informe a sigla da estrutura.", { title: "Sigla obrigatória", type: "warning" });
@@ -1164,38 +1062,6 @@ export default function App() {
       flash("\u274c Erro ao salvar a caixa: " + (err?.message || "Verifique o banco de dados."));
     }
   }, [nodeForm, editNodeId, nodes, logAction]);
-  const deleteNode = useCallback((idOverride) => {
-    const targetId = idOverride || (selected && selected.id);
-    if (!targetId || !canEdit) return;
-    
-    const nodeRecord = nodeMap.get(targetId);
-    if (!nodeRecord) return;
-    
-    if (!nodeRecord.parentId) { showSystemAlert("O nó raiz não pode ser removido.", { title: "Atenção", type: "warning" }); return; }
-    if (nodes.some((n) => n.parentId === targetId)) { showSystemAlert("Remova subordinados antes.", { title: "Atenção", type: "warning" }); return; }
-    
-    const nodeName = nodeRecord.name || nodeRecord.responsavel || "esta caixa";
-    if (!confirm(`\u26a0\ufe0f ATENÇÃO: Você tem certeza que deseja excluir "${nodeName}"?\n\nEsta ação é irreversível.`)) return;
-    
-    if (supabase) supabase.from('nodes').delete().eq('id', targetId).then(() => console.log("Removed from cloud"));
-    setNodes((c) => c.filter((x) => x.id !== targetId));
-    
-    if (selected && selected.id === targetId) {
-      setSelectedId(nodeRecord.parentId);
-      setShowDetail(false);
-    }
-    
-    logAction("Excluir Caixa", "NODE", nodeName);
-    flash("Excluída");
-  }, [selected, canEdit, nodes, nodeMap, logAction]);
-
-  const handlePhoto = useCallback(async (e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    if (f.size > 1024 * 1024 * 2) { showSystemAlert("O arquivo deve ter no máximo 2MB.", { title: "Arquivo muito grande", type: "warning" }); return; }
-    try { setNodeForm((p) => ({ ...p, foto: "" })); const b = await fileToBase64(f); setNodeForm((p) => ({ ...p, foto: b })); } catch { showSystemAlert("Erro ao carregar a imagem.", { title: "Erro", type: "error" }); }
-    e.target.value = "";
-  }, []);
 
     const resetAssetTypeForm = useCallback(() => {
     setAssetTypeForm({ id: "", category: "", name: "" });
@@ -1502,15 +1368,6 @@ export default function App() {
     setPersonReturnTarget(null);
   }, [personReturnTarget]);
 
-  const closePersonForm = useCallback(() => {
-    if (personReturnTarget === "registry") {
-      setOpenPersonDlg("registry");
-    } else {
-      setOpenPersonDlg(false);
-      setPersonReturnTarget(null);
-    }
-    setEditPersonId(null);
-  }, [personReturnTarget]);
   const savePerson = useCallback(() => {
     const emailVal = personForm.email.trim();
     if (!personForm.name?.trim()) {
@@ -1557,6 +1414,13 @@ export default function App() {
       setTimeout(() => setOpenNodeDlg(true), 100);
     }
   }, [personForm, editPersonId, logAction, pendingPersonNodeForm, personReturnTarget, showSystemAlert, supabase, flash]);
+  const requestDeleteNode = useCallback((id) => {
+    if (!canEdit) { flash("Entre no modo edição para excluir."); return; }
+    const n = nodeMap.get(id);
+    if (!n) return;
+    setDeleteRequest({ type: "node", id, name: n.name });
+  }, [canEdit, nodeMap, flash]);
+
   const requestDeletePerson = useCallback((id) => {
     if (!canEdit) { flash("Entre no modo edição para excluir."); return; }
     const p = personMap.get(id);
@@ -1610,13 +1474,6 @@ export default function App() {
     setEditContractId(null);
     setContractReturnTarget(null);
     setOpenContractDlg(false);
-  }, []);
-
-  const backToContractRegistry = useCallback(() => {
-    setShowContractDetail(null);
-    setEditContractId(null);
-    setContractReturnTarget("registry");
-    setOpenContractDlg("registry");
   }, []);
 
   const cancelContractEdit = useCallback(() => {
@@ -1796,36 +1653,7 @@ export default function App() {
     });
   }, [deleteContract]);
 
-  const requestDeleteNode = useCallback((nodeId) => {
-    if (!canEdit) { flash("Entre no modo edição para excluir."); return; }
-    const node = nodeMap.get(nodeId);
-    if (!node) { flash("Caixa não encontrada."); return; }
-    setDeleteRequest({ type: "node", id: nodeId, name: node.name || node.responsavel || "esta caixa" });
-  }, [canEdit, nodeMap, flash]);
 
-  const confirmDeleteNode = useCallback(async () => {
-    if (!deleteRequest || deleteRequest.type !== "node") return;
-    const targetId = deleteRequest.id;
-    const nodeRecord = nodeMap.get(targetId);
-    if (!nodeRecord) { flash("Caixa não encontrada."); setDeleteRequest(null); return; }
-    if (!nodeRecord.parentId) { flash("O nó raiz não pode ser removido."); setDeleteRequest(null); return; }
-    if (nodes.some((n) => n.parentId === targetId)) { flash("Remova subordinados antes."); setDeleteRequest(null); return; }
-    if (assets.some((a) => a.nodeId === targetId)) { flash("Remova ativos vinculados antes."); setDeleteRequest(null); return; }
-
-    try {
-      await deleteNodeById(supabase, targetId);
-      setNodes((c) => c.filter((x) => x.id !== targetId));
-      if (selectedId === targetId) { setSelectedId(nodeRecord.parentId); setFocusId(nodeRecord.parentId); setShowDetail(false); }
-      if (editNodeId === targetId) { setOpenNodeDlg(false); setEditNodeId(null); }
-      logAction("Excluir Caixa", "NODE", nodeRecord.name || targetId);
-      flash("Excluída");
-    } catch (err) {
-      console.error("Delete error:", err);
-      flash("Erro ao excluir. Verifique permissões.");
-    } finally {
-      setDeleteRequest(null);
-    }
-  }, [deleteRequest, nodeMap, nodes, assets, supabase, selectedId, editNodeId, logAction, flash]);
 
   const handleImportPersons = useCallback((e) => {
     const file = e.target.files[0];
@@ -1898,37 +1726,7 @@ export default function App() {
     }
   }, [nodes, personMap, flash]);
 
-  const exportContractsCsv = useCallback((contractsList) => {
-    try {
-      exportContractsCsvFile(contractsList, {
-        filename: "contratos-export.csv",
-        nodes,
-        personMap,
-        getContractStatus
-      });
-      flash("CSV Gerado!");
-    } catch (e) {
-      console.error(e);
-      window.alert("Não foi possível gerar o CSV de contratos.");
-    }
-  }, [nodes, personMap, flash]);
 
-  const exportContractsPdf = useCallback((contractsList) => {
-    try {
-      exportContractsPdfFile(contractsList, {
-        title: "Relatório de Contratos",
-        subtitle: "Lista de Contratos Cadastrados",
-        logoUrl: window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png",
-        nodes,
-        personMap,
-        getContractStatus
-      });
-      flash("PDF Gerado!");
-    } catch (e) {
-      console.error(e);
-      window.alert("Não foi possível gerar o PDF de contratos.");
-    }
-  }, [nodes, personMap, flash]);
 
   const expJson = useCallback(() => { downloadFile("organograma-dmae.json", JSON.stringify({ nodes, assets }, null, 2)); flash("JSON exportado!"); }, [nodes, assets]);
   const expCsv = useCallback((nid) => {
@@ -1940,16 +1738,7 @@ export default function App() {
     });
     flash("CSV exportado!");
   }, [assets, descendantIds, nodeMap, nodes, flash]);
-  const expPdf = useCallback((nid) => {
-    const sc = new Set(descendantIds(nid));
-    const list = assets.filter((a) => sc.has(a.nodeId));
-    const logoUrl = window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png";
-    exportAssetsPdf(list, { 
-      label: nodeMap.get(nid)?.name || "", 
-      nodes, 
-      logoUrl 
-    });
-  }, [assets, descendantIds, nodeMap, nodePath]);
+
   const handleImport = useCallback((e) => {
     const f = e.target.files?.[0]; if (!f) return;
     const r = new FileReader();
@@ -1958,54 +1747,7 @@ export default function App() {
   }, [logAction]);
 
   // Login & Admin
-  const doLogin = useCallback(async () => {
-    setLoginErr("");
-    
-    // 1. Try regular admin/editor users from Supabase first
-    try {
-      const latestUsers = await fetchUsers(supabase);
-      if (latestUsers) {
-        const u = latestUsers.find(x => x.username.toLowerCase() === loginUser.toLowerCase() && x.password === loginPass);
-        if (u) {
-          const sessionUser = { 
-            ...u, 
-            username: u.username || loginUser,
-            role: u.role || (u.username.toLowerCase() === 'admin' ? 'admin' : 'editor')
-          };
-          setCurrentUser(sessionUser);
-          setCanEdit(true);
-          setOpenLoginDlg(false);
-          setLoginUser(""); setLoginPass(""); setLoginErr("");
-          logAction('LOGIN_SUCCESS', 'USER', sessionUser.username);
-          
-          if (pendingEditNodeId) { 
-            const nodeRecord = nodes.find(n => n.id === pendingEditNodeId);
-            if (nodeRecord) { setEditNodeId(pendingEditNodeId); setNodeForm(nodeRecord); setOpenNodeDlg(true); }
-            setPendingEditNodeId(null); 
-          }
-          return;
-        }
-      }
-    } catch (e) { console.error("Login fetch error:", e); }
 
-    // 2. Try Person login (Matrícula as login and password)
-    const p = persons.find(x => x.matricula === loginUser && x.matricula === loginPass);
-    if (p) {
-        setCurrentUser({ 
-          username: p.matricula, 
-          name: p.name, 
-          role: 'viewer' 
-        });
-        setCanEdit(false);
-        setOpenLoginDlg(false);
-        setLoginUser(""); setLoginPass(""); setLoginErr("");
-        flash(`Bem-vindo, ${p.name}! Acesso de visualização liberado.`);
-        logAction("Login Visualizador", "PERSON", p.name);
-        return;
-    }
-
-    setLoginErr("Credenciais inválidas.");
-  }, [loginUser, loginPass, users, persons, pendingEditNodeId, nodes, logAction, flash]);
 
   const handleChangePassword = useCallback(async () => {
     if (pwdNew.length < 3) { showSystemAlert("A nova senha deve ter no mínimo 3 caracteres.", { title: "Senha curta", type: "warning" }); return; }
@@ -2134,19 +1876,7 @@ export default function App() {
     }
   };
 
-  const parentOpts = useMemo(() => {
-    const opts = [];
-    const traverse = (nodeId, depth) => {
-      if (nodeId === editNodeId) return; // Prevent cycles
-      const n = nodeMap.get(nodeId);
-      if (n) opts.push({ ...n, depth });
-      const children = childrenMap.get(nodeId) || [];
-      children.forEach(c => traverse(c.id, depth + 1));
-    };
-    const roots = childrenMap.get("root-parent") || [];
-    roots.forEach(r => traverse(r.id, 0));
-    return opts;
-  }, [editNodeId, childrenMap, nodeMap]);
+
   const handleEditFromCard = useCallback((nodeId) => {
     if (canEdit) {
       const n = nodeMap.get(nodeId);
@@ -2770,7 +2500,11 @@ export default function App() {
                         <Eye size={10} /> Detalhes
                       </button>
                       {a.tipoVinculo === "Contratado" && (
-                        <button className="btn btn-outline btn-xs" style={{ flex: 1, justifyContent: "center" }} onClick={() => setShowAssetContractModal(a.id)}>
+                        <button className="btn btn-outline btn-xs" style={{ flex: 1, justifyContent: "center" }} onClick={() => {
+                          const c = contracts.find(x => x.sei === a.numeroContrato);
+                          if (c) setShowContractDetail(c.id);
+                          else flash("Contrato não encontrado para este ativo.", { type: "info" });
+                        }}>
                           <FileText size={10} /> Contrato
                         </button>
                       )}
@@ -3112,7 +2846,7 @@ export default function App() {
                       setPendingEditNodeId(null); 
                     }
                   } else { setLoginErr("Usuário ou senha inválidos."); }
-                } catch (e) { setLoginErr("Erro ao validar credenciais."); }
+                } catch { setLoginErr("Erro ao validar credenciais."); }
               }}>Entrar</button>
             </div>
           </div>
