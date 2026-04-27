@@ -11,7 +11,6 @@ export default function PersonForm({
   personForm,
   setPersonForm,
   editPersonId,
-  setEditPersonId,
   persons = [],
   registryFilter = "",
   setRegistryFilter = () => {},
@@ -21,10 +20,8 @@ export default function PersonForm({
   onSave,
   onCloseRegistry,
   onCancelEdit,
-  onBackToRegistry,
   onDeleteRequest,
   onImport,
-  emptyPerson,
   fileToBase64,
   maskPhone
 }) {

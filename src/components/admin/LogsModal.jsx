@@ -1,4 +1,3 @@
-import React from "react";
 import { X, FileText, Download } from "lucide-react";
 
 function formatLogDetails(log) {

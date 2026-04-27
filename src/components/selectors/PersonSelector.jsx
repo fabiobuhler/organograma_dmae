@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { X, Search } from "lucide-react";
 
 /**
@@ -93,11 +93,9 @@ export default function PersonSelector({
                         </button>
                       );
                     })}
-                    {filtered.length === 0 && onAddNew && (
                       <button type="button" onMouseDown={(e) => { e.preventDefault(); setQ(""); onAddNew(q); }} className="search-item" style={{ color: "var(--primary)", justifyContent: "center", borderTop: "1px solid var(--n200)" }}>
-                        <b>Pessoa não encontrada. Clique aqui para cadastrar "{q}"</b>
+                        <b>Pessoa não encontrada. Clique aqui para cadastrar &quot;{q}&quot;</b>
                       </button>
-                    )}
                   </>
                 );
               })()}

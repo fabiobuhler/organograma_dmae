@@ -1,4 +1,3 @@
-import React from "react";
 import { AlertTriangle, ShieldCheck, Info } from "lucide-react";
 
 export default function SystemAlertModal({ alert, onClose }) {

@@ -1,4 +1,3 @@
-import React from "react";
 import { X, PieChart } from "lucide-react";
 
 export default function StatsModal({

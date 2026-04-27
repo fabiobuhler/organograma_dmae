@@ -1,4 +1,3 @@
-import React from "react";
 import { X, Save, Plus, Pencil, Trash2 } from "lucide-react";
 
 /**

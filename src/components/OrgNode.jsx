@@ -1,12 +1,12 @@
-import React, { useState, useMemo, useEffect } from "react";
-import { ChevronDown, ChevronUp, ChevronsDown, Plus, Pencil, Undo2, PieChart, Siren, AlertTriangle } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { ChevronDown, ChevronUp, ChevronsDown, Plus, Pencil, Siren, AlertTriangle } from "lucide-react";
 import { initials, computeNodeColor, connectorColor } from "../utils/helpers";
 
 /* ──── Individual Card ──── */
 const OrgNodeCard = ({
   node, person, selected, childCount, assetCount, emergencyCount, maintenanceCount, emergencyMaintenanceCount,
-  onSelect, onAddChild, onEditNode, onShowPerson, canEdit, isProtected,
-  bgColor, borderColor, collapsed, onToggleCollapse, onExpand, onExpandAll, onOpenDashboard,
+  onSelect, onAddChild, onEditNode, canEdit, isProtected,
+  bgColor, borderColor, collapsed, onToggleCollapse, onExpand, onExpandAll,
 }) => {
   const isApoio = node.subtipo === "apoio";
   const displayPhoto = person?.foto || node.foto;
@@ -119,7 +119,7 @@ const OrgNodeCard = ({
 /* ─€─€─€ Apoio Branch (recursive) ─€─€─€ */
 const ApoioBranch = ({
   node, getChildren, personMap, selectedId, onSelect, onAddChild, onEditNode,
-  onShowPerson, onExpand, onExpandAll, canEdit, isProtected, directAssetCount, directEmergencyCount, directMaintenanceCount, directEmergencyMaintenanceCount, parentHex, depth = 0, expandedSet, onOpenDashboard
+  onExpand, onExpandAll, canEdit, isProtected, directAssetCount, directEmergencyCount, directMaintenanceCount, directEmergencyMaintenanceCount, parentHex, depth = 0, expandedSet
 }) => {
   const [collapsed, setCollapsed] = useState(depth >= 1);
   const childCh = getChildren(node.id);
@@ -143,10 +143,10 @@ const ApoioBranch = ({
           maintenanceCount={directMaintenanceCount ? directMaintenanceCount(node.id) : 0}
           emergencyMaintenanceCount={directEmergencyMaintenanceCount ? directEmergencyMaintenanceCount(node.id) : 0}
           onSelect={onSelect} onAddChild={onAddChild} onEditNode={onEditNode}
-          onShowPerson={onShowPerson} canEdit={canEdit} isProtected={isProtected}
+          canEdit={canEdit} isProtected={isProtected}
           bgColor={nodeColor.bg} borderColor={nodeColor.baseHex}
           collapsed={collapsed} onToggleCollapse={setCollapsed}
-          onExpand={onExpand} onExpandAll={onExpandAll} onOpenDashboard={onOpenDashboard}
+          onExpand={onExpand} onExpandAll={onExpandAll}
         />
       </div>
       {!collapsed && childCh.length > 0 && (
@@ -155,7 +155,7 @@ const ApoioBranch = ({
             <OrgBranch
               key={child.id} node={child} getChildren={getChildren} personMap={personMap}
               selectedId={selectedId} onSelect={onSelect} onAddChild={onAddChild}
-              onEditNode={onEditNode} onShowPerson={onShowPerson}
+              onEditNode={onEditNode}
               onExpand={onExpand} onExpandAll={onExpandAll}
               depth={depth + 1} canEdit={canEdit} isProtected={isProtected}
               directAssetCount={directAssetCount} 
@@ -163,7 +163,7 @@ const ApoioBranch = ({
               directMaintenanceCount={directMaintenanceCount}
               directEmergencyMaintenanceCount={directEmergencyMaintenanceCount}
               parentHex={nodeColor.hex}
-              expandedSet={expandedSet} onOpenDashboard={onOpenDashboard}
+              expandedSet={expandedSet}
             />
           ))}
         </ul>
@@ -175,8 +175,8 @@ const ApoioBranch = ({
 /* ─€─€─€ Main Branch (recursive) ─€─€─€ */
 const OrgBranch = ({
   node, getChildren, personMap, selectedId, onSelect, onAddChild, onEditNode,
-  onExpand, onExpandAll, onShowPerson, directAssetCount, directEmergencyCount, directMaintenanceCount, directEmergencyMaintenanceCount, canEdit, isProtected, parentHex,
-  depth = 0, isFocusRoot, onReturnFromFocus, expandedSet, onOpenDashboard
+  onExpand, onExpandAll, directAssetCount, directEmergencyCount, directMaintenanceCount, directEmergencyMaintenanceCount, canEdit, isProtected, parentHex,
+  depth = 0, expandedSet
 }) => {
   const [collapsed, setCollapsed] = useState(depth >= 3
   );
@@ -204,10 +204,10 @@ const OrgBranch = ({
           maintenanceCount={directMaintenanceCount ? directMaintenanceCount(node.id) : 0}
           emergencyMaintenanceCount={directEmergencyMaintenanceCount ? directEmergencyMaintenanceCount(node.id) : 0}
           onSelect={onSelect} onAddChild={onAddChild} onEditNode={onEditNode}
-          onShowPerson={onShowPerson} canEdit={canEdit} isProtected={isProtected}
+          canEdit={canEdit} isProtected={isProtected}
           bgColor={nodeColor.bg} borderColor={nodeColor.baseHex}
           collapsed={collapsed} onToggleCollapse={setCollapsed}
-          onExpand={onExpand} onExpandAll={onExpandAll} onOpenDashboard={onOpenDashboard}
+          onExpand={onExpand} onExpandAll={onExpandAll}
         />
       </div>
 
@@ -224,7 +224,7 @@ const OrgBranch = ({
                   <ApoioBranch
                     key={child.id} node={child} getChildren={getChildren} personMap={personMap}
                     selectedId={selectedId} onSelect={onSelect} onAddChild={onAddChild}
-                    onEditNode={onEditNode} onShowPerson={onShowPerson}
+                    onEditNode={onEditNode}
                     onExpand={onExpand} onExpandAll={onExpandAll}
                     depth={depth + 1} canEdit={canEdit} isProtected={isProtected}
                     directAssetCount={directAssetCount} 
@@ -232,7 +232,7 @@ const OrgBranch = ({
                     directMaintenanceCount={directMaintenanceCount}
                     directEmergencyMaintenanceCount={directEmergencyMaintenanceCount}
                     parentHex={nodeColor.hex}
-                    expandedSet={expandedSet} onOpenDashboard={onOpenDashboard}
+                    expandedSet={expandedSet}
                   />
                 ))}
               </ul>
@@ -248,13 +248,13 @@ const OrgBranch = ({
               key={child.id} node={child} getChildren={getChildren} personMap={personMap}
               selectedId={selectedId} onSelect={onSelect} onAddChild={onAddChild}
               onEditNode={onEditNode} onExpand={onExpand} onExpandAll={onExpandAll}
-              onShowPerson={onShowPerson} depth={depth + 1}
+              depth={depth + 1}
               directAssetCount={directAssetCount} 
               directEmergencyCount={directEmergencyCount}
               directMaintenanceCount={directMaintenanceCount}
               directEmergencyMaintenanceCount={directEmergencyMaintenanceCount}
               canEdit={canEdit} isProtected={isProtected} parentHex={nodeColor.hex}
-              expandedSet={expandedSet} onOpenDashboard={onOpenDashboard}
+              expandedSet={expandedSet}
             />
           ))}
         </ul>

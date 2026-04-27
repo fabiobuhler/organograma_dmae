@@ -1,4 +1,3 @@
-import React from "react";
 import WhatsAppButton from "../common/WhatsAppButton";
 import WhatsAppQrButton from "../common/WhatsAppQrButton";
 

@@ -1,4 +1,3 @@
-import { makeId } from "../utils/helpers";
 
 // --- SEED PERSONS ---
 export const seedPersons = [

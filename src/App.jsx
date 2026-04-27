@@ -588,7 +588,9 @@ export default function App() {
         }
         if (Array.isArray(p.logs)) setLogs(p.logs);
       }
-    } catch { }
+    } catch (e) { 
+      console.warn("Falha não crítica ao carregar localStorage ignorada:", e);
+    }
   }, []);
 
   useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes, assets, persons, contracts, users, logs })); }, [nodes, assets, persons, contracts, users, logs]);
@@ -1089,16 +1091,12 @@ export default function App() {
     const payload = { category, name };
     try {
       let savedPayload = { ...payload, id: assetTypeForm.id || currentId, _localId: localId };
-      try {
-        if (supabase) {
-          const saved = await upsertAssetType(supabase, {
-            ...payload,
-            ...(editAssetTypeId && assetTypeForm.id ? { id: assetTypeForm.id } : {})
-          });
-          savedPayload = saved || savedPayload;
-        }
-      } catch (err) {
-        throw err;
+      if (supabase) {
+        const saved = await upsertAssetType(supabase, {
+          ...payload,
+          ...(editAssetTypeId && assetTypeForm.id ? { id: assetTypeForm.id } : {})
+        });
+        savedPayload = saved || savedPayload;
       }
       setAssetTypes((current) => {
         if (editAssetTypeId) {

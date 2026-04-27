@@ -11,7 +11,6 @@ export default function NodeForm({
   nodeForm,
   setNodeForm,
   editNodeId,
-  canEdit,
   persons = [],
   nodes = [],
   onClose,

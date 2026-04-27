@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 /**
  * NodeSelector - Typeahead para seleção de Unidade Vinculada (Estrutura)

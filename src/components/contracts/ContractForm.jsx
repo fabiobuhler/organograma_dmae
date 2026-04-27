@@ -16,7 +16,6 @@ export default function ContractForm({
   setContractForm,
   editContractId,
   canEdit,
-  isAdmin,
   nodes = [],
   persons = [],
   contracts = [],

@@ -10,7 +10,6 @@ export default function AssetForm({
   assetForm,
   setAssetForm,
   editAssetId,
-  canEdit,
   isAdmin,
   nodes,
   contracts,
