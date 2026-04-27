@@ -3,8 +3,8 @@ import {
   FolderTree, Search, KeyRound, Download, Upload,
   Pencil, Trash2, Users, Building2, ClipboardList, Briefcase,
   Home, Plus, Save, Mail, Phone, Car, Wrench, X, Menu, LogOut,
-  ImagePlus, Image, List, Network, MapPin, ChevronsDown, Undo2, FileText, Printer, PieChart, Package, ArrowUp,
-  AlertTriangle, History, ChevronLeft, Eye, Settings, Siren, ShieldCheck
+  Image, List, Network, MapPin, ChevronsDown, Undo2, FileText, Printer, PieChart, Package, ArrowUp,
+  AlertTriangle, History, Eye, Settings, Siren, ShieldCheck
 } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -17,7 +17,7 @@ import { seedNodes, seedAssets, seedPersons, seedContracts, seedAssetTypes } fro
 import {
   makeId, initials, sortNodes, downloadFile,
   getDescendantIds, getParentChain, fileToBase64,
-  normalizeHex, DEFAULT_ROOT_COLOR, computeNodeColor
+  normalizeHex, DEFAULT_ROOT_COLOR
 } from "./utils/helpers";
 import { maskPhone } from "./utils/phone";
 import WhatsAppButton from "./components/common/WhatsAppButton";
@@ -27,18 +27,15 @@ import SystemAlertModal from "./components/common/SystemAlertModal";
 import ConfirmDialog from "./components/common/ConfirmDialog";
 import { getContractStatus, getDashboardStats, cleanRole, cleanRoleArray } from "./utils/contractUtils";
 import NodeSelector from "./components/selectors/NodeSelector";
-import PersonSelector from "./components/selectors/PersonSelector";
 import ListNode from "./components/org/ListNode";
 import AssetTypesModal from "./components/assets/AssetTypesModal";
 import AssetContactActions from "./components/assets/AssetContactActions";
-import AssetBadges from "./components/assets/AssetBadges";
 import LogsModal from "./components/admin/LogsModal";
 import StatsModal from "./components/admin/StatsModal";
 import NodeForm from "./components/org/NodeForm";
 import AssetForm from "./components/assets/AssetForm";
 import ContractForm from "./components/contracts/ContractForm";
 import DashboardCard from "./components/dashboard/DashboardCard";
-import DonutChart from "./components/dashboard/DonutChart";
 import DashboardAssetTable from "./components/dashboard/DashboardAssetTable";
 import DashboardHeader from "./components/dashboard/DashboardHeader";
 import DashboardContractStatusPanel from "./components/dashboard/DashboardContractStatusPanel";
@@ -89,8 +86,6 @@ import {
 } from "./services/exportService";
 
 const STORAGE_KEY = "dmae-orgchart-v16";
-const DEMO_USER = "admin";
-const DEMO_PASS = "dmae123";
 
 const emptyNode = {
   id: "", parentId: "", name: "", description: "", funcao: "", responsavel: "", matricula: "",
@@ -866,94 +861,113 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [selectedId, viewMode, isLoadingCloud]);
 
-  // Auto-center on focus change
-  // --- AUTO-CENTER EFFECTS ---
-  useEffect(() => {
-    if (viewMode !== "tree" || !selectedId) return;
-    centerNodeInView(selectedId, { behavior: "smooth", attempts: 4, delay: 100 });
-  }, [selectedId, viewMode]);
+  const getNodeCardElement = useCallback((nodeId) => {
+    const vp = vpRef.current;
+    if (!vp || !nodeId) return null;
 
-  useEffect(() => {
-    if (viewMode !== "tree" || !focusId) return;
-    // Quando o foco muda, centralizamos o novo nó raiz do foco
-    centerNodeInView(focusId, { behavior: "smooth", attempts: 5, delay: 150 });
-  }, [focusId, viewMode]);
+    const rawId = String(nodeId);
+    const safeId =
+      typeof CSS !== "undefined" && CSS.escape
+        ? CSS.escape(rawId)
+        : rawId.replace(/["\\]/g, "\\$&");
 
-  /**
-   * Centraliza um nó no viewport do organograma de forma robusta.
-   * Unifica cálculos de zoom, pan e tentativas de renderização.
-   */
+    return (
+      vp.querySelector(`.org-card[data-node-id="${safeId}"]`) ||
+      vp.querySelector(`[data-node-id="${safeId}"].org-card`) ||
+      vp.querySelector(`[data-node-id="${safeId}"] .org-card`) ||
+      vp.querySelector(`[data-node-id="${safeId}"]`)
+    );
+  }, []);
+
   const centerNodeInView = useCallback((nodeId, options = {}) => {
-    if (!nodeId || viewMode !== "tree") return;
-
     const {
       behavior = "smooth",
-      attempts = 3,
+      attempts = 10,
       delay = 80
     } = options;
 
-    // Registra como último nó centralizado para preservação no zoom
+    if (!nodeId) return;
+
     setCenteredNodeId(nodeId);
 
     const run = (remainingAttempts) => {
-      const vp = vpRef.current;
-      if (!vp) return;
+      requestAnimationFrame(() => {
+        const vp = vpRef.current;
+        const el = getNodeCardElement(nodeId);
 
-      // Seletor exato: .org-card que contém o data-node-id
-      const safeId = String(nodeId).replace(/"/g, '\\"');
-      const el = vp.querySelector(`.org-card[data-node-id="${safeId}"]`);
+        if (!vp || !el) {
+          if (remainingAttempts > 1) {
+            setTimeout(() => run(remainingAttempts - 1), delay);
+          }
+          return;
+        }
 
-      if (!el) {
-        if (remainingAttempts > 0) {
+        const vpRect = vp.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+
+        const vpCenterX = vpRect.left + vpRect.width / 2;
+        const vpCenterY = vpRect.top + vpRect.height / 2;
+        const elCenterX = elRect.left + elRect.width / 2;
+        const elCenterY = elRect.top + elRect.height / 2;
+
+        const currentZoom = zoom || 1;
+
+        const deltaX = (elCenterX - vpCenterX) / currentZoom;
+        const deltaY = (elCenterY - vpCenterY) / currentZoom;
+
+        vp.scrollBy({
+          left: deltaX,
+          top: deltaY,
+          behavior: remainingAttempts <= 2 ? behavior : "auto"
+        });
+
+        if (remainingAttempts > 1) {
           setTimeout(() => run(remainingAttempts - 1), delay);
         }
-        return;
-      }
-
-      const vpRect = vp.getBoundingClientRect();
-      const elRect = el.getBoundingClientRect();
-
-      // Centro exato da viewport (visual)
-      const viewportCenterX = vpRect.left + vpRect.width / 2;
-      const viewportCenterY = vpRect.top + vpRect.height / 2;
-
-      // Centro exato do nó (visual, já escalado pelo transform)
-      const nodeCenterX = elRect.left + elRect.width / 2;
-      const nodeCenterY = elRect.top + elRect.height / 2;
-
-      // Diferença visual em pixels de tela
-      const deltaX = nodeCenterX - viewportCenterX;
-      const deltaY = nodeCenterY - viewportCenterY;
-
-      const currentZoom = zoom || 1;
-
-      // Ajusta o scroll: somamos o deslocamento visual dividido pelo zoom
-      // porque scrollLeft/Top operam no espaço de layout (não escalado).
-      vp.scrollTo({
-        left: Math.max(0, vp.scrollLeft + deltaX / currentZoom),
-        top: Math.max(0, vp.scrollTop + deltaY / currentZoom),
-        behavior
       });
     };
 
-    requestAnimationFrame(() => run(attempts));
-  }, [viewMode, zoom]);
+    run(attempts);
+  }, [getNodeCardElement, zoom]);
 
   const zoomAndKeepCenter = useCallback((nextZoom) => {
-    const targetNodeId = centeredNodeId || selectedId || focusId;
+    const targetNodeId = centeredNodeId || selectedId || focusId || rootNode?.id;
     setZoom(nextZoom);
 
     if (targetNodeId) {
-      // Pequeno delay para o transform: scale ser aplicado antes do recalcular
       setTimeout(() => {
         centerNodeInView(targetNodeId, {
-          behavior: "auto", // Movimento instantâneo durante zoom para evitar lag visual
-          attempts: 5,
-          delay: 50
+          behavior: "auto",
+          attempts: 6,
+          delay: 80
         });
-      }, 150);
+      }, 80);
     }
-  }, [centeredNodeId, selectedId, focusId, centerNodeInView]);
+  }, [centeredNodeId, selectedId, focusId, rootNode?.id, centerNodeInView]);
+
+  // --- AUTO-CENTER EFFECTS ---
+  useEffect(() => {
+    if (viewMode !== "tree" || !selectedId) return;
+
+    centerNodeInView(selectedId, {
+      behavior: "smooth",
+      attempts: 8,
+      delay: 100
+    });
+  }, [selectedId, viewMode, isLoadingCloud, centerNodeInView]);
+
+  useEffect(() => {
+    if (viewMode !== "tree") return;
+
+    const targetId = focusId || rootNode?.id;
+    if (!targetId) return;
+
+    centerNodeInView(targetId, {
+      behavior: "smooth",
+      attempts: 8,
+      delay: 120
+    });
+  }, [focusId, viewMode, isLoadingCloud, rootNode?.id, centerNodeInView]);
 
   // Drag-to-pan on tree viewport
   useEffect(() => {
@@ -2155,11 +2169,13 @@ export default function App() {
   }, [canEdit, openNewNode]);
 
   const handleExpand = useCallback((nodeId) => {
-    setSelectedId(nodeId);
-    // Aguarda a expansão do componente e centraliza o nó clicado
-    setTimeout(() => {
-      centerNodeInView(nodeId, { behavior: "smooth", attempts: 5, delay: 120 });
-    }, 80);
+    if (!nodeId) return;
+
+    centerNodeInView(nodeId, {
+      behavior: "smooth",
+      attempts: 12,
+      delay: 90
+    });
   }, [centerNodeInView]);
 
   const handleReturnFromFocus = useCallback(() => {
@@ -2169,11 +2185,13 @@ export default function App() {
   const handleExpandAllBelow = useCallback((nodeId) => {
     const ids = new Set(getDescendantIds(nodeId, getChildren));
     setExpandedSet(ids);
-    setSelectedId(nodeId);
-    // Centralização com mais tentativas para lidar com múltiplos níveis abrindo
-    setTimeout(() => {
-      centerNodeInView(nodeId, { behavior: "smooth", attempts: 8, delay: 150 });
-    }, 100);
+    setCenteredNodeId(nodeId);
+
+    centerNodeInView(nodeId, {
+      behavior: "smooth",
+      attempts: 14,
+      delay: 100
+    });
   }, [getChildren, centerNodeInView]);
 
   const handleExportPdf = useCallback(async () => {
