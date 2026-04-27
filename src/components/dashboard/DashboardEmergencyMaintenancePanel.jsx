@@ -1,13 +1,13 @@
-import { Siren } from "lucide-react";
+import { Siren, AlertCircle } from "lucide-react";
 import AssetBadges from "../assets/AssetBadges";
 import AssetContactActions from "../assets/AssetContactActions";
+import { getContractStatus } from "../../utils/contractUtils";
 
 /**
  * DashboardEmergencyMaintenancePanel.jsx
  * Painel visual de Ativos de Contingência Inoperantes.
- * Componente visual puro extraído da Fase 9C.
  */
-export default function DashboardEmergencyMaintenancePanel({ list, nodes }) {
+export default function DashboardEmergencyMaintenancePanel({ list, nodes, contracts = [] }) {
   return (
     <div className="bi-list-view">
       <div className="bi-alert-critical" style={{ background: "#fee2e2", border: "1px solid #ef4444", padding: 12, borderRadius: 8, marginBottom: 20, display: "flex", alignItems: "center", gap: 10, color: "#b91c1c" }}>
@@ -30,31 +30,52 @@ export default function DashboardEmergencyMaintenancePanel({ list, nodes }) {
           </thead>
           <tbody>
             {list.length > 0 ? (
-              list.map(a => (
-                <tr key={a.id} style={{ borderTop: "1px solid var(--n100)" }}>
-                  <td style={{ padding: 12 }}>
-                    <div style={{ fontWeight: 700, color: "#b91c1c" }}>{a.name}</div>
-                  </td>
-                  <td style={{ padding: 12 }}>{a.type || "—"}</td>
-                  <td style={{ padding: 12 }}>{nodes.find(n => n.id === a.nodeId)?.name || "—"}</td>
-                  <td style={{ padding: 12, fontWeight: 600 }}>{a.contatoResponsavel || "—"}</td>
-                  <td style={{ padding: 12 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span>{a.contatoAcionamento || "—"}</span>
-                      {a.contatoAcionamento && (
-                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <AssetBadges asset={a} compact showText={false} />
-                          <AssetContactActions phone={a.contatoAcionamento} responsible={a.contatoResponsavel} />
+              list.map(a => {
+                // Verifica se o contrato existe e seu status
+                const contract = contracts.find(c => c.sei === a.numeroContrato);
+                const isContractMissing = a.tipoVinculo === "Contratado" && a.numeroContrato && !contract;
+                const isContractExpired = contract && getContractStatus(contract) === "expired";
+                const isDiscontinued = isContractMissing || isContractExpired;
+
+                const rowStyle = isDiscontinued ? { textDecoration: "line-through", opacity: 0.6, background: "#fef2f2" } : {};
+
+                return (
+                  <tr key={a.id} style={{ borderTop: "1px solid var(--n100)", ...rowStyle }}>
+                    <td style={{ padding: 12 }}>
+                      <div style={{ fontWeight: 700, color: "#b91c1c" }}>{a.name}</div>
+                      {isContractMissing ? (
+                        <div style={{ fontSize: 10, color: "#ef4444", fontWeight: 700, marginTop: 4, display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
+                           <span style={{ border: "1px solid #ef4444", padding: "1px 4px", borderRadius: 4, background: "#fee2e2" }}>
+                            contrato descontinuado
+                           </span>
+                        </div>
+                      ) : isContractExpired && (
+                        <div style={{ fontSize: 10, color: "#ef4444", fontWeight: 700, display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
+                          <AlertCircle size={10} /> Contrato vencido
                         </div>
                       )}
-                    </div>
-                  </td>
-                  <td style={{ padding: 12, fontSize: 10 }}>{a.maintenanceNotes || "—"}</td>
-                  <td style={{ padding: 12, textAlign: "center" }}>
-                    {a.maintenanceSince ? new Date(a.maintenanceSince).toLocaleDateString('pt-BR') : "—"}
-                  </td>
-                </tr>
-              ))
+                    </td>
+                    <td style={{ padding: 12 }}>{a.type || "—"}</td>
+                    <td style={{ padding: 12 }}>{nodes.find(n => n.id === a.nodeId)?.name || "—"}</td>
+                    <td style={{ padding: 12, fontWeight: 600 }}>{a.contatoResponsavel || "—"}</td>
+                    <td style={{ padding: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
+                        <span>{a.contatoAcionamento || "—"}</span>
+                        {a.contatoAcionamento && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <AssetBadges asset={a} compact showText={false} />
+                            <AssetContactActions phone={a.contatoAcionamento} responsible={a.contatoResponsavel} />
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td style={{ padding: 12, fontSize: 10 }}>{a.maintenanceNotes || "—"}</td>
+                    <td style={{ padding: 12, textAlign: "center" }}>
+                      {a.maintenanceSince ? new Date(a.maintenanceSince).toLocaleDateString('pt-BR') : "—"}
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr><td colSpan={7} style={{ padding: 30, textAlign: "center", color: "var(--n400)" }}>Nenhum ativo de contingência em manutenção.</td></tr>
             )}

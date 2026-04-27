@@ -118,14 +118,10 @@ export function darkenHex(hex, percent = 5) {
 
 /**
  * Retorna o percentual de clareamento por nível.
- * Subordinada: 12%, Apoio: 18%.
- * Com bg=15%, cada nível acumula diferença visível.
+ * Padrão: 5%.
  */
-export function getFadePercent(node) {
-  if (node?.subtipo === "apoio" || node?.natureza === "apoio" || node?.tipoApoio === true) {
-    return 18;
-  }
-  return 12;
+export function getFadePercent() {
+  return 5;
 }
 
 /**
@@ -141,7 +137,7 @@ export function isColorDark(hex) {
 /**
  * Computa a cor efetiva de um nó baseado em sua cor própria ou herança do pai.
  * - Se o nó tem `color` própria definida, ela é a cor base.
- * - Senão, herda a cor do pai clareada (5% subordinada, 10% apoio).
+ * - Senão, herda a cor do pai clareada (5%).
  * 
  * Retorna { bg, hex, baseHex, isDark }
  * - bg: cor de fundo do card (muito clara)
@@ -166,7 +162,7 @@ export function computeNodeColor(node, parentHex) {
   }
 
   // Fundo do card: clareado apenas 15% acima do baseHex.
-  // Menos clareamento = diferença de 12%/nível fica visível entre hierarquias.
+  // Menos clareamento = diferença de 5%/nível fica visível entre hierarquias.
   const bg = lightenHex(baseHex, 15);
 
 

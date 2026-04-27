@@ -1,5 +1,6 @@
-import { X, Save, Siren, Plus, ClipboardList, ImagePlus } from "lucide-react";
+import { X, Save, Siren, Plus, ClipboardList, ImagePlus, AlertCircle } from "lucide-react";
 import NodeSelector from "../selectors/NodeSelector";
+import { getContractStatus } from "../../utils/contractUtils";
 
 /**
  * Componente de formulário para criação e edição de ativos.
@@ -35,10 +36,10 @@ export default function AssetForm({
         <div className="modal-body">
           <div className="fg" style={{ marginBottom: 16 }}>
             <label className="fl">Unidade de Alocação / Lotação *</label>
-            <NodeSelector 
-              value={assetForm.nodeId} 
-              nodes={nodes} 
-              onChange={(val) => setAssetForm({ ...assetForm, nodeId: val })} 
+            <NodeSelector
+              value={assetForm.nodeId}
+              nodes={nodes}
+              onChange={(val) => setAssetForm({ ...assetForm, nodeId: val })}
             />
             {!assetForm.nodeId && <span style={{ fontSize: 10, color: "#ef4444" }}>Obrigatório selecionar o local no organograma para salvar.</span>}
           </div>
@@ -106,7 +107,7 @@ export default function AssetForm({
             <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none", color: assetForm.isMaintenance ? "#d97706" : "var(--n600)", fontWeight: "bold" }}>
               <input type="checkbox" checked={assetForm.isMaintenance} onChange={(e) => setAssetForm({ ...assetForm, isMaintenance: e.target.checked })} /> Ativo em Manutenção / Inoperante?
             </label>
-            
+
             {assetForm.isMaintenance && (
               <div className="fr" style={{ marginTop: 12, alignItems: "flex-start" }}>
                 <div className="fg" style={{ flex: 1 }}>
@@ -165,7 +166,17 @@ export default function AssetForm({
 
                {/* SEI com auto-fill */}
                <div className="fg" style={{ position: "relative" }}>
-                 <label className="fl">Nº Processo SEI *</label>
+                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                   <label className="fl">Nº Processo SEI *</label>
+                   {(() => {
+                     const contract = contracts.find(x => x.sei === assetForm.numeroContrato);
+                     const isMissing = assetForm.numeroContrato && !contract;
+                     const isExpired = contract && getContractStatus(contract) === "expired";
+                     if (isMissing) return <span style={{ fontSize: 9, color: "#ef4444", fontWeight: 700, border: "1px solid #ef4444", padding: "0 4px", borderRadius: 4, background: "#fee2e2" }}>contrato descontinuado</span>;
+                     if (isExpired) return <span style={{ fontSize: 9, color: "#ef4444", fontWeight: 700, display: "flex", alignItems: "center", gap: 2 }}><AlertCircle size={10} /> Contrato vencido</span>;
+                     return null;
+                   })()}
+                 </div>
                  <input
                    className="fi"
                    value={assetForm.numeroContrato}
@@ -206,15 +217,15 @@ export default function AssetForm({
                              onClick={() => {
                                const fiscal = personMap?.get(c.fiscaisContrato?.[0]?.titularId)?.name || "";
                                const fiscalMat = personMap?.get(c.fiscaisContrato?.[0]?.titularId)?.matricula || "";
-                               setAssetForm({ 
-                                 ...assetForm, 
-                                 numeroContrato: c.sei, 
-                                 empresaContratada: c.empresa || "", 
-                                 cnpjContratada: c.cnpj || "", 
+                               setAssetForm({
+                                 ...assetForm,
+                                 numeroContrato: c.sei,
+                                 empresaContratada: c.empresa || "",
+                                 cnpjContratada: c.cnpj || "",
                                  contatoEmpresa: c.contato || "",
                                  responsavelDireto: c.responsavel || "",
-                                 fiscalContrato: fiscal, 
-                                 matriculaFiscal: fiscalMat 
+                                 fiscalContrato: fiscal,
+                                 matriculaFiscal: fiscalMat
                                });
                              }}
                              style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 12px", border: "none", background: "none", cursor: "pointer", fontSize: 12, borderBottom: "1px solid var(--n100)" }}
@@ -268,32 +279,32 @@ export default function AssetForm({
                  const f = assetForm.photos?.[idx];
                  return (
                    <div key={idx} style={{ flex: 1 }}>
-                      <label className={`photo-area ${!f ? "empty" : ""}`} style={{ 
-                        display: "flex", 
-                        height: 100, 
-                        flexDirection: "column", 
-                        alignItems: "center", 
-                        justifyContent: "center", 
-                        gap: 4, 
-                        border: "2px dashed var(--n200)", 
-                        borderRadius: 12, 
-                        cursor: "pointer", 
-                        background: "var(--n50)", 
-                        position: "relative", 
-                        overflow: "hidden" 
+                      <label className={`photo-area ${!f ? "empty" : ""}`} style={{
+                        display: "flex",
+                        height: 100,
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 4,
+                        border: "2px dashed var(--n200)",
+                        borderRadius: 12,
+                        cursor: "pointer",
+                        background: "var(--n50)",
+                        position: "relative",
+                        overflow: "hidden"
                       }}>
                         {f ? (
                           <>
                             <img src={f} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                            <button 
-                              className="btn-icon-xs" 
+                            <button
+                              className="btn-icon-xs"
                               type="button"
                               style={{ position: "absolute", top: 4, right: 4, background: "rgba(255,255,255,0.8)", border: "1px solid var(--n200)" }}
-                              onClick={(e) => { 
-                                e.preventDefault(); 
-                                const p = [...(assetForm.photos || [])]; 
-                                p.splice(idx, 1); 
-                                setAssetForm({...assetForm, photos: p}); 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                const p = [...(assetForm.photos || [])];
+                                p.splice(idx, 1);
+                                setAssetForm({...assetForm, photos: p});
                               }}
                             >
                               <X size={10} />
@@ -303,10 +314,10 @@ export default function AssetForm({
                           <>
                             <ImagePlus size={20} color="var(--n400)" />
                             <span style={{ fontSize: 9, color: "var(--n500)", fontWeight: 600 }}>Adicionar</span>
-                            <input 
-                              type="file" 
-                              accept="image/*" 
-                              style={{ display: "none" }} 
+                            <input
+                              type="file"
+                              accept="image/*"
+                              style={{ display: "none" }}
                               onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
@@ -316,7 +327,7 @@ export default function AssetForm({
                                   p[idx] = b64;
                                   setAssetForm({...assetForm, photos: p});
                                 }
-                              }} 
+                              }}
                             />
                           </>
                         )}
