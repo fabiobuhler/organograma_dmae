@@ -70,11 +70,6 @@ export default function ContractDetail({
                 <p style={{ fontSize: 13, marginBottom: 4 }}><b>Itens:</b> {contract.itens || "---"}</p>
                 <p style={{ fontSize: 13, marginBottom: 4 }}><b>Unidade Vinculada:</b> {node ? `${node.name} — ${node.description || ""}` : "(Nenhuma)"}</p>
               </div>
-              {assets.some(a => a.numeroContrato === contract.sei && a.isEmergency) && (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: "50%", background: "rgba(0,0,0,0.05)", border: "2px solid #fbbf24" }} title="Este contrato possui ativos de CONTINGÊNCIA">
-                  <Siren size={20} color="#ef4444" strokeWidth={3} fill="#ef4444" fillOpacity={0.1} style={{ transform: "scale(1.8)" }} />
-                </div>
-              )}
             </div>
 
             <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--n200)" }}>
@@ -107,7 +102,27 @@ export default function ContractDetail({
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   {contractAssets.map(a => (
                     <div key={a.id} style={{ fontSize: 11, padding: "8px", background: "var(--n50)", borderRadius: 8, border: "1px solid var(--n200)" }}>
-                      <div style={{ fontWeight: "bold" }}>{a.name}</div>
+                      <div style={{ fontWeight: "bold", display: "flex", alignItems: "center" }}>
+                        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={a.name}>{a.name}</span>
+                        {a.isEmergency && (
+                          <span
+                            title="Ativo de contingência"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                              marginLeft: 6,
+                              color: "#dc2626",
+                              fontSize: 10,
+                              fontWeight: 700,
+                              flexShrink: 0
+                            }}
+                          >
+                            <Siren size={12} />
+                            Contingência
+                          </span>
+                        )}
+                      </div>
                       <div style={{ opacity: 0.7 }}>{a.category} | {a.plate || a.patrimonio || "S/N"}</div>
                     </div>
                   ))}
