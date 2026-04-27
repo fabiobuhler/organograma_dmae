@@ -8,7 +8,7 @@
 ## Arquivos sensíveis encontrados
 - **.env:** Estava rastreado no Git. Removido do tracking com `git rm --cached`.
 - **lista.txt:** Presente no diretório raiz. Recomendação de exclusão do Git.
-- **Token em cache gh-pages:** Identificado em `node_modules\.cache\gh-pages\https!fabiobuhler!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@github.com!fabiobuhler!organograma_dmae`. **URGENTE: Revogar token no GitHub.**
+- **Token em cache gh-pages:** Identificado em `node_modules\.cache\gh-pages\...ghp_REDACTED@github.com...`. **URGENTE: Revogar token no GitHub.**
 - **node_modules:** Existe localmente (normal). Cache de gh-pages contém segredo.
 - **dist:** Pasta de build presente localmente.
 
