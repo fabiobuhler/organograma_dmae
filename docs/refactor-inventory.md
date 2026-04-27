@@ -1139,3 +1139,157 @@ O projeto utiliza componentes React internos em JavaScript sem adoção sistemá
 Caso o projeto evolua para uma base maior ou API de componentes reutilizáveis, avaliar:
 - adoção gradual de PropTypes em componentes públicos;
 - ou migração controlada para TypeScript.
+
+---
+
+## Checkpoint final — Arquitetura estabilizada e checklist de release
+
+### Estado final
+- **Branch atual:** refactor/app-split-phase-10b-eslint-proptypes-decision
+- **Último commit:** 6e8fe49c chore: desativa react prop-types e documenta decisao tecnica
+- **Linhas finais do App.jsx:** 3.660
+- **Working tree:** clean
+- **Build de produção:** Sucesso (verificado na Fase 10C)
+- **Dev server validado:** Sim (localhost:5174)
+
+### Arquitetura consolidada
+A aplicação foi reorganizada em camadas:
+
+#### App.jsx
+Responsabilidade atual:
+- orquestração geral;
+- estado global React;
+- integração entre organograma, modais, formulários, detalhes e dashboard;
+- montagem de payloads;
+- validações de negócio;
+- chamadas de services;
+- alertas;
+- auditoria;
+- retorno ao modal/listagem de origem.
+
+#### Components
+Responsabilidade:
+- UI e apresentação;
+- formulários extraídos;
+- detalhes extraídos;
+- modais extraídos;
+- Dashboard/BI modular;
+- componentes comuns e seletores.
+
+Principais grupos:
+- components/common;
+- components/admin;
+- components/assets;
+- components/contracts;
+- components/people;
+- components/org;
+- components/selectors;
+- components/dashboard.
+
+#### Services
+Arquivos:
+- src/services/supabaseReadService.js;
+- src/services/supabaseWriteService.js;
+- src/services/auditService.js;
+- src/services/exportService.js.
+
+Responsabilidade:
+- leitura Supabase;
+- escrita Supabase;
+- auditoria;
+- exportações PDF/CSV.
+
+Regra:
+Services são puros em relação à UI:
+- não controlam React;
+- não controlam modais;
+- não chamam showSystemAlert;
+- não chamam logAction, exceto auditService que apenas grava quando chamado;
+- não aplicam regra visual.
+
+#### Utils
+Arquivos relevantes:
+- assetUtils;
+- contractUtils;
+- dashboardMetrics;
+- helpers;
+- cnpj;
+- phone.js.
+
+Responsabilidade:
+- funções puras;
+- normalizações;
+- cálculos;
+- validações;
+- métricas do Dashboard;
+- helpers de cor e formatação.
+
+### Blocos concluídos
+- Fases 1 a 6: componentes, modais, detalhes e formulários;
+- Fase 7: services Supabase, auditService e auxiliares;
+- Fase 8: exportService e exportações PDF/CSV;
+- Fase 9: Dashboard/BI modular;
+- Fase 10A: limpeza técnica simples;
+- Fase 10B: decisão ESLint react/prop-types;
+- Fase 10C: validação técnica final.
+
+### Correções funcionais finais
+- centralização robusta ao expandir organograma;
+- ícone de contingência posicionado no ativo vinculado dentro do detalhe de contrato;
+- restauração de dependências locais quando node_modules/Babel ficou incompleto;
+- CSV de ativos/contratos compatível com Excel via UTF-16LE quando necessário.
+
+### Decisões técnicas
+- App.jsx permanece como orquestrador principal;
+- Services não controlam UI;
+- Dashboard visual separado de métricas;
+- exportService recebe dados prontos;
+- CSV para Excel deve usar padrão validado;
+- react/prop-types foi desativado no ESLint por decisão técnica documentada;
+- no-undef, no-unused-vars, react-hooks e react-refresh permanecem ativos.
+
+### Resultado da revisão técnica
+- lint executado (sucesso, sem erros críticos);
+- build executado (sucesso, dist gerado);
+- dev server validado em localhost;
+- sem falhas bloqueantes;
+- pendências não bloqueantes:
+  - eventuais no-unused-vars residuais (imports de React);
+  - eventuais react/no-unescaped-entities;
+  - vulnerabilidades npm moderadas observadas pelo audit.
+
+### Checklist manual pré-release
+Antes de merge/deploy, validar:
+
+1. Login.
+2. Organograma.
+3. Expansão de caixa com centralização.
+4. Zoom + e zoom -.
+5. Cadastro de Pessoas.
+6. Cadastro de Estruturas.
+7. Registro de Ativos.
+8. Ativo com foto.
+9. Ativo em contingência.
+10. Ativo em manutenção.
+11. Cadastro de Contratos.
+12. Contrato com ativo de contingência vinculado.
+13. Exportar CSV/PDF de ativos.
+14. Exportar CSV/PDF de contratos.
+15. Histórico de Modificações.
+16. Exportar CSV/PDF de logs.
+17. Dashboard/BI.
+18. Dashboard — cards.
+19. Dashboard — gráficos.
+20. Dashboard — contingência em manutenção.
+21. Fechamento de modais retornando à origem.
+22. Console sem erro vermelho crítico.
+
+### Checklist técnico pré-release
+Executar antes do release:
+
+```powershell
+git status
+npm run lint
+npm run build
+npm run dev
+```
