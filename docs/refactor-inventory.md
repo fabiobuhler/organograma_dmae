@@ -1117,3 +1117,25 @@ Componentes de Dashboard devem:
 - Commit sempre manual pelo usuário via PowerShell.
 
 *Documento atualizado em 2026-04-26.*
+
+---
+
+## Decisão técnica — ESLint react/prop-types
+
+### Decisão
+A regra react/prop-types foi desativada no ESLint.
+
+### Motivo
+O projeto utiliza componentes React internos em JavaScript sem adoção sistemática de PropTypes. A inclusão de PropTypes em massa geraria grande volume de alterações sem ganho proporcional nesta fase de estabilização.
+
+### Preservado
+- no-undef permanece ativo;
+- no-unused-vars permanece ativo;
+- regras de hooks permanecem ativas;
+- comportamento do sistema não foi alterado;
+- componentes não foram reescritos.
+
+### Diretriz futura
+Caso o projeto evolua para uma base maior ou API de componentes reutilizáveis, avaliar:
+- adoção gradual de PropTypes em componentes públicos;
+- ou migração controlada para TypeScript.
