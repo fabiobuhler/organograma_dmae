@@ -1,6 +1,6 @@
-import { 
-  X, Search, FileText, Pencil, Trash2, Briefcase, 
-  ShieldCheck, Wrench, Save, Siren 
+import {
+  X, Search, FileText, Pencil, Trash2, Briefcase,
+  ShieldCheck, Wrench, Save, Siren
 } from "lucide-react";
 import NodeSelector from "../selectors/NodeSelector";
 import PersonSelector from "../selectors/PersonSelector";
@@ -25,6 +25,7 @@ export default function ContractForm({
   onCloseRegistry,
   onCancelEdit,
   onSave,
+  onAddNew,
   onCreateContract,
   onEditContract,
   onShowDetail,
@@ -63,10 +64,10 @@ export default function ContractForm({
               ) : <div/>}
               <div className="hdr-search" style={{ width: 220 }}>
                 <Search size={12} />
-                <input 
-                  placeholder="Filtrar contratos..." 
-                  value={contractFilter} 
-                  onChange={(e) => setContractFilter(e.target.value)} 
+                <input
+                  placeholder="Filtrar contratos..."
+                  value={contractFilter}
+                  onChange={(e) => setContractFilter(e.target.value)}
                 />
               </div>
             </div>
@@ -136,31 +137,31 @@ export default function ContractForm({
               </div>
               <div className="fg" style={{ flex: 1 }}>
                 <label className="fl">Nº Processo (SEI) *</label>
-                <input 
-                  className="fi" 
-                  value={contractForm.sei} 
-                  onChange={(e) => setContractForm({ ...contractForm, sei: e.target.value })} 
-                  placeholder="Ex: 25.10.000010414-3" 
+                <input
+                  className="fi"
+                  value={contractForm.sei}
+                  onChange={(e) => setContractForm({ ...contractForm, sei: e.target.value })}
+                  placeholder="Ex: 25.10.000010414-3"
                 />
               </div>
             </div>
             <div className="fr">
               <div className="fg" style={{ flex: 1 }}>
                 <label className="fl">Nome da Empresa Contratada *</label>
-                <input 
-                  className="fi" 
-                  value={contractForm.empresa || ""} 
-                  placeholder="Razão social..." 
-                  onChange={(e) => setContractForm({ ...contractForm, empresa: e.target.value })} 
+                <input
+                  className="fi"
+                  value={contractForm.empresa || ""}
+                  placeholder="Razão social..."
+                  onChange={(e) => setContractForm({ ...contractForm, empresa: e.target.value })}
                 />
               </div>
               <div className="fg" style={{ flex: 1 }}>
                 <label className="fl">CNPJ *</label>
-                <input 
-                  className="fi" 
-                  value={contractForm.cnpj || ""} 
-                  placeholder="00.000.000/0000-00" 
-                  onChange={(e) => setContractForm({ ...contractForm, cnpj: maskCnpj ? maskCnpj(e.target.value) : e.target.value })} 
+                <input
+                  className="fi"
+                  value={contractForm.cnpj || ""}
+                  placeholder="00.000.000/0000-00"
+                  onChange={(e) => setContractForm({ ...contractForm, cnpj: maskCnpj ? maskCnpj(e.target.value) : e.target.value })}
                 />
                 {cnpjMessage && (
                   <div style={{ color: "#b91c1c", fontSize: 12, fontWeight: 700, marginTop: 4 }}>
@@ -172,60 +173,60 @@ export default function ContractForm({
             <div className="fr">
               <div className="fg" style={{ flex: 1 }}>
                 <label className="fl">Contato da Empresa (Acionamento)</label>
-                <input 
-                  className="fi" 
-                  value={contractForm.contato || ""} 
-                  placeholder="Telefone, WhatsApp ou E-mail..." 
-                  onChange={(e) => setContractForm({ ...contractForm, contato: e.target.value })} 
+                <input
+                  className="fi"
+                  value={contractForm.contato || ""}
+                  placeholder="Telefone, WhatsApp ou E-mail..."
+                  onChange={(e) => setContractForm({ ...contractForm, contato: e.target.value })}
                 />
               </div>
             </div>
             <div className="fr">
               <div className="fg" style={{ flex: 1 }}>
                 <label className="fl">Data de Início</label>
-                <input 
-                  type="date" 
-                  className="fi" 
-                  value={contractForm.dataInicio || ""} 
-                  onChange={(e) => setContractForm({ ...contractForm, dataInicio: e.target.value })} 
+                <input
+                  type="date"
+                  className="fi"
+                  value={contractForm.dataInicio || ""}
+                  onChange={(e) => setContractForm({ ...contractForm, dataInicio: e.target.value })}
                 />
               </div>
               <div className="fg" style={{ flex: 1 }}>
                 <label className="fl">Data de Término</label>
-                <input 
-                  type="date" 
-                  className="fi" 
-                  value={contractForm.dataTermino || ""} 
-                  onChange={(e) => setContractForm({ ...contractForm, dataTermino: e.target.value })} 
+                <input
+                  type="date"
+                  className="fi"
+                  value={contractForm.dataTermino || ""}
+                  onChange={(e) => setContractForm({ ...contractForm, dataTermino: e.target.value })}
                 />
               </div>
             </div>
             <div className="fg">
               <label className="fl">Objeto do Contrato *</label>
-              <textarea 
-                className="ft" 
-                style={{ height: 60 }} 
-                value={contractForm.objeto} 
-                onChange={(e) => setContractForm({ ...contractForm, objeto: e.target.value })} 
-                placeholder="Descreva o objeto da contratação..." 
+              <textarea
+                className="ft"
+                style={{ height: 60 }}
+                value={contractForm.objeto}
+                onChange={(e) => setContractForm({ ...contractForm, objeto: e.target.value })}
+                placeholder="Descreva o objeto da contratação..."
               />
             </div>
             <div className="fg">
               <label className="fl">Itens do Contrato (Materiais / Serviços)</label>
-              <textarea 
-                className="ft" 
-                style={{ height: 60 }} 
-                value={contractForm.itens} 
-                onChange={(e) => setContractForm({ ...contractForm, itens: e.target.value })} 
-                placeholder="Liste os materiais ou serviços contemplados..." 
+              <textarea
+                className="ft"
+                style={{ height: 60 }}
+                value={contractForm.itens}
+                onChange={(e) => setContractForm({ ...contractForm, itens: e.target.value })}
+                placeholder="Liste os materiais ou serviços contemplados..."
               />
             </div>
-            
+
             <div style={{ marginTop: 12, padding: 12, background: "var(--n50)", borderRadius: 12, border: "1px solid var(--n200)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <h3 style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>Aditivos</h3>
-                <button 
-                  className="btn btn-outline btn-xs" 
+                <button
+                  className="btn btn-outline btn-xs"
                   onClick={() => setContractForm({ ...contractForm, aditivos: [...(contractForm.aditivos || []), { aditivoInício: "", aditivoTermino: "" }] })}
                 >
                   + Add Aditivo
@@ -244,8 +245,8 @@ export default function ContractForm({
               {/* GESTOR SECTION */}
               <div style={{ background: "var(--n50)", padding: 12, borderRadius: 12, border: "1px solid var(--n200)" }}>
                 <h3 style={{ fontSize: 13, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}><Briefcase size={14} /> Gestor do Contrato</h3>
-                <PersonSelector enforceNodeOccupation={false} label="Titular" valueId={contractForm.gestor.titularId} persons={persons} onSelect={(id) => setContractForm({ ...contractForm, gestor: { ...contractForm.gestor, titularId: id } })} onClear={() => setContractForm({ ...contractForm, gestor: { ...contractForm.gestor, titularId: "" } })} />
-                <PersonSelector enforceNodeOccupation={false} label="Suplente" valueId={contractForm.gestor.suplenteId} persons={persons} onSelect={(id) => setContractForm({ ...contractForm, gestor: { ...contractForm.gestor, suplenteId: id } })} onClear={() => setContractForm({ ...contractForm, gestor: { ...contractForm.gestor, suplenteId: "" } })} />
+                <PersonSelector enforceNodeOccupation={false} label="Titular" valueId={contractForm.gestor.titularId} persons={persons} onAddNew={onAddNew} onSelect={(id) => setContractForm({ ...contractForm, gestor: { ...contractForm.gestor, titularId: id } })} onClear={() => setContractForm({ ...contractForm, gestor: { ...contractForm.gestor, titularId: "" } })} />
+                <PersonSelector enforceNodeOccupation={false} label="Suplente" valueId={contractForm.gestor.suplenteId} persons={persons} onAddNew={onAddNew} onSelect={(id) => setContractForm({ ...contractForm, gestor: { ...contractForm.gestor, suplenteId: id } })} onClear={() => setContractForm({ ...contractForm, gestor: { ...contractForm.gestor, suplenteId: "" } })} />
               </div>
 
               <div style={{ opacity: 0.5, display: "flex", alignItems: "center", justifyContent: "center", border: "2px dashed var(--n200)", borderRadius: 12 }}>
@@ -260,8 +261,8 @@ export default function ContractForm({
               </div>
               {contractForm.fiscaisContrato.map((f, idx) => (
                 <div key={idx} className="fr" style={{ marginBottom: 12, background: "var(--n50)", padding: 10, borderRadius: 12, border: "1px solid var(--n200)", alignItems: "flex-end" }}>
-                  <div style={{ flex: 1 }}><PersonSelector enforceNodeOccupation={false} label={`Titular ${idx + 1}`} valueId={f.titularId} persons={persons} onSelect={(id) => { const nf = [...contractForm.fiscaisContrato]; nf[idx].titularId = id; setContractForm({ ...contractForm, fiscaisContrato: nf }); }} onClear={() => { const nf = [...contractForm.fiscaisContrato]; nf[idx].titularId = ""; setContractForm({ ...contractForm, fiscaisContrato: nf }); }} /></div>
-                  <div style={{ flex: 1 }}><PersonSelector enforceNodeOccupation={false} label={`Suplente ${idx + 1}`} valueId={f.suplenteId} persons={persons} onSelect={(id) => { const nf = [...contractForm.fiscaisContrato]; nf[idx].suplenteId = id; setContractForm({ ...contractForm, fiscaisContrato: nf }); }} onClear={() => { const nf = [...contractForm.fiscaisContrato]; nf[idx].suplenteId = ""; setContractForm({ ...contractForm, fiscaisContrato: nf }); }} /></div>
+                  <div style={{ flex: 1 }}><PersonSelector enforceNodeOccupation={false} label={`Titular ${idx + 1}`} valueId={f.titularId} persons={persons} onAddNew={onAddNew} onSelect={(id) => { const nf = [...contractForm.fiscaisContrato]; nf[idx].titularId = id; setContractForm({ ...contractForm, fiscaisContrato: nf }); }} onClear={() => { const nf = [...contractForm.fiscaisContrato]; nf[idx].titularId = ""; setContractForm({ ...contractForm, fiscaisContrato: nf }); }} /></div>
+                  <div style={{ flex: 1 }}><PersonSelector enforceNodeOccupation={false} label={`Suplente ${idx + 1}`} valueId={f.suplenteId} persons={persons} onAddNew={onAddNew} onSelect={(id) => { const nf = [...contractForm.fiscaisContrato]; nf[idx].suplenteId = id; setContractForm({ ...contractForm, fiscaisContrato: nf }); }} onClear={() => { const nf = [...contractForm.fiscaisContrato]; nf[idx].suplenteId = ""; setContractForm({ ...contractForm, fiscaisContrato: nf }); }} /></div>
                   <button type="button" className="btn btn-outline btn-xs" style={{ marginBottom: 12, color: "red" }} onClick={() => setContractForm({ ...contractForm, fiscaisContrato: contractForm.fiscaisContrato.filter((_, i) => i !== idx) })}><Trash2 size={12} /></button>
                 </div>
               ))}
@@ -274,8 +275,8 @@ export default function ContractForm({
               </div>
               {contractForm.fiscaisServico.map((f, idx) => (
                 <div key={idx} className="fr" style={{ marginBottom: 12, background: "var(--n50)", padding: 10, borderRadius: 12, border: "1px solid var(--n200)", alignItems: "flex-end" }}>
-                  <div style={{ flex: 1 }}><PersonSelector enforceNodeOccupation={false} label={`Titular ${idx + 1}`} valueId={f.titularId} persons={persons} onSelect={(id) => { const nf = [...contractForm.fiscaisServico]; nf[idx].titularId = id; setContractForm({ ...contractForm, fiscaisServico: nf }); }} onClear={() => { const nf = [...contractForm.fiscaisServico]; nf[idx].titularId = ""; setContractForm({ ...contractForm, fiscaisServico: nf }); }} /></div>
-                  <div style={{ flex: 1 }}><PersonSelector enforceNodeOccupation={false} label={`Suplente ${idx + 1}`} valueId={f.suplenteId} persons={persons} onSelect={(id) => { const nf = [...contractForm.fiscaisServico]; nf[idx].suplenteId = id; setContractForm({ ...contractForm, fiscaisServico: nf }); }} onClear={() => { const nf = [...contractForm.fiscaisServico]; nf[idx].suplenteId = ""; setContractForm({ ...contractForm, fiscaisServico: nf }); }} /></div>
+                  <div style={{ flex: 1 }}><PersonSelector enforceNodeOccupation={false} label={`Titular ${idx + 1}`} valueId={f.titularId} persons={persons} onAddNew={onAddNew} onSelect={(id) => { const nf = [...contractForm.fiscaisServico]; nf[idx].titularId = id; setContractForm({ ...contractForm, fiscaisServico: nf }); }} onClear={() => { const nf = [...contractForm.fiscaisServico]; nf[idx].titularId = ""; setContractForm({ ...contractForm, fiscaisServico: nf }); }} /></div>
+                  <div style={{ flex: 1 }}><PersonSelector enforceNodeOccupation={false} label={`Suplente ${idx + 1}`} valueId={f.suplenteId} persons={persons} onAddNew={onAddNew} onSelect={(id) => { const nf = [...contractForm.fiscaisServico]; nf[idx].suplenteId = id; setContractForm({ ...contractForm, fiscaisServico: nf }); }} onClear={() => { const nf = [...contractForm.fiscaisServico]; nf[idx].suplenteId = ""; setContractForm({ ...contractForm, fiscaisServico: nf }); }} /></div>
                   <button type="button" className="btn btn-outline btn-xs" style={{ marginBottom: 12, color: "red" }} onClick={() => setContractForm({ ...contractForm, fiscaisServico: contractForm.fiscaisServico.filter((_, i) => i !== idx) })}><Trash2 size={12} /></button>
                 </div>
               ))}

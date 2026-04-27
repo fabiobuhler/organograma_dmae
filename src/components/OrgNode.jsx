@@ -11,6 +11,7 @@ const OrgNodeCard = ({
   const isApoio = node.subtipo === "apoio";
   const displayPhoto = person?.foto || node.foto;
   const showSensitive = canEdit || isProtected;
+  const availableEmergencyCount = emergencyCount - emergencyMaintenanceCount;
 
   return (
     <div className="org-card-wrap">
@@ -62,8 +63,8 @@ const OrgNodeCard = ({
         {showSensitive && (
           <div className="oc-badges">
             <span className={`badge ${isApoio ? "badge-apoio" : "badge-sec"}`}>{isApoio ? "apoio" : node.tipo}</span>
-            {emergencyCount > 0 && <span className="badge" style={{ background: "rgba(0,0,0,0.05)", color: "#ef4444", border: "2px solid #fbbf24", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: "50%", boxShadow: "0 2px 4px rgba(0,0,0,0.1)", position: "relative" }} title="Ativos de Contingência disponíveis"><Siren size={24} strokeWidth={3} fill="#ef4444" fillOpacity={0.1} style={{ transform: "scale(1.8)", transformOrigin: "center" }} /></span>}
-            {maintenanceCount > 0 && <span className="badge badge-maintenance" style={{ background: "rgba(0,0,0,0.05)", color: "#d97706", border: "2px solid #d97706", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: "50%", boxShadow: "0 2px 4px rgba(217,119,6,0.1)", position: "relative" }} title="Ativos em Manutenção/Inoperantes"><AlertTriangle size={18} strokeWidth={3} color="#d97706" /></span>}
+            {availableEmergencyCount > 0 && <span className="badge" style={{ background: "rgba(0,0,0,0.05)", color: "#ef4444", border: "2px solid #fbbf24", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: "50%", boxShadow: "0 2px 4px rgba(0,0,0,0.1)", position: "relative" }} title="Ativos de Contingência disponíveis"><Siren size={24} strokeWidth={3} fill="#ef4444" fillOpacity={0.1} style={{ transform: "scale(1.8)", transformOrigin: "center" }} /></span>}
+            {maintenanceCount > 0 && <span className="badge badge-maintenance" style={{ background: "rgba(0,0,0,0.05)", color: "#d97706", border: "2px solid #d97706", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: "50%", boxShadow: "0 2px 8px rgba(217,119,6,0.1)", position: "relative" }} title="Ativos em Manutenção/Inoperantes"><AlertTriangle size={18} strokeWidth={3} color="#d97706" /></span>}
             {emergencyMaintenanceCount > 0 && <span className="badge badge-emergency-maintenance" style={{ background: "#fee2e2", color: "#ef4444", border: "2px solid #ef4444", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: "50%", boxShadow: "0 2px 8px rgba(239, 68, 68, 0.3)", position: "relative" }} title="CONTINGÊNCIA INOPERANTE!"><Siren size={20} strokeWidth={3} fill="#ef4444" fillOpacity={0.2} /></span>}
             {assetCount > 0 && <span className="badge badge-out">{assetCount} ativos</span>}
           </div>
@@ -158,7 +159,7 @@ const ApoioBranch = ({
               onEditNode={onEditNode}
               onExpand={onExpand} onExpandAll={onExpandAll}
               depth={depth + 1} canEdit={canEdit} isProtected={isProtected}
-              directAssetCount={directAssetCount} 
+              directAssetCount={directAssetCount}
               directEmergencyCount={directEmergencyCount}
               directMaintenanceCount={directMaintenanceCount}
               directEmergencyMaintenanceCount={directEmergencyMaintenanceCount}
@@ -227,7 +228,7 @@ const OrgBranch = ({
                     onEditNode={onEditNode}
                     onExpand={onExpand} onExpandAll={onExpandAll}
                     depth={depth + 1} canEdit={canEdit} isProtected={isProtected}
-                    directAssetCount={directAssetCount} 
+                    directAssetCount={directAssetCount}
                     directEmergencyCount={directEmergencyCount}
                     directMaintenanceCount={directMaintenanceCount}
                     directEmergencyMaintenanceCount={directEmergencyMaintenanceCount}
@@ -249,7 +250,7 @@ const OrgBranch = ({
               selectedId={selectedId} onSelect={onSelect} onAddChild={onAddChild}
               onEditNode={onEditNode} onExpand={onExpand} onExpandAll={onExpandAll}
               depth={depth + 1}
-              directAssetCount={directAssetCount} 
+              directAssetCount={directAssetCount}
               directEmergencyCount={directEmergencyCount}
               directMaintenanceCount={directMaintenanceCount}
               directEmergencyMaintenanceCount={directEmergencyMaintenanceCount}

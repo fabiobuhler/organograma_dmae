@@ -1,4 +1,4 @@
-﻿/**
+/**
  * exportService.js
  * Centraliza a lógica de exportação de arquivos PDF e CSV.
  * Este serviço é puro: não usa React, não acessa estado e não altera a UI diretamente.
@@ -149,7 +149,7 @@ export function exportAuditLogsCsv(logs = [], options = {}) {
   const { filename = "auditoria-logs.csv" } = options;
 
   const headers = ["Data/Hora", "Operador", "Ação", "Detalhes"];
-  
+
   const rows = logs.map((lg) => [
     lg.timestamp || formatExportDateTime(lg.created_at),
     lg.user || lg.user_name || "—",
@@ -173,10 +173,10 @@ export function exportAuditLogsCsv(logs = [], options = {}) {
  * Exporta logs de auditoria para PDF via janela de impressão (Layout Rich HTML).
  */
 export function exportAuditLogsPdf(logs = [], options = {}) {
-  const { 
+  const {
     title = "Auditoria de Sistema",
     subtitle = "Log de eventos e operações",
-    logoUrl = "" 
+    logoUrl = ""
   } = options;
 
   const w = window.open("", "_blank");
@@ -239,7 +239,7 @@ export function exportAuditLogsPdf(logs = [], options = {}) {
  * Exporta logs de auditoria para PDF via html2pdf (Layout Moderno).
  */
 export function generateDirectLogsPdf(logs = [], options = {}) {
-  const { 
+  const {
     title = "Registro de Auditoria de Sistema",
     subtitle = "Log de eventos e operações",
     logoUrl = "",
@@ -303,8 +303,8 @@ export function exportAssetsCsv(assets = [], options = {}) {
   const { filename = "ativos-export.csv", nodes = [] } = options;
 
   const headers = [
-    "Identificação", "Categoria", "Tipo", "Fabricante", "Modelo", 
-    "Ano", "Placa", "Patrimônio", "Vínculo", "Contrato", 
+    "Identificação", "Categoria", "Tipo", "Fabricante", "Modelo",
+    "Ano", "Placa", "Patrimônio", "Vínculo", "Contrato",
     "Empresa", "Unidade"
   ];
 
@@ -514,7 +514,7 @@ export function exportContractsCsv(contracts = [], options = {}) {
 
   const headers = [
     "Número/SEI", "Status", "Objeto", "Empresa", "CNPJ", "Contato", "Unidade",
-    "Início", "Término", "Itens", "Aditivos", 
+    "Início", "Término", "Itens", "Aditivos",
     "Gestor Titular", "Gestor Suplente",
     "Fiscal Contrato Titular", "Fiscal Contrato Suplente",
     "Fiscal Serviço Titular", "Fiscal Serviço Suplente"
@@ -524,7 +524,7 @@ export function exportContractsCsv(contracts = [], options = {}) {
     const node = nodes.find((n) => n.id === c.nodeId);
     const status = getContractStatus ? getContractStatus(c) : "";
     const statusText = status === "active" ? "Ativo" : status === "expiring" ? "A Vencer" : "Vencido";
-    
+
     const aditivosStr = (c.aditivos || []).map((ad, idx) => `Aditivo ${idx+1}: ${ad.aditivoInício} a ${ad.aditivoTermino}`).join(" | ");
 
     return [
@@ -826,5 +826,132 @@ export function exportContractsPdf(contracts = [], options = {}) {
   ].join("\n");
 
   w.document.write(html);
+  w.document.close();
+}
+
+/**
+ * Exporta a lista do organograma (subárvore) para CSV.
+ */
+export function exportOrgListCsv(nodes = [], options = {}) {
+  const {
+    filename = "organograma-lista.csv",
+    isProtected = false,
+    printFields = { responsavel: true, funcao: true, matricula: false, lotacao: true }
+  } = options;
+
+  const headers = ["Nível", "Sigla/Nome", "Descrição"];
+  if (printFields.responsavel) headers.push("Responsável");
+  if (printFields.funcao) headers.push("Função/Cargo");
+  if (isProtected && printFields.matricula) headers.push("Matrícula");
+  headers.push("Tipo", "Subtipo");
+  if (printFields.lotacao) headers.push("Lotação");
+
+  const rows = nodes.map(n => {
+    const row = [n.depth || 0, n.name, n.description || ""];
+    if (printFields.responsavel) row.push(n.responsavel || "");
+    if (printFields.funcao) row.push(n.funcao || n.cargo || "");
+    if (isProtected && printFields.matricula) row.push(n.matricula || "");
+    row.push(n.tipo, n.subtipo || "principal");
+    if (printFields.lotacao) row.push(n.lotacao || "");
+    return row;
+  });
+
+  const csvContent = [
+    headers.map(escapeCsvValue).join(";"),
+    ...rows.map(row => row.map(escapeCsvValue).join(";"))
+  ].join("\n");
+
+  downloadExcelCsvFile(filename, csvContent, {
+    includeSeparatorHint: true,
+    separator: ";"
+  });
+}
+
+/**
+ * Exporta a lista do organograma (subárvore) para PDF via impressão.
+ * Agora utiliza um layout hierárquico idêntico à estrutura em tela.
+ */
+export function exportOrgListPdf(nodes = [], options = {}) {
+  const {
+    title = "Lista do Organograma",
+    logoUrl = "",
+    isProtected = false,
+    printFields = { responsavel: true, funcao: true, matricula: false, lotacao: true }
+  } = options;
+
+  const w = window.open("", "_blank");
+  if (!w) throw new Error("Pop-up bloqueado.");
+
+  const contentHtml = nodes.map(n => {
+    const depth = n.depth || 0;
+    const indent = depth * 24;
+    const isApoio = n.subtipo === "apoio";
+
+    return `
+      <div class="node-card" style="margin-left: ${indent}px; border-left: 4px solid ${isApoio ? '#f59e0b' : '#3b82f6'};">
+        <div class="node-header">
+          <div class="node-title">
+            <span class="node-name">${n.name}</span>
+            <span class="node-badge ${isApoio ? 'badge-apoio' : 'badge-est'}">${isApoio ? 'apoio' : 'estrutura'}</span>
+          </div>
+          <div class="node-desc">${n.description || ""}</div>
+        </div>
+        <div class="node-footer">
+          ${printFields.responsavel ? `<div class="node-item"><strong>Responsável:</strong> ${n.responsavel || "—"}</div>` : ""}
+          ${printFields.funcao ? `<div class="node-item"><strong>Função/Cargo:</strong> ${n.funcao || n.cargo || "—"}</div>` : ""}
+          ${isProtected && printFields.matricula ? `<div class="node-item"><strong>Matrícula:</strong> ${n.matricula || "—"}</div>` : ""}
+          ${printFields.lotacao ? `<div class="node-item"><strong>Lotação:</strong> ${n.lotacao || "—"}</div>` : ""}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  const dtNow = new Date().toLocaleString("pt-BR");
+
+  w.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<title>${title}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+  body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; background: #f8fafc; }
+  .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
+  .header img { height: 50px; }
+
+  .node-card { background: #fff; border-radius: 12px; padding: 14px 20px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; page-break-inside: avoid; }
+  .node-header { margin-bottom: 10px; }
+  .node-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .node-name { font-weight: 800; font-size: 13px; color: #0f172a; text-transform: uppercase; letter-spacing: -0.01em; }
+  .node-badge { font-size: 8px; font-weight: 800; text-transform: uppercase; padding: 2px 10px; border-radius: 20px; }
+  .badge-est { background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe; }
+  .badge-apoio { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+  .node-desc { font-size: 11px; color: #64748b; font-weight: 500; }
+
+  .node-footer { display: flex; flex-wrap: wrap; gap: 20px; border-top: 1px solid #f1f5f9; padding-top: 10px; font-size: 10px; color: #475569; }
+  .node-item { min-width: 140px; }
+  .node-item strong { color: #94a3b8; font-size: 8px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+
+  @media print {
+    body { padding: 0; background: #fff; }
+    .header { border: none; border-bottom: 2px solid #000; border-radius: 0; padding: 10px 0; }
+    .node-card { border: 1px solid #ddd; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    ${logoUrl ? `<img src="${logoUrl}" alt="Logo" />` : '<div></div>'}
+    <div style="text-align:right">
+      <h2 style="margin:0; font-size: 18px; color: #0f172a; font-weight: 800;">${title}</h2>
+      <p style="margin:4px 0; color:#64748b; font-size: 11px; font-weight: 600;">Relatório de Estrutura Organizográfica</p>
+      <p style="margin:0; color:#94a3b8; font-size: 9px;">Data de Emissão: ${dtNow}</p>
+    </div>
+  </div>
+  <div class="nodes-container">
+    ${contentHtml}
+  </div>
+  <script>setTimeout(() => window.print(), 800);</script>
+</body>
+</html>`);
   w.document.close();
 }

@@ -1,9 +1,10 @@
 import {
   X, Siren, AlertTriangle, Car, Wrench, Briefcase,
-  Pencil, Trash2, Image
+  Pencil, Trash2, Image, AlertCircle
 } from "lucide-react";
 import AssetContactActions from "./AssetContactActions";
 import WhatsAppQrButton from "../common/WhatsAppQrButton";
+import { getContractStatus } from "../../utils/contractUtils";
 
 /**
  * Componente de visualização detalhada de um ativo.
@@ -12,6 +13,7 @@ import WhatsAppQrButton from "../common/WhatsAppQrButton";
 export default function AssetDetail({
   asset,
   nodes = [],
+  contracts = [],
   canEdit = false,
   isProtected = false,
   onClose,
@@ -159,28 +161,50 @@ export default function AssetDetail({
           {(isProtected || canEdit) && asset.tipoVinculo === "Contratado" && (
             <div style={{ background: "#fefce8", padding: 16, borderRadius: 12, border: "1px solid #fde047" }}>
               <h4 style={{ fontSize: 11, color: "#854d0e", marginBottom: 12, fontWeight: 800 }}>DADOS DO CONTRATO</h4>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label className="fl" style={{ fontSize: 8 }}>Processo SEI</label>
-                  <div className="detail-val" style={{ fontWeight: 700, fontSize: 12 }}>{asset.numeroContrato}</div>
-                </div>
-                <div>
-                  <label className="fl" style={{ fontSize: 8 }}>Empresa</label>
-                  <div className="detail-val" style={{ fontSize: 12 }}>{asset.empresaContratada}</div>
-                </div>
-                <div>
-                  <label className="fl" style={{ fontSize: 8 }}>Fiscal Titular</label>
-                  <div className="detail-val" style={{ fontSize: 12 }}>{asset.fiscalContrato}</div>
-                </div>
-                <div>
-                  <label className="fl" style={{ fontSize: 8 }}>Contato Empresa</label>
-                  <div className="detail-val" style={{ fontSize: 11 }}>{asset.contatoEmpresa || "---"}</div>
-                </div>
-                <div>
-                  <label className="fl" style={{ fontSize: 8 }}>Responsável Direto</label>
-                  <div className="detail-val" style={{ fontSize: 11 }}>{asset.responsavelDireto || "---"}</div>
-                </div>
-              </div>
+
+              {(() => {
+                const contract = contracts.find(c => c.sei === asset.numeroContrato);
+                const isContractMissing = asset.numeroContrato && !contract;
+                const isContractExpired = contract && getContractStatus(contract) === "expired";
+                const isDiscontinued = isContractMissing || isContractExpired;
+
+                return (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, textDecoration: isDiscontinued ? "line-through" : "none" }}>
+                    <div style={{ textDecoration: "none" }}>
+                      <label className="fl" style={{ fontSize: 8 }}>Processo SEI</label>
+                      <div className="detail-val" style={{ fontWeight: 700, fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                        {asset.numeroContrato}
+                        {isContractMissing && (
+                          <span style={{ border: "1px solid #ef4444", padding: "1px 4px", borderRadius: 4, background: "#fee2e2", fontSize: 9, color: "#ef4444" }}>
+                            contrato descontinuado
+                          </span>
+                        )}
+                        {isContractExpired && (
+                          <span style={{ background: "#fee2e2", color: "#ef4444", padding: "1px 4px", borderRadius: 4, fontSize: 9, display: "flex", alignItems: "center", gap: 2 }}>
+                            <AlertCircle size={10} /> Contrato vencido
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="fl" style={{ fontSize: 8 }}>Empresa</label>
+                      <div className="detail-val" style={{ fontSize: 12 }}>{asset.empresaContratada}</div>
+                    </div>
+                    <div>
+                      <label className="fl" style={{ fontSize: 8 }}>Fiscal Titular</label>
+                      <div className="detail-val" style={{ fontSize: 12 }}>{asset.fiscalContrato}</div>
+                    </div>
+                    <div>
+                      <label className="fl" style={{ fontSize: 8 }}>Contato Empresa</label>
+                      <div className="detail-val" style={{ fontSize: 11 }}>{asset.contatoEmpresa || "---"}</div>
+                    </div>
+                    <div>
+                      <label className="fl" style={{ fontSize: 8 }}>Responsável Direto</label>
+                      <div className="detail-val" style={{ fontSize: 11 }}>{asset.responsavelDireto || "---"}</div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 

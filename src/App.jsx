@@ -73,14 +73,16 @@ import {
   deleteUserByUsername
 } from "./services/supabaseWriteService";
 import { writeAuditLog } from "./services/auditService";
-import { 
-  exportAuditLogsCsv, 
-  exportAuditLogsPdf, 
+import {
+  exportAuditLogsCsv,
+  exportAuditLogsPdf,
   generateDirectLogsPdf,
   exportAssetsCsv,
   exportAssetsPdf,
   exportContractDetailCsv as exportContractDetailCsvFile,
-  exportContractDetailPdf as exportContractDetailPdfFile
+  exportContractDetailPdf as exportContractDetailPdfFile,
+  exportOrgListCsv,
+  exportOrgListPdf
 } from "./services/exportService";
 
 const STORAGE_KEY = "dmae-orgchart-v16";
@@ -166,7 +168,7 @@ function assetIcon(c) {
 function exportLogsPdf(logsList) {
   const logoUrl = window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png";
   const normalizedLogs = (logsList || []).map(normalizeAuditLog);
-  
+
   try {
     exportAuditLogsPdf(normalizedLogs, {
       logoUrl,
@@ -363,15 +365,15 @@ export default function App() {
   const [qFocused, setQFocused] = useState(false);
 
   const [showDetail, setShowDetail] = useState(false);
-  const [showPersonDetail, setShowPersonDetail] = useState(null); 
-  const [showContractDetail, setShowContractDetail] = useState(null); 
+  const [showPersonDetail, setShowPersonDetail] = useState(null);
+  const [showContractDetail, setShowContractDetail] = useState(null);
   const [openNodeDlg, setOpenNodeDlg] = useState(false);
   const [assetTypes, setAssetTypes] = useState(seedAssetTypes);
   const [assetTypeForm, setAssetTypeForm] = useState({ id: "", category: "", name: "" });
   const [editAssetTypeId, setEditAssetTypeId] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [openAssetDlg, setOpenAssetDlg] = useState(false);
-  const [openPersonDlg, setOpenPersonDlg] = useState(false); 
+  const [openPersonDlg, setOpenPersonDlg] = useState(false);
   const [personReturnTarget, setPersonReturnTarget] = useState(null);
   const [registryFilter, setRegistryFilter] = useState("");
   const [contractFilter, setContractFilter] = useState("");
@@ -388,6 +390,37 @@ export default function App() {
   const [contractForm, setContractForm] = useState(emptyContract);
   const [dashboardView, setDashboardView] = useState("summary"); // "summary" | "assets" | "people" | "structures"
   const [deleteRequest, setDeleteRequest] = useState(null); // { type, id, name }
+  const [printFields, setPrintFields] = useState({
+    responsavel: true,
+    funcao: true,
+    matricula: false,
+    lotacao: true
+  });
+  const [showExportOptions, setShowExportOptions] = useState(null); // null | "pdf" | "csv"
+
+  const hasAutoExpanded = useRef(false);
+
+  // Expande até o nível 3 por padrão ao carregar ou trocar para modo lista
+  useEffect(() => {
+    if (nodes.length > 0 && viewMode === "list" && !hasAutoExpanded.current) {
+      const getDepth = (nodeId, currentDepth = 0) => {
+        const node = nodes.find(n => n.id === nodeId);
+        if (!node || !node.parentId) return currentDepth;
+        return getDepth(node.parentId, currentDepth + 1);
+      };
+
+      const toExpand = new Set();
+      nodes.forEach(n => {
+        if (getDepth(n.id) < 2) { // Expande níveis 0 e 1 para ver até o nível 2 e 3
+          toExpand.add(n.id);
+        }
+      });
+      if (toExpand.size > 0) {
+        setExpandedSet(toExpand);
+        hasAutoExpanded.current = true;
+      }
+    }
+  }, [nodes, viewMode]);
 
   const [cloudStatus, setCloudStatus] = useState("checking"); // "online" | "offline" | "checking"
 
@@ -478,10 +511,10 @@ export default function App() {
   const [dashboardNodeId, setDashboardNodeId] = useState(null);
 
   const [canEdit, setCanEdit] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null); 
+  const [currentUser, setCurrentUser] = useState(null);
   // Super-Admin Safeguard: recognies role OR the hardcoded username 'admin'
   const [openAssetTypesDlg, setOpenAssetTypesDlg] = useState(false);
-  
+
   const isAdmin = currentUser?.role === 'admin' || currentUser?.username?.toLowerCase() === 'admin';
   const isProtected = !!currentUser;
   const [users, setUsers] = useState([]);
@@ -543,8 +576,8 @@ export default function App() {
         entityName: name,
         details
       });
-    } catch (e) { 
-      console.warn("Falha ao registrar auditoria:", e); 
+    } catch (e) {
+      console.warn("Falha ao registrar auditoria:", e);
     }
   }, [supabase, currentUser]);
 
@@ -588,7 +621,7 @@ export default function App() {
         }
         if (Array.isArray(p.logs)) setLogs(p.logs);
       }
-    } catch (e) { 
+    } catch (e) {
       console.warn("Falha não crítica ao carregar localStorage ignorada:", e);
     }
   }, []);
@@ -889,11 +922,11 @@ export default function App() {
     const onPointerDown = (e) => {
       // Ignore right clicks or clicks on interactive elements
       if (e.button !== 0 || e.target.closest(".org-card, button, a, input, select, textarea")) return;
-      
+
       isDragging.current = true;
       dragStartPos.current = { x: e.clientX, y: e.clientY };
       scrollStartPos.current = { x: vp.scrollLeft, y: vp.scrollTop };
-      
+
       vp.style.cursor = "grabbing";
       vp.style.userSelect = "none";
       vp.setPointerCapture(e.pointerId);
@@ -902,10 +935,10 @@ export default function App() {
 
     const onPointerMove = (e) => {
       if (!isDragging.current) return;
-      
+
       const dx = e.clientX - dragStartPos.current.x;
       const dy = e.clientY - dragStartPos.current.y;
-      
+
       // Adjust scroll by zoom factor to keep content pinned to cursor
       vp.scrollLeft = scrollStartPos.current.x - dx / zoom;
       vp.scrollTop = scrollStartPos.current.y - dy / zoom;
@@ -934,7 +967,7 @@ export default function App() {
   }, [viewMode, zoom, isLoadingCloud]);
 
 
-  // Select node 
+  // Select node
   const selectNode = useCallback((id) => {
     setSelectedId(id);
     centerNodeInView(id, { behavior: "smooth", attempts: 4, delay: 100 });
@@ -1194,7 +1227,7 @@ export default function App() {
       );
       return;
     }
-    
+
     const assetToDb = {
       id: normalizedAsset.id,
       node_id: normalizedAsset.nodeId || null,
@@ -1236,7 +1269,7 @@ export default function App() {
       showSystemAlert(`O ativo não pôde ser salvo.\n\nDetalhe técnico: ${error.message}`, { title: "Erro ao salvar ativo", type: "error" });
       return;
     }
-    
+
     setAssets((current) =>
       editAssetId
         ? current.map((item) => item.id === editAssetId ? normalizedAsset : item)
@@ -1281,7 +1314,7 @@ export default function App() {
   const openPersonEdit = useCallback((person, options = {}) => {
     if (!person) return;
     const fromRegistry = options.fromRegistry || personReturnTarget === "registry";
-    
+
     setPersonForm({
       id: person.id || "",
       name: person.name || "",
@@ -1298,13 +1331,13 @@ export default function App() {
 
     setEditPersonId(person.id);
     setShowPersonDetail(null);
-    
+
     if (fromRegistry) {
       setPersonReturnTarget("registry");
     } else {
       setPersonReturnTarget(null);
     }
-    
+
     setOpenPersonDlg("edit");
   }, [maskPhone, personReturnTarget]);
 
@@ -1347,6 +1380,68 @@ export default function App() {
     setOpenPersonDlg(false);
   }, []);
 
+  const getVisibleListForExport = useCallback((root, expanded, getCh, depth = 0) => {
+    const result = [{ ...root, depth }];
+    // Respeita a regra do ListNode: expanded ou depth < 2
+    const isOpen = expanded.has(root.id) || depth < 1;
+
+    if (isOpen) {
+      const children = getCh(root.id);
+      children.forEach(c => {
+        result.push(...getVisibleListForExport(c, expanded, getCh, depth + 1));
+      });
+    }
+    return result;
+  }, []);
+
+  const handleExportOrgListCsv = () => {
+    const focusNode = focused;
+    if (!focusNode) return;
+
+    let subTree = [];
+    if (onlyEmergency) {
+      subTree = nodes
+        .filter(n => directEmergencyCount(n.id) > 0)
+        .map(n => ({ ...n, depth: 0 }));
+    } else {
+      subTree = getVisibleListForExport(focusNode, expandedSet, getChildren);
+    }
+
+    exportOrgListCsv(subTree, { isProtected, printFields });
+  };
+
+  const handleExportOrgListPdf = () => {
+    const focusNode = focused;
+    if (!focusNode) return;
+
+    let subTree = [];
+    if (onlyEmergency) {
+      subTree = nodes
+        .filter(n => directEmergencyCount(n.id) > 0)
+        .map(n => ({ ...n, depth: 0 }));
+    } else {
+      subTree = getVisibleListForExport(focusNode, expandedSet, getChildren);
+    }
+
+    const logoUrl = window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png";
+
+    exportOrgListPdf(subTree, {
+      title: `Lista do Organograma - ${focusNode.name}`,
+      logoUrl,
+      isProtected,
+      printFields
+    });
+  };
+
+  const handleAddNewPerson = (suggestedName = "") => {
+    setPersonForm({
+      ...emptyPerson,
+      id: makeId(),
+      name: suggestedName
+    });
+    setOpenPersonDlg("registry");
+  };
+
   const backToPersonRegistry = useCallback(() => {
     setShowPersonDetail(null);
     setEditPersonId(null);
@@ -1379,7 +1474,7 @@ export default function App() {
       return;
     }
     const p = { ...personForm, email: emailVal, id: editPersonId || makeId("person") };
-    
+
     (async () => {
       try {
         await upsertPerson(supabase, p);
@@ -1392,7 +1487,7 @@ export default function App() {
 
     setPersons(editPersonId ? (c) => c.map((x) => x.id === editPersonId ? p : x) : (c) => [...c, p]);
     logAction(editPersonId ? "Editar Pessoa" : "Criar Pessoa", "PERSON", p.name);
-    
+
     if (personReturnTarget === "registry") {
       setOpenPersonDlg("registry");
       setEditPersonId(null);
@@ -1401,7 +1496,7 @@ export default function App() {
       setOpenPersonDlg(false);
       setPersonReturnTarget(null);
     }
-    
+
     showSystemAlert(editPersonId ? "Pessoa atualizada!" : "Pessoa cadastrada!", { title: "Pessoa salva", type: "success" });
     // If we were in the middle of assigning this person to a node, restore the node dialog
     if (pendingPersonNodeForm) {
@@ -1421,9 +1516,9 @@ export default function App() {
     if (!canEdit) { flash("Entre no modo edição para excluir."); return; }
     const p = personMap.get(id);
     if (!p) return;
-    if (nodes.some(n => n.personId === id)) { 
-      flash("Esta pessoa está vinculada a uma caixa. Remova o vínculo antes."); 
-      return; 
+    if (nodes.some(n => n.personId === id)) {
+      flash("Esta pessoa está vinculada a uma caixa. Remova o vínculo antes.");
+      return;
     }
     setDeleteRequest({ type: "person", id, name: p.name });
   }, [canEdit, personMap, nodes, flash]);
@@ -1605,7 +1700,7 @@ export default function App() {
     );
 
     logAction(editContractId ? "Editar Contrato" : "Criar Contrato", "CONTRACT", normalizedContract.sei);
-    
+
     if (contractReturnTarget === "registry") {
       setOpenContractDlg("registry");
       setEditContractId(null);
@@ -1616,7 +1711,7 @@ export default function App() {
       setContractForm(emptyContract);
       setContractReturnTarget(null);
     }
-    
+
     showSystemAlert("Contrato salvo com sucesso.", { title: "Contrato salvo", type: "success" });
   }, [contractForm, editContractId, contractReturnTarget, logAction]);
 
@@ -1635,11 +1730,26 @@ export default function App() {
 
   const requestDeleteContract = useCallback((contract) => {
     if (!contract) return;
+
+    const linkedAssets = assets.filter(a => a.numeroContrato === contract.sei);
+    const linkedEmergencyAssets = linkedAssets.filter(a => a.isEmergency);
+    const count = linkedAssets.length;
+    const emergencyCount = linkedEmergencyAssets.length;
+
+    let warningMessage = `Confirma a exclusão do contrato SEI ${contract.sei}? Esta ação removerá o vínculo de todos os fiscais associados e não poderá ser desfeita.`;
+
+    if (count > 0) {
+      warningMessage = `Atenção: Este contrato possui ${count} ativo(s) vinculado(s) em unidades/locais.\n\nAo excluir o contrato, esses ativos permanecerão cadastrados, porém serão marcados como "contrato descontinuado".`;
+      if (emergencyCount > 0) {
+        warningMessage += `\n\nCUIDADO: Entre os ativos vinculados existem ${emergencyCount} ativo(s) de CONTINGÊNCIA. A exclusão pode impactar a leitura operacional dessas unidades.`;
+      }
+    }
+
     setConfirmDialog({
       open: true,
-      title: "Excluir contrato",
-      message: `Confirma a exclusão do contrato SEI ${contract.sei}? Esta ação removerá o vínculo de todos os ativos e fiscais associados e não poderá ser desfeita.`,
-      confirmLabel: "Excluir",
+      title: emergencyCount > 0 ? "EXCLUIR CONTRATO - ALERTA CRÍTICO" : "Excluir contrato",
+      message: warningMessage,
+      confirmLabel: "Excluir mesmo assim",
       cancelLabel: "Cancelar",
       type: "danger",
       onConfirm: () => {
@@ -1647,7 +1757,7 @@ export default function App() {
         setConfirmDialog(null);
       }
     });
-  }, [deleteContract]);
+  }, [deleteContract, assets]);
 
 
 
@@ -1728,9 +1838,9 @@ export default function App() {
   const expCsv = useCallback((nid) => {
     const sc = new Set(descendantIds(nid));
     const list = assets.filter((a) => sc.has(a.nodeId));
-    exportAssetsCsv(list, { 
+    exportAssetsCsv(list, {
       filename: `ativos-${(nodeMap.get(nid)?.name || "").toLowerCase()}.csv`,
-      nodes 
+      nodes
     });
     flash("CSV exportado!");
   }, [assets, descendantIds, nodeMap, nodes, flash]);
@@ -1765,7 +1875,7 @@ export default function App() {
     if (forcePassMode) {
       if (!pwdNew || pwdNew.length < 4) return showSystemAlert("Sua senha deve ter no mínimo 4 caracteres.", { title: "Senha curta", type: "warning" });
       if (pwdNew !== pwdConfirm) return showSystemAlert("As senhas não conferem.", { title: "Senhas não conferem", type: "warning" });
-      
+
       const uname = currentUser?.username || "usuario_desconhecido";
       const uid = currentUser?.id;
 
@@ -1784,7 +1894,7 @@ export default function App() {
           } else {
             await supabase.from('users').update({ password: pwdNew, must_change_password: false }).eq('username', uname);
           }
-          
+
           logAction("PASSWORD_RESET_CLOUD", "USER", uname);
           loadCloudData(); // Refresh list in background
         }
@@ -1800,9 +1910,9 @@ export default function App() {
     if (users.some(u => u.username.toLowerCase() === newUser.toLowerCase())) { showSystemAlert("Usuário já existe!", { title: "Conflito", type: "warning" }); return; }
 
     try {
-      const data = await upsertUser(supabase, { 
-        username: newUser, 
-        password: newPass, 
+      const data = await upsertUser(supabase, {
+        username: newUser,
+        password: newPass,
         role: newIsAdmin ? 'admin' : 'editor',
         must_change_password: true
       });
@@ -1820,7 +1930,7 @@ export default function App() {
     if (!username) return;
     if (username === currentUser?.username) { showSystemAlert("Não pode excluir a si mesmo!", { title: "Ação bloqueada", type: "warning" }); return; }
     if (username.toLowerCase() === "admin") { showSystemAlert("A conta admin padrão não pode ser excluída.", { title: "Ação bloqueada", type: "warning" }); return; }
-    
+
     try {
       // 1. Remove from local UI immediately
       setUsers(prev => prev.filter(x => x.username.toLowerCase().trim() !== username.toLowerCase().trim()));
@@ -1845,7 +1955,7 @@ export default function App() {
           throw error;
         }
       }
-      
+
       logAction("Excluir Usuário", "USER", username);
       showSystemAlert("Usuário removido com sucesso.", { title: "Concluído", type: "success" });
     } catch (err) {
@@ -1858,12 +1968,12 @@ export default function App() {
     try {
       if (supabase) {
         // Como o handleResetPass original não tinha ID, usamos username
-        await supabase.from('users').update({ 
+        await supabase.from('users').update({
           password: newRaw,
-          must_change_password: true 
+          must_change_password: true
         }).eq('username', username);
       }
-      
+
       setUsers(prev => prev.map(u => u.username === username ? { ...u, password: newRaw, must_change_password: true } : u));
       logAction("RESET_PASSWORD", "USER", username);
       setResetSuccessInfo({ username, password: newRaw });
@@ -1943,7 +2053,7 @@ export default function App() {
       const ctx = padded.getContext("2d");
       ctx.fillStyle = "#f8fafd";
       ctx.fillRect(0, 0, padded.width, padded.height);
-      
+
       ctx.drawImage(canvas, padding * 2, padding * 2);
 
       const imgData = padded.toDataURL("image/png");
@@ -2041,7 +2151,7 @@ export default function App() {
             <button className="btn btn-outline btn-sm" onClick={() => { setFocusId(null); setSelectedId(null); setShowDetail(false); }}>
               <Home size={12} /> <span className="hide-mobile">Início</span>
             </button>
-            
+
             {currentUser && (
               <div className="dropdown-container">
                 <button className="btn btn-outline btn-sm" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
@@ -2161,12 +2271,12 @@ export default function App() {
               }}>
                 <Network size={12} />
                 <span>Foco: <strong>{focused?.name}</strong></span>
-                
+
                 {focused?.parentId && (
-                  <button className="btn btn-outline btn-xs" 
-                    onClick={() => { 
+                  <button className="btn btn-outline btn-xs"
+                    onClick={() => {
                       const pid = focused.parentId;
-                      setFocusId(pid); 
+                      setFocusId(pid);
                       setSelectedId(pid);
                       setTimeout(() => centerNodeInView(pid, { behavior: "smooth", attempts: 5 }), 100);
                     }}
@@ -2277,15 +2387,23 @@ export default function App() {
                   </div>
                 </label>
               )}
+              <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+                <button className="btn btn-outline btn-xs" onClick={() => setShowExportOptions("csv")} title="Exportar CSV da lista atual">
+                  <Download size={12} /> Exportar CSV
+                </button>
+                <button className="btn btn-outline btn-xs" onClick={() => setShowExportOptions("pdf")} title="Imprimir lista atual">
+                  <Printer size={12} /> Imprimir / PDF
+                </button>
+              </div>
             </div>
             <div className="list-view-content" style={{ padding: 20 }}>
               {focused && (
                 onlyEmergency ? (
                   nodes
                     .filter(n => directEmergencyCount(n.id) > 0)
-                    .map(n => <ListNode key={n.id} node={n} getChildren={() => []} onSelect={selectNode} directEmergencyCount={directEmergencyCount} directMaintenanceCount={directMaintenanceCount} depth={0} isProtected={isProtected} parentHex={DEFAULT_ROOT_COLOR} expandedSet={expandedSet} onToggleExpandAll={(ids) => setExpandedSet(prev => new Set([...prev, ...ids]))} />)
+                    .map(n => <ListNode key={n.id} node={n} getChildren={() => []} onSelect={selectNode} directEmergencyCount={directEmergencyCount} directMaintenanceCount={directMaintenanceCount} directEmergencyMaintenanceCount={directEmergencyMaintenanceCount} depth={0} isProtected={isProtected} parentHex={DEFAULT_ROOT_COLOR} expandedSet={expandedSet} onToggleExpandAll={(ids) => setExpandedSet(prev => new Set([...prev, ...ids]))} onToggle={(id) => setExpandedSet(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; })} />)
                 ) : (
-                  <ListNode node={focused} getChildren={getChildren} onSelect={selectNode} directEmergencyCount={directEmergencyCount} directMaintenanceCount={directMaintenanceCount} isProtected={isProtected} parentHex={DEFAULT_ROOT_COLOR} expandedSet={expandedSet} onToggleExpandAll={(ids) => setExpandedSet(prev => new Set([...prev, ...ids]))} />
+                  <ListNode node={focused} getChildren={getChildren} onSelect={selectNode} directEmergencyCount={directEmergencyCount} directMaintenanceCount={directMaintenanceCount} directEmergencyMaintenanceCount={directEmergencyMaintenanceCount} isProtected={isProtected} parentHex={DEFAULT_ROOT_COLOR} expandedSet={expandedSet} onToggleExpandAll={(ids) => setExpandedSet(prev => new Set([...prev, ...ids]))} onToggle={(id) => setExpandedSet(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; })} />
                 )
               )}
               {onlyEmergency && nodes.filter(n => directEmergencyCount(n.id) > 0).length === 0 && (
@@ -2350,7 +2468,7 @@ export default function App() {
                 <button className="btn btn-outline btn-xs" onClick={() => { handleExpandAllBelow(selected.id); setShowDetail(false); }} title="Expandir todos os níveis abaixo desta caixa">
                   <ChevronsDown size={12} /> Expandir Tudo
                 </button>
-                
+
                 {(isProtected || canEdit) && (
                   <>
                     {canEdit && (
@@ -2399,9 +2517,9 @@ export default function App() {
                       return (
                         <>
                           <span style={{ fontSize: 11 }}>{full}</span>
-                          <a 
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr.lotacao)}`} 
-                            target="_blank" 
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr.lotacao)}`}
+                            target="_blank"
                             rel="noopener noreferrer"
                             title="Ver no Google Maps"
                             style={{ display: "inline-flex", color: "#ef4444" }}
@@ -2433,11 +2551,11 @@ export default function App() {
                           {showPhone !== "" && (
                             <>
                               <WhatsAppButton phone={showPhone} label="" />
-                              <WhatsAppQrButton 
-                                phone={showPhone} 
-                                responsible={selected.responsavel || respObj?.name} 
-                                label="" 
-                                title="QR Code WhatsApp" 
+                              <WhatsAppQrButton
+                                phone={showPhone}
+                                responsible={selected.responsavel || respObj?.name}
+                                label=""
+                                title="QR Code WhatsApp"
                               />
                             </>
                           )}
@@ -2567,7 +2685,7 @@ export default function App() {
         if (!dNode) return null;
 
         const descIds = getDescendantIds(dashboardNodeId, getChildren).filter(x => x !== dashboardNodeId);
-        
+
         // Data Collections
         const { direct: dContracts, sub: sContracts } = getContractsInScope(contracts, dashboardNodeId, descIds);
         const { direct: dPersons, sub: sPersons } = getPersonsInScope(nodes, persons, dashboardNodeId, descIds);
@@ -2582,19 +2700,19 @@ export default function App() {
         const exportPDF = async () => {
           // If in a list view, use the professional tabular report format
           if (dashboardView !== "summary") {
-            const listToExport = dashboardView === "allAssets" ? [...dAssets, ...sAssets] : 
+            const listToExport = dashboardView === "allAssets" ? [...dAssets, ...sAssets] :
                                  dashboardView === "emergencyAssets" ? [...dAssets.filter(a => a.isEmergency), ...sAssets.filter(a => a.isEmergency)] :
                                  [...dAssets, ...sAssets].filter(a => a.isEmergency && a.isMaintenance);
-            
-            const listTitle = dashboardView === "allAssets" ? "Inventário Geral de Ativos" : 
-                              dashboardView === "emergencyAssets" ? "Inventário de Contingência" : 
+
+            const listTitle = dashboardView === "allAssets" ? "Inventário Geral de Ativos" :
+                              dashboardView === "emergencyAssets" ? "Inventário de Contingência" :
                               "Ativos em Manutenção";
-            
+
             const logoUrl = window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png";
-    exportAssetsPdf(listToExport, { 
-      label: `${listTitle} - ${dNode.name}`, 
-      nodes, 
-      logoUrl 
+    exportAssetsPdf(listToExport, {
+      label: `${listTitle} - ${dNode.name}`,
+      nodes,
+      logoUrl
     });
             return;
           }
@@ -2602,16 +2720,16 @@ export default function App() {
           // For summary view, use the "Model" with logo but capturing the dashboard visuals
           const el = document.getElementById("bi-dashboard-content");
           if(!el) return;
-          
+
           flash("Gerando Relatório Executivo...");
           const canvas = await html2canvas(el, { scale: 2 });
           const imgData = canvas.toDataURL("image/png");
-          
+
           const w = window.open("", "_blank");
           if (!w) return;
 
           const logoUrl = window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png";
-          
+
           w.document.write(`<!DOCTYPE html>
 <html>
 <head>
@@ -2638,7 +2756,7 @@ export default function App() {
       <p style="font-size: 11px;">Consolidado: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
     </div>
   </div>
-  
+
   <img src="${imgData}" class="content-img" />
 
   <div class="footer">
@@ -2671,10 +2789,10 @@ export default function App() {
             ];
           } else {
             // Asset List export
-            const list = dashboardView === "allAssets" ? [...dAssets, ...sAssets] : 
+            const list = dashboardView === "allAssets" ? [...dAssets, ...sAssets] :
                          dashboardView === "emergencyAssets" ? [...dAssets.filter(a => a.isEmergency), ...sAssets.filter(a => a.isEmergency)] :
                          [...dAssets, ...sAssets].filter(a => a.isEmergency && a.isMaintenance);
-            
+
             rows = [
               ["Ativo", "Categoria", "Unidade", "Patrimônio/Placa", "Contingência", "Status", "Manutenção Desde"]
             ];
@@ -2705,7 +2823,7 @@ export default function App() {
 
 
         const AssetTable = ({ list, title }) => (
-          <DashboardAssetTable list={list} title={title} nodeMap={nodeMap} />
+          <DashboardAssetTable list={list} title={title} nodeMap={nodeMap} contracts={contracts} />
         );
 
 
@@ -2714,14 +2832,14 @@ export default function App() {
           <div className="modal-overlay">
             <div className="modal-content wide bi-dash" id="bi-dashboard-content" style={{ maxWidth: 1000 }}>
               <button className="modal-close no-print" onClick={() => { setDashboardNodeId(null); setShowDetail(true); }}><X size={12} /></button>
-              
-              <DashboardHeader 
-                dashboardView={dashboardView} 
-                setDashboardView={setDashboardView} 
-                dNodeName={dNode.name} 
-                subUnitsCount={descIds.length} 
-                onExportExcel={exportExcel} 
-                onExportPdf={exportPDF} 
+
+              <DashboardHeader
+                dashboardView={dashboardView}
+                setDashboardView={setDashboardView}
+                dNodeName={dNode.name}
+                subUnitsCount={descIds.length}
+                onExportExcel={exportExcel}
+                onExportPdf={exportPDF}
               />
 
               <div className="modal-body bi-body">
@@ -2761,9 +2879,10 @@ export default function App() {
                 )}
 
                 {dashboardView === "emergencyMaintenanceAssets" && (
-                  <DashboardEmergencyMaintenancePanel 
-                    list={[...dAssets, ...sAssets].filter(a => a.isEmergency && a.isMaintenance)} 
-                    nodes={nodes} 
+                  <DashboardEmergencyMaintenancePanel
+                    list={[...dAssets, ...sAssets].filter(a => a.isEmergency && a.isMaintenance)}
+                    nodes={nodes}
+                    contracts={contracts}
                   />
                 )}
 
@@ -2789,7 +2908,7 @@ export default function App() {
                   </div>
                 )}
               </div>
-              
+
                <div className="modal-footer bi-footer-actions no-print">
                 {dashboardView !== "summary" ? (
                   <button className="btn btn-primary btn-xs" onClick={() => setDashboardView("summary")}>Voltar para o Resumo</button>
@@ -2836,10 +2955,10 @@ export default function App() {
                   if (u) {
                     const sessionUser = { ...u, username: u.username || loginUser, role: u.role || (u.username.toLowerCase() === 'admin' ? 'admin' : 'editor') };
                     setCurrentUser(sessionUser); setCanEdit(true); setOpenLoginDlg(false); logAction('LOGIN_SUCCESS', 'USER', sessionUser.username);
-                    if (pendingEditNodeId) { 
+                    if (pendingEditNodeId) {
                       const nodeRecord = nodes.find(n => n.id === pendingEditNodeId);
                       if (nodeRecord) { setEditNodeId(pendingEditNodeId); setNodeForm(nodeRecord); setOpenNodeDlg(true); }
-                      setPendingEditNodeId(null); 
+                      setPendingEditNodeId(null);
                     }
                   } else { setLoginErr("Usuário ou senha inválidos."); }
                 } catch { setLoginErr("Erro ao validar credenciais."); }
@@ -2860,6 +2979,7 @@ export default function App() {
         nodes={nodes}
         onClose={() => setOpenNodeDlg(false)}
         onSave={saveNode}
+        onAddNew={handleAddNewPerson}
         requestDeleteNode={requestDeleteNode}
       />
 
@@ -2950,10 +3070,10 @@ export default function App() {
 
               {/* Custom Confirmation Overlay inside the modal */}
               {userToDelete && (
-                <div style={{ 
-                  position: "absolute", top: 0, left: 0, right: 0, bottom: 0, 
-                  background: "rgba(255,255,255,0.95)", zIndex: 2000, 
-                  display: "flex", alignItems: "center", justifyContent: "center", 
+                <div style={{
+                  position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+                  background: "rgba(255,255,255,0.95)", zIndex: 2000,
+                  display: "flex", alignItems: "center", justifyContent: "center",
                   flexDirection: "column", gap: 20, borderRadius: 12
                 }}>
                   <div style={{ textAlign: "center" }}>
@@ -2970,18 +3090,18 @@ export default function App() {
 
               {/* Custom Reset Success Overlay */}
               {resetSuccessInfo && (
-                <div style={{ 
-                  position: "absolute", top: 0, left: 0, right: 0, bottom: 0, 
-                  background: "rgba(255,255,255,1)", zIndex: 3000, 
-                  display: "flex", alignItems: "center", justifyContent: "center", 
+                <div style={{
+                  position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+                  background: "rgba(255,255,255,1)", zIndex: 3000,
+                  display: "flex", alignItems: "center", justifyContent: "center",
                   flexDirection: "column", gap: 20, borderRadius: 12
                 }}>
                   <div style={{ textAlign: "center" }}>
                     <ShieldCheck size={50} color="#22c55e" style={{ marginBottom: 16 }} />
                     <h2 style={{ margin: 0, color: "#166534" }}>Senha Resetada!</h2>
                     <p style={{ fontSize: 16, marginTop: 12 }}>A nova senha de <b>{resetSuccessInfo.username}</b> é:</p>
-                    <div style={{ 
-                      background: "var(--n100)", padding: "12px 24px", borderRadius: 8, 
+                    <div style={{
+                      background: "var(--n100)", padding: "12px 24px", borderRadius: 8,
                       fontSize: 24, fontWeight: 800, letterSpacing: 2, margin: "16px 0",
                       border: "1px dashed var(--n400)"
                     }}>
@@ -2995,10 +3115,10 @@ export default function App() {
 
               {/* Custom Reset Confirmation Overlay */}
               {resetConfirmUser && (
-                <div style={{ 
-                  position: "absolute", top: 0, left: 0, right: 0, bottom: 0, 
-                  background: "rgba(255,255,255,0.95)", zIndex: 2500, 
-                  display: "flex", alignItems: "center", justifyContent: "center", 
+                <div style={{
+                  position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+                  background: "rgba(255,255,255,0.95)", zIndex: 2500,
+                  display: "flex", alignItems: "center", justifyContent: "center",
                   flexDirection: "column", gap: 20, borderRadius: 12
                 }}>
                   <div style={{ textAlign: "center" }}>
@@ -3019,7 +3139,7 @@ export default function App() {
           </div>
         </div>
       )}
-      
+
       {/* ═─ ═─ ═─ ESTATÍSTICAS DE ACESSO (ADM) ═─ ═─ ═─ */}
       <StatsModal
         open={openStatsDlg && isAdmin}
@@ -3027,7 +3147,7 @@ export default function App() {
         logs={logs}
       />
 
-      
+
       {/* ═─ ═─ ═─ GESTÃO DE TIPOS DE ATIVOS ═─ ═─ ═─ */}
       <AssetTypesModal
         open={openAssetTypesDlg}
@@ -3082,11 +3202,11 @@ export default function App() {
           canEdit={canEdit}
           onClose={closePersonDetail}
           onEdit={(p) => openPersonEdit(p)}
-          onSelectNode={(id) => { 
-            selectNode(id); 
-            setFocusId(id); 
-            setShowPersonDetail(null); 
-            setShowDetail(true); 
+          onSelectNode={(id) => {
+            selectNode(id);
+            setFocusId(id);
+            setShowPersonDetail(null);
+            setShowDetail(true);
           }}
           resolveAddress={resolveAddress}
         />
@@ -3125,6 +3245,7 @@ export default function App() {
         onCloseRegistry={closeContractRegistry}
         onCancelEdit={cancelContractEdit}
         onSave={saveContract}
+        onAddNew={handleAddNewPerson}
         onCreateContract={() => openContractCreate({ fromRegistry: true })}
         onEditContract={(c) => openContractEdit(c, { fromRegistry: true })}
         onShowDetail={(id) => {
@@ -3189,11 +3310,11 @@ export default function App() {
 
             <div className="modal-body" style={{ overflow: "hidden", height: "85vh", maxHeight: "none", paddingBottom: 16 }}>
               {/* FILTERS SECTION */}
-              <div style={{ 
-                background: "var(--n50)", 
-                padding: 16, 
-                borderRadius: 12, 
-                border: "1px solid var(--n200)", 
+              <div style={{
+                background: "var(--n50)",
+                padding: 16,
+                borderRadius: 12,
+                border: "1px solid var(--n200)",
                 marginBottom: 20,
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
@@ -3205,8 +3326,8 @@ export default function App() {
                   <label className="fl">Busca Identificação</label>
                   <div style={{ position: "relative" }}>
                     <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--n400)" }} />
-                    <input className="fi" style={{ paddingLeft: 32 }} 
-                      placeholder={assetRegFilter.vinculo === "Contratado" ? "Busque por Nome, Placa, SEI ou Empresa..." : "Busque por Nome, Placa ou Patrimônio..."} 
+                    <input className="fi" style={{ paddingLeft: 32 }}
+                      placeholder={assetRegFilter.vinculo === "Contratado" ? "Busque por Nome, Placa, SEI ou Empresa..." : "Busque por Nome, Placa ou Patrimônio..."}
                       value={assetRegFilter.search} onChange={e => setAssetRegFilter({...assetRegFilter, search: e.target.value})} />
                   </div>
                 </div>
@@ -3225,15 +3346,15 @@ export default function App() {
                     <label className="fl">Contrato / Empresa</label>
                     <div style={{ position: "relative" }}>
                        <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--n400)" }} />
-                       <input 
-                         className="fi" 
+                       <input
+                         className="fi"
                          style={{ paddingLeft: 32 }}
                          placeholder="Filtre por SEI ou Empresa..."
                          value={assetRegFilter.contractSearch}
                          onChange={e => setAssetRegFilter({...assetRegFilter, contractSearch: e.target.value})}
                        />
                        {assetRegFilter.contractSearch && (
-                         <button 
+                         <button
                            onClick={() => setAssetRegFilter({...assetRegFilter, contractSearch: ""})}
                            style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", color: "var(--n400)" }}
                          >
@@ -3244,19 +3365,19 @@ export default function App() {
                        {assetRegFilter.contractSearch && assetRegFilter.contractSearch.length > 0 && (
                          (() => {
                             const q = assetRegFilter.contractSearch.toLowerCase();
-                            const sugs = uniqueContracts.filter(c => 
+                            const sugs = uniqueContracts.filter(c =>
                               c.sei.toLowerCase().includes(q) || c.empresa.toLowerCase().includes(q)
                             ).slice(0, 10);
-                            
+
                             // Only show if the current input isn't an EXACT match for a suggestion
                             const exactMatch = sugs.find(s => s.sei === assetRegFilter.contractSearch || s.empresa === assetRegFilter.contractSearch);
-                            
+
                             return (sugs.length > 0 && !exactMatch) ? (
                               <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid var(--n200)", borderRadius: 10, boxShadow: "var(--sh-lg)", zIndex: 60, marginTop: 4, overflow: "hidden" }}>
                                 {sugs.map((s, idx) => (
-                                  <button 
+                                  <button
                                     key={idx}
-                                    className="dropdown-item" 
+                                    className="dropdown-item"
                                     style={{ borderBottom: "1px solid var(--n100)", borderRadius: 0, padding: "8px 12px" }}
                                     onClick={() => setAssetRegFilter({...assetRegFilter, contractSearch: s.sei})}
                                   >
@@ -3299,10 +3420,10 @@ export default function App() {
 
                 <div className="fg" style={{ margin: 0 }}>
                   <label className="fl">Unidade / Local</label>
-                  <NodeSelector 
-                    value={assetRegFilter.nodeId === "all" ? "" : assetRegFilter.nodeId} 
-                    nodes={nodes} 
-                    onChange={val => setAssetRegFilter({...assetRegFilter, nodeId: val || "all"})} 
+                  <NodeSelector
+                    value={assetRegFilter.nodeId === "all" ? "" : assetRegFilter.nodeId}
+                    nodes={nodes}
+                    onChange={val => setAssetRegFilter({...assetRegFilter, nodeId: val || "all"})}
                   />
                 </div>
 
@@ -3328,9 +3449,9 @@ export default function App() {
                        return matchesSearch && matchesVinculo && matchesCategory && matchesSubType && matchesNode && matchesEmergency && matchesContract;
                     });
                     const logoUrl = window.location.origin + window.location.pathname.replace(/\/$/, "") + "/logo-dmae.png";
-                    exportAssetsPdf(list, { 
-                      label: "Registro Centralizado", 
-                      nodes, 
+                    exportAssetsPdf(list, {
+                      label: "Registro Centralizado",
+                      nodes,
                       sort: assetRegSort,
                       logoUrl
                     });
@@ -3378,20 +3499,20 @@ export default function App() {
                     <tbody>
                       {(() => {
                         const filtered = assets.filter(a => {
-                          const matchesSearch = !assetRegFilter.search || 
+                          const matchesSearch = !assetRegFilter.search ||
                             a.name.toLowerCase().includes(assetRegFilter.search.toLowerCase()) ||
                             a.plate?.toLowerCase().includes(assetRegFilter.search.toLowerCase()) ||
                             a.patrimonio?.toLowerCase().includes(assetRegFilter.search.toLowerCase()) ||
                             a.numeroContrato?.toLowerCase().includes(assetRegFilter.search.toLowerCase()) ||
                             a.empresaContratada?.toLowerCase().includes(assetRegFilter.search.toLowerCase());
-                          
+
                           const matchesVinculo = assetRegFilter.vinculo === "all" || a.tipoVinculo === assetRegFilter.vinculo;
                           const matchesCategory = assetRegFilter.category === "all" || a.category === assetRegFilter.category;
                           const matchesSubType = assetRegFilter.subType === "all" || a.type === assetRegFilter.subType;
                           const matchesNode = assetRegFilter.nodeId === "all" || a.nodeId === assetRegFilter.nodeId;
                           const matchesEmergency = !assetRegFilter.emergency || a.isEmergency;
-                          
-                          const matchesContract = !assetRegFilter.contractSearch || 
+
+                          const matchesContract = !assetRegFilter.contractSearch ||
                             a.numeroContrato?.toLowerCase().includes(assetRegFilter.contractSearch.toLowerCase()) ||
                             a.empresaContratada?.toLowerCase().includes(assetRegFilter.contractSearch.toLowerCase());
 
@@ -3404,7 +3525,7 @@ export default function App() {
                           else if (assetRegSort.key === "vinculo") { valA = a.tipoVinculo; valB = b.tipoVinculo; }
                           else if (assetRegSort.key === "node") { valA = nodes.find(n=>n.id===a.nodeId)?.name || ""; valB = nodes.find(n=>n.id===b.nodeId)?.name || ""; }
                           else if (assetRegSort.key === "contato") { valA = a.contatoResponsavel || a.contatoFone || ""; valB = b.contatoResponsavel || b.contatoFone || ""; }
-                          
+
                           valA = (valA || "").toLowerCase();
                           valB = (valB || "").toLowerCase();
                           if (valA < valB) return assetRegSort.direction === "asc" ? -1 : 1;
@@ -3422,39 +3543,47 @@ export default function App() {
 
                         return filtered.map(a => {
                           const node = nodes.find(n => n.id === a.nodeId);
+                          const contract = contracts.find(c => c.sei === a.numeroContrato);
+                          const isMissing = a.tipoVinculo === "Contratado" && a.numeroContrato && !contract;
+                          const isExpired = contract && getContractStatus(contract) === "expired";
+                          const isDiscontinued = isMissing || isExpired;
+
                           return (
-                            <tr key={a.id} style={{ borderBottom: "1px solid var(--n100)" }} className="search-item-hover">
+                            <tr key={a.id} style={{ borderBottom: "1px solid var(--n100)", opacity: isDiscontinued ? 0.7 : 1 }} className="search-item-hover">
                               <td style={{ padding: "12px 16px" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                  <div style={{ 
-                                    width: 32, height: 32, borderRadius: 8, background: "var(--n50)", 
+                                  <div style={{
+                                    width: 32, height: 32, borderRadius: 8, background: "var(--n50)",
                                     display: "flex", alignItems: "center", justifyContent: "center", color: "var(--n600)",
-                                    border: a.isEmergency ? "2px solid #eab308" : "1px solid var(--n200)"
+                                    border: a.isEmergency ? "2px solid #eab308" : "1px solid var(--n200)",
+                                    textDecoration: "none"
                                   }}>
                                     {assetIcon(a.category)}
                                   </div>
-                                  <div>
+                                  <div style={{ textDecoration: isDiscontinued ? "line-through" : "none" }}>
                                     <div style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
                                       {a.name}
                                       {a.isEmergency && (
-                                        <div style={{ 
-                                          display: "flex", alignItems: "center", justifyContent: "center", 
-                                          width: 22, height: 22, borderRadius: "50%", 
-                                          border: "2px solid #eab308", background: "#fff", 
+                                        <div style={{
+                                          display: "flex", alignItems: "center", justifyContent: "center",
+                                          width: 22, height: 22, borderRadius: "50%",
+                                          border: "2px solid #eab308", background: "#fff",
                                           boxShadow: "0 0 6px rgba(234, 179, 8, 0.4)",
-                                          marginLeft: 4
+                                          marginLeft: 4,
+                                          textDecoration: "none"
                                         }} title="Ativo de Contingência">
                                           <Siren size={12} color="#ef4444" strokeWidth={3} fill="#ef4444" fillOpacity={0.1} style={{ transform: "scale(1.3)" }} />
                                         </div>
                                       )}
                                       {a.isMaintenance && (
-                                        <div className="badge-maintenance" style={{ 
-                                          display: "flex", alignItems: "center", justifyContent: "center", 
-                                          width: 22, height: 22, borderRadius: "50%", 
-                                          border: "2px solid #d97706", background: "#fff", 
+                                        <div className="badge-maintenance" style={{
+                                          display: "flex", alignItems: "center", justifyContent: "center",
+                                          width: 22, height: 22, borderRadius: "50%",
+                                          border: "2px solid #d97706", background: "#fff",
                                           boxShadow: "0 0 6px rgba(217, 119, 6, 0.4)",
                                           marginLeft: 4,
-                                          color: "#d97706"
+                                          color: "#d97706",
+                                          textDecoration: "none"
                                         }} title="Ativo em Manutenção/Inoperante">
                                           <AlertTriangle size={12} strokeWidth={3} style={{ transform: "scale(1.3)" }} />
                                         </div>
@@ -3463,7 +3592,7 @@ export default function App() {
                                     <div style={{ fontSize: 10, color: "var(--n500)", display: "flex", alignItems: "center", gap: 6 }}>
                                       {a.type} • {a.model || "—"} {a.year && `(${a.year})`}
                                       {Array.isArray(a.photos) && a.photos.filter(Boolean).length > 0 && (
-                                        <span style={{ display: "inline-flex", alignItems: "center", gap: 3, color: "var(--n600)", fontWeight: 600 }} title="Possui fotos">
+                                        <span style={{ display: "inline-flex", alignItems: "center", gap: 3, color: "var(--n600)", fontWeight: 600, textDecoration: "none" }} title="Possui fotos">
                                           <Image size={10} /> Foto
                                         </span>
                                       )}
@@ -3472,13 +3601,26 @@ export default function App() {
                                 </div>
                               </td>
                               <td style={{ padding: "12px 16px" }}>
-                                <span className={`badge ${a.tipoVinculo === "Contratado" ? "badge-sec" : "badge-out"}`}>
-                                  {a.tipoVinculo || "Próprio"}
-                                </span>
-                                {a.tipoVinculo === "Contratado" && a.empresaContratada && (
-                                  <div style={{ fontSize: 10, marginTop: 4, fontWeight: 600, color: "var(--n600)" }}>🏢 {a.empresaContratada}</div>
-                                )}
-                                {a.plate && <div style={{ fontSize: 10, marginTop: 4, fontWeight: 600 }}>Placa: {a.plate}</div>}
+                                <div style={{ textDecoration: "none" }}>
+                                  <span className={`badge ${a.tipoVinculo === "Contratado" ? "badge-sec" : "badge-out"}`}>
+                                    {a.tipoVinculo || "Próprio"}
+                                  </span>
+                                  {a.tipoVinculo === "Contratado" && (
+                                    <div style={{ fontSize: 10, marginTop: 4, fontWeight: 600, color: isDiscontinued ? "#ef4444" : "var(--n600)" }}>
+                                      {isMissing ? (
+                                        <span style={{ border: "1px solid #ef4444", padding: "1px 4px", borderRadius: 4, background: "#fee2e2", textDecoration: "none", display: "inline-block" }}>
+                                          contrato descontinuado
+                                        </span>
+                                      ) : (
+                                        <span style={{ textDecoration: isDiscontinued ? "line-through" : "none" }}>
+                                          🏢 {a.empresaContratada || "Empresa não informada"}
+                                          {isExpired && <span style={{ marginLeft: 4, color: "#ef4444", background: "#fee2e2", padding: "0 2px", borderRadius: 2 }}> (Vencido)</span>}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                  {a.plate && <div style={{ fontSize: 10, marginTop: 4, fontWeight: 600, textDecoration: isDiscontinued ? "line-through" : "none" }}>Placa: {a.plate}</div>}
+                                </div>
                               </td>
                               <td style={{ padding: "12px 16px" }}>
                                 <div style={{ fontWeight: 600 }}>{node?.name || "Desconhecida"}</div>
@@ -3550,10 +3692,10 @@ export default function App() {
           </div>
         </div>
       )}
-            <footer className="app-footer" style={{ 
-              display: "grid", 
-              gridTemplateColumns: "1fr auto 1fr", 
-              alignItems: "center", 
+            <footer className="app-footer" style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto 1fr",
+              alignItems: "center",
               padding: "8px 20px",
               fontSize: "11px"
             }}>
@@ -3579,7 +3721,7 @@ export default function App() {
             <div className="modal-body">
               <p style={{ fontSize: 14 }}>Tem certeza que deseja excluir <strong>{deleteRequest.name}</strong>?</p>
               <div style={{ marginTop: 12, padding: 10, background: "#fff1f2", borderRadius: 8, fontSize: 12, color: "#991b1b", border: "1px solid #fecaca" }}>
-                {deleteRequest.type === "node" 
+                {deleteRequest.type === "node"
                   ? "A exclusão só será permitida se não houver subordinados nem ativos vinculados."
                   : "A pessoa só será excluída se não estiver vinculada a nenhuma caixa do organograma."}
               </div>
@@ -3597,6 +3739,7 @@ export default function App() {
         <AssetDetail
           asset={assets.find(x => x.id === viewAssetId)}
           nodes={nodes}
+          contracts={contracts}
           canEdit={canEdit}
           isProtected={isProtected}
           onClose={() => setViewAssetId(null)}
@@ -3639,7 +3782,52 @@ export default function App() {
               color: "#fff", fontSize: 18, cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center"
             }}
-          >\u00d7</button>
+          >&times;</button>
+        </div>
+      )}
+
+      {showExportOptions && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }} onMouseDown={(e) => { if (e.target === e.currentTarget) setShowExportOptions(null); }}>
+          <div className="modal-content" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Exportar {showExportOptions === "csv" ? "Excel/CSV" : "PDF de Impressão"}</h3>
+              <button className="modal-close" onClick={() => setShowExportOptions(null)}><X size={12} /></button>
+            </div>
+            <div className="modal-body" style={{ padding: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, color: "var(--primary)", fontWeight: 700 }}>
+                <Settings size={16} />
+                <span>Escolha os campos desejados:</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, background: "var(--n50)", padding: 15, borderRadius: 12, border: "1px solid var(--n200)" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                  <input type="checkbox" checked={printFields.responsavel} onChange={e => setPrintFields({...printFields, responsavel: e.target.checked})} /> Responsável
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                  <input type="checkbox" checked={printFields.funcao} onChange={e => setPrintFields({...printFields, funcao: e.target.checked})} /> Função / Cargo
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                  <input type="checkbox" checked={printFields.matricula} onChange={e => setPrintFields({...printFields, matricula: e.target.checked})} /> Matrícula
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                  <input type="checkbox" checked={printFields.lotacao} onChange={e => setPrintFields({...printFields, lotacao: e.target.checked})} /> Lotação
+                </label>
+              </div>
+              <p style={{ fontSize: 10, color: "var(--n500)", marginTop: 12, fontStyle: "italic" }}>
+                * A exportação respeitará o foco e a expansão atual da lista em tela.
+              </p>
+            </div>
+            <div className="modal-footer" style={{ justifyContent: "space-between" }}>
+              <button className="btn btn-outline" onClick={() => setShowExportOptions(null)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={() => {
+                const type = showExportOptions;
+                setShowExportOptions(null);
+                if (type === "csv") handleExportOrgListCsv();
+                else handleExportOrgListPdf();
+              }}>
+                {showExportOptions === "csv" ? <Download size={14} /> : <Printer size={14} />} Confirmar e Gerar
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

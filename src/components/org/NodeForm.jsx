@@ -15,6 +15,7 @@ export default function NodeForm({
   nodes = [],
   onClose,
   onSave,
+  onAddNew,
   requestDeleteNode
 }) {
   if (!open) return null;
@@ -82,6 +83,7 @@ export default function NodeForm({
                 nodes={nodes}
                 currentNodeId={editNodeId || nodeForm.id || ""}
                 enforceNodeOccupation={true}
+                onAddNew={onAddNew}
                 onSelect={(personId) => {
                   const selectedPerson = persons.find((p) => p.id === personId);
                   setNodeForm((current) => ({
@@ -120,6 +122,7 @@ export default function NodeForm({
               nodes={nodes}
               currentNodeId={editNodeId || nodeForm.id || ""}
               enforceNodeOccupation={true}
+              onAddNew={onAddNew}
               onSelect={(personId) => {
                 const selectedPerson = persons.find((p) => p.id === personId);
                 setNodeForm((current) => ({
