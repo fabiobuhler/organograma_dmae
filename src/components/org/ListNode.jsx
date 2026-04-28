@@ -68,8 +68,8 @@ export default function ListNode({
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ fontSize: 12, fontWeight: 700 }}>{node.name}</div>
           <div style={{ fontSize: 10, color: "var(--n500)" }}>
-            {node.description && <span style={{ display: "block", marginBottom: 2 }}>{node.description}</span>}
-            <span style={{ opacity: 0.8 }}>{node.responsavel || node.cargo}</span>
+            {node.description && node.tipo !== "pessoa" && <span style={{ display: "block", marginBottom: 2 }}>{node.description}</span>}
+            <span style={{ opacity: 0.8 }}>{node.responsavel || node.funcao || node.cargo}</span>
           </div>
         </div>
         <div style={{ display: "flex", gap: 4 }}>

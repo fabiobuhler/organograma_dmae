@@ -37,7 +37,11 @@ const OrgNodeCard = ({
               {showSensitive && <span className="dot" style={{ marginTop: 5, flexShrink: 0 }} />}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              {node.description && <div className="oc-cargo" title={node.description}>{node.description}</div>}
+              {node.tipo === "pessoa" ? (
+                <div className="oc-cargo" title={node.funcao || node.description}>{node.funcao || node.description}</div>
+              ) : (
+                node.description && <div className="oc-cargo" title={node.description}>{node.description}</div>
+              )}
             </div>
           </div>
         </div>
