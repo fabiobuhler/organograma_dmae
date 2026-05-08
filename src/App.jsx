@@ -3025,7 +3025,7 @@ export default function App() {
         setAssetForm={setAssetForm}
         editAssetId={editAssetId}
         canEdit={canEdit}
-        isAdmin={isAdmin}
+        canManageAssetTypes={canEdit || isAdmin}
         nodes={nodes}
         contracts={contracts}
         assetTypes={assetTypes}
@@ -3187,7 +3187,7 @@ export default function App() {
       <AssetTypesModal
         open={openAssetTypesDlg}
         onClose={() => setOpenAssetTypesDlg(false)}
-        isAdmin={isAdmin}
+        canManageAssetTypes={canEdit || isAdmin}
         assetTypes={assetTypes}
         assetTypeForm={assetTypeForm}
         setAssetTypeForm={setAssetTypeForm}

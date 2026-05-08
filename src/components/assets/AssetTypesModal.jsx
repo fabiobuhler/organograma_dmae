@@ -6,7 +6,7 @@ import { X, Save, Plus, Pencil, Trash2 } from "lucide-react";
 export default function AssetTypesModal({
   open,
   onClose,
-  isAdmin,
+  canManageAssetTypes,
   assetTypes,
   assetTypeForm,
   setAssetTypeForm,
@@ -16,7 +16,7 @@ export default function AssetTypesModal({
   startEditAssetType,
   requestDeleteAssetType
 }) {
-  if (!open || !isAdmin) return null;
+  if (!open || !canManageAssetTypes) return null;
 
   const DEFAULT_ASSET_GROUPS = [
     "Veículo",

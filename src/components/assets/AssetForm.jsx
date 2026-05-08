@@ -11,7 +11,7 @@ export default function AssetForm({
   assetForm,
   setAssetForm,
   editAssetId,
-  isAdmin,
+  canManageAssetTypes,
   nodes,
   contracts,
   assetTypes,
@@ -130,7 +130,7 @@ export default function AssetForm({
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
-                {isAdmin && <button className="btn btn-outline btn-xs" type="button" style={{ padding: "0 8px" }} onClick={onOpenAssetTypes} title="Gerenciar Grupos/Tipos"><Plus size={12} /></button>}
+                {canManageAssetTypes && <button className="btn btn-outline btn-xs" type="button" style={{ padding: "0 8px" }} onClick={onOpenAssetTypes} title="Gerenciar Grupos/Tipos"><Plus size={12} /></button>}
               </div>
             </div>
             <div className="fg" style={{ flex: 1 }}><label className="fl">Tipo do Ativo *</label>
@@ -144,7 +144,7 @@ export default function AssetForm({
                     <option key={t.name} value={t.name}>{t.name}</option>
                   ))}
                 </select>
-                {isAdmin && <button className="btn btn-outline btn-xs" type="button" style={{ padding: "0 8px" }} onClick={onOpenAssetTypes} title="Gerenciar Grupos/Tipos"><Plus size={12} /></button>}
+                {canManageAssetTypes && <button className="btn btn-outline btn-xs" type="button" style={{ padding: "0 8px" }} onClick={onOpenAssetTypes} title="Gerenciar Grupos/Tipos"><Plus size={12} /></button>}
               </div>
             </div>
           </div>
