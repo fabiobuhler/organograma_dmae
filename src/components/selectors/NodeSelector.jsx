@@ -1,14 +1,14 @@
-import { useState, useEffect, useMemo } from "react";
+﻿import { useState, useEffect, useMemo } from "react";
 
 /**
- * NodeSelector - Seletor hierárquico para Unidades (Estruturas)
+ * NodeSelector - Seletor hierÃ¡rquico para Unidades (Estruturas)
  */
 export default function NodeSelector({ value, nodes, onChange }) {
   const currentNode = nodes.find(n => n.id === value);
   const [search, setSearch] = useState(currentNode?.name || "");
   const [open, setOpen] = useState(false);
 
-  // Gera a lista hierárquica (Pre-order traversal) com caminhos completos
+  // Gera a lista hierÃ¡rquica (Pre-order traversal) com caminhos completos
   const hierarchicalNodes = useMemo(() => {
     const structures = nodes.filter(n => n.tipo === "estrutura");
     const map = new Map();
@@ -21,15 +21,15 @@ export default function NodeSelector({ value, nodes, onChange }) {
     const result = [];
     const walk = (parentId, depth, pathArr = []) => {
       const children = map.get(parentId) || [];
-      // Ordena alfabeticamente os irmãos
+      // Ordena alfabeticamente os irmÃ£os
       children.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-      
+
       children.forEach(node => {
         const currentPath = [...pathArr, node.name];
-        result.push({ 
-          ...node, 
-          depth, 
-          breadcrumb: pathArr.length > 0 ? pathArr.join(" > ") : "" 
+        result.push({
+          ...node,
+          depth,
+          breadcrumb: pathArr.length > 0 ? pathArr.join(" > ") : ""
         });
         walk(node.id, depth + 1, currentPath);
       });
@@ -63,54 +63,54 @@ export default function NodeSelector({ value, nodes, onChange }) {
           style={{ paddingRight: 30 }}
         />
         <div style={{ position: "absolute", right: 10, pointerEvents: "none", opacity: 0.5, fontSize: 10 }}>
-          {open ? "▲" : "▼"}
+          {open ? "â–²" : "â–¼"}
         </div>
       </div>
-      
+
       {open && (
-        <div style={{ 
-          position: "absolute", 
-          top: "100%", 
-          left: 0, 
-          right: 0, 
-          background: "#fff", 
-          border: "1px solid var(--n200)", 
-          borderRadius: 10, 
-          boxShadow: "0 10px 25px rgba(0,0,0,0.15)", 
-          zIndex: 2000, 
-          maxHeight: 300, 
+        <div style={{
+          position: "absolute",
+          top: "100%",
+          left: 0,
+          right: 0,
+          background: "#fff",
+          border: "1px solid var(--n200)",
+          borderRadius: 10,
+          boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+          zIndex: 2000,
+          maxHeight: 300,
           overflowY: "auto",
           marginTop: 4
         }}>
           <button type="button" onMouseDown={() => { onChange(""); setSearch(""); setOpen(false); }}
-            style={{ 
-              display: "block", 
-              width: "100%", 
-              textAlign: "left", 
-              padding: "10px 12px", 
-              border: "none", 
-              background: "none", 
-              cursor: "pointer", 
-              fontSize: 11, 
-              color: "var(--n500)", 
+            style={{
+              display: "block",
+              width: "100%",
+              textAlign: "left",
+              padding: "10px 12px",
+              border: "none",
+              background: "none",
+              cursor: "pointer",
+              fontSize: 11,
+              color: "var(--n500)",
               borderBottom: "1px solid var(--n100)",
               fontStyle: "italic"
             }}>
             (Nenhuma - Tornar Raiz)
           </button>
-          
+
           {filtered.map(n => (
             <button key={n.id} type="button"
               onMouseDown={() => { onChange(n.id); setSearch(n.name); setOpen(false); }}
-              style={{ 
-                display: "block", 
-                width: "100%", 
-                textAlign: "left", 
-                padding: search ? "8px 12px" : `8px 12px 8px ${12 + (n.depth * 16)}px`, 
-                border: "none", 
-                background: value === n.id ? "var(--n100)" : "none", 
-                cursor: "pointer", 
-                fontSize: 12, 
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                padding: search ? "8px 12px" : `8px 12px 8px ${12 + (n.depth * 16)}px`,
+                border: "none",
+                background: value === n.id ? "var(--n100)" : "none",
+                cursor: "pointer",
+                fontSize: 12,
                 fontWeight: value === n.id ? 700 : 400,
                 borderLeft: (!search && n.depth > 0) ? "1px solid var(--n100)" : "none",
                 marginLeft: (!search && n.depth > 0) ? 8 : 0,
@@ -119,12 +119,12 @@ export default function NodeSelector({ value, nodes, onChange }) {
               onMouseEnter={e => e.currentTarget.style.background = "var(--n50)"}
               onMouseLeave={e => e.currentTarget.style.background = value === n.id ? "var(--n100)" : "none"}
             >
-              {!search && <span style={{ opacity: 0.4, marginRight: 6 }}>{n.depth > 0 ? "└─" : "•"}</span>}
-              
+              {!search && <span style={{ opacity: 0.4, marginRight: 6 }}>{n.depth > 0 ? "â””â”€" : "â€¢"}</span>}
+
               <div style={{ display: "flex", flexDirection: "column" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span style={{ fontWeight: 700 }}>{n.name}</span>
-                  {n.description && <span style={{ fontSize: 10, color: "var(--n400)", fontWeight: 400 }}>— {n.description}</span>}
+                  {n.description && <span style={{ fontSize: 10, color: "var(--n400)", fontWeight: 400 }}>â€” {n.description}</span>}
                 </div>
                 {n.breadcrumb && (
                    <div style={{ fontSize: 9, color: "var(--n400)", marginTop: 1, opacity: 0.8 }}>
@@ -134,7 +134,7 @@ export default function NodeSelector({ value, nodes, onChange }) {
               </div>
             </button>
           ))}
-          
+
           {filtered.length === 0 && (
             <div style={{ padding: "12px", fontSize: 12, color: "var(--n400)", textAlign: "center" }}>
               Nenhuma unidade encontrada
