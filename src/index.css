@@ -1712,3 +1712,337 @@ li.apoio-card-box:last-child:before {
   height: 6px;
   border-left: 2px solid var(--connector-color);
 }
+
+/* ============================================================ */
+/* ─── RESPONSIVIDADE E MOBILE ─── */
+/* ============================================================ */
+
+/* Proteção global contra overflow horizontal */
+html,
+body,
+#root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Modais responsivos */
+@media (max-width: 768px) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding: 8px;
+    overflow-y: auto;
+  }
+
+  .modal-content,
+  .modal-content.wide {
+    width: 100%;
+    max-width: none;
+    max-height: calc(100dvh - 16px);
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-body,
+  .modal-scroll-body {
+    overflow-y: auto;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-footer {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    z-index: 2;
+    padding: 10px;
+    flex-wrap: wrap;
+  }
+
+  .modal-footer .btn {
+    flex: 1 1 auto;
+    min-height: 40px;
+  }
+}
+
+/* Formulários em celular */
+@media (max-width: 768px) {
+  .fr,
+  .form-grid,
+  .form-grid.two,
+  .detail-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px;
+  }
+
+  .fg {
+    width: 100%;
+  }
+
+  .fi,
+  .ft,
+  select,
+  input,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Botões - área de toque */
+@media (max-width: 768px) {
+  .btn-xs,
+  .btn-sm {
+    min-height: 38px;
+    padding: 0 12px;
+    font-size: 11px;
+  }
+
+  .btn-icon,
+  .list-collapse-icon,
+  .coll-btn,
+  .expand-all-btn,
+  .layout-toggle-btn,
+  .add-btn,
+  .card-edit-btn,
+  .card-dash-btn {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+
+/* Tabelas e Wrappers de BI */
+@media (max-width: 768px) {
+  .table-wrap,
+  .registry-table-wrap,
+  .dashboard-table-wrap,
+  .assets-table-wrap,
+  .contracts-table-wrap,
+  .asset-scroll-list {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-wrap table,
+  .registry-table-wrap table,
+  .dashboard-table-wrap table,
+  .assets-table-wrap table,
+  .contracts-table-wrap table,
+  .asset-scroll-list table,
+  .modal-body table,
+  .modal-scroll-body table {
+    min-width: 720px;
+  }
+}
+
+/* Dashboard painéis internos */
+@media (max-width: 768px) {
+  .dashboard-panel,
+  .bi-panel,
+  .contract-status-panel,
+  .emergency-maintenance-panel {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .dashboard-panel-body,
+  .bi-panel-body {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Dashboard header e ações */
+@media (max-width: 768px) {
+  .dashboard,
+  .dashboard-view,
+  .dashboard-content,
+  .dashboard-shell,
+  .bi-dash {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    padding: 10px;
+  }
+
+  .dashboard-header,
+  .bi-header,
+  .dashboard-title-row,
+  .dashboard-actions,
+  .export-actions,
+  .toolbar-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .dashboard-actions .btn,
+  .dashboard-header .btn,
+  .export-actions .btn,
+  .toolbar-actions .btn {
+    width: 100%;
+    min-height: 40px;
+    justify-content: center;
+  }
+}
+
+/* Dashboard Cards e Grid */
+@media (max-width: 768px) {
+  .dashboard-grid,
+  .dashboard-cards,
+  .stats-grid,
+  .bi-grid,
+  .bi-grid-cards,
+  .bi-donuts-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .dashboard-card,
+  .stat-card,
+  .bi-card,
+  .metric-card,
+  .summary-card,
+  .bi-chart-box {
+    width: 100%;
+    min-width: 0 !important;
+    padding: 12px;
+  }
+
+  .metric-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .metric-card-icon,
+  .dashboard-card-icon {
+    flex-shrink: 0;
+  }
+
+  .metric-card-title,
+  .metric-card-value,
+  .dashboard-card-title,
+  .dashboard-card-value {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+@media (min-width: 769px) and (max-width: 1024px) {
+  .dashboard-grid,
+  .dashboard-cards,
+  .stats-grid,
+  .bi-grid,
+  .bi-grid-cards,
+  .bi-donuts-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Cabeçalho App */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0 10px;
+  }
+
+  .header-row-1 {
+    height: auto;
+    min-height: 52px;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 0;
+  }
+
+  .header-brand {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .header-title {
+    font-size: 13px;
+    line-height: 1.2;
+  }
+
+  .header-sub {
+    display: none;
+  }
+
+  .header-controls {
+    width: 100%;
+    overflow-x: auto;
+    gap: 6px;
+    padding-bottom: 4px;
+  }
+
+  .hdr-search {
+    width: 100%;
+  }
+
+  .main-content {
+    padding-top: 170px;
+  }
+
+  .tree-viewport {
+    height: calc(100dvh - 170px);
+  }
+}
+
+/* Modo Lista */
+@media (max-width: 768px) {
+  .list-view {
+    padding: 10px 8px 80px;
+    max-width: none;
+    width: 100%;
+  }
+
+  .list-node {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 12px;
+  }
+
+  .list-node-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .list-children {
+    padding-left: 10px;
+  }
+}
+
+/* Modo Árvore */
+@media (max-width: 768px) {
+  .tree-viewport {
+    overflow: auto;
+    padding: 12px 12px 80px;
+  }
+
+  .org-card {
+    width: 180px;
+    padding: 8px 10px;
+  }
+
+  .oc-name {
+    font-size: 12px;
+  }
+
+  .oc-cargo {
+    font-size: 9px;
+  }
+
+  .tree li {
+    padding-left: 5px;
+    padding-right: 5px;
+  }
+}

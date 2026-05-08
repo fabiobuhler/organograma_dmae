@@ -13,7 +13,7 @@ export default function DashboardAssetTable({ list, title, nodeMap, contracts = 
       <h3 style={{ fontSize: 14, marginBottom: 12, display: "flex", alignItems: "center", gap: 8, color: "var(--n700)" }}>
         <Package size={16} /> {title} ({list.length})
       </h3>
-      <div style={{ border: "1px solid var(--n200)", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
+      <div className="dashboard-table-wrap" style={{ border: "1px solid var(--n200)", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
           <thead style={{ background: "var(--n50)" }}>
             <tr>

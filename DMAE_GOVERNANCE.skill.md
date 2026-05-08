@@ -34,7 +34,7 @@ Antes de qualquer alteração:
 Versão de trabalho atual (branch `fix/governance-skill-sync`):
 
 ```txt
-1.0.2026.04270956
+1.0.2026.05081734
 ```
 
 Commit de recuperação importante:

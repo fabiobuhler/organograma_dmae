@@ -35,7 +35,7 @@ export default function DashboardHeader({
           </p>
         </div>
       </div>
-      <div className="bi-header-actions no-print" style={{ display: "flex", gap: 6 }}>
+      <div className="bi-header-actions dashboard-actions no-print" style={{ display: "flex", gap: 6 }}>
         <button className="btn btn-outline btn-xs" onClick={onExportExcel}><FileText size={14} /> Exportar Excel</button>
         <button className="btn btn-primary btn-xs" onClick={onExportPdf}><Download size={14} /> Exportar PDF</button>
       </div>

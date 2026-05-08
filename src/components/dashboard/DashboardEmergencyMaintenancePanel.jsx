@@ -15,7 +15,7 @@ export default function DashboardEmergencyMaintenancePanel({ list, nodes, contra
         <div style={{ fontSize: 13, fontWeight: 700 }}>ATENÇÃO: Existem ativos estratégicos fora de operação nesta ramificação.</div>
       </div>
 
-      <div style={{ border: "1px solid var(--n200)", borderRadius: 12, overflow: "hidden" }}>
+      <div className="dashboard-table-wrap" style={{ border: "1px solid var(--n200)", borderRadius: 12, overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
           <thead style={{ background: "var(--n50)" }}>
             <tr>

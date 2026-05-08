@@ -2881,7 +2881,7 @@ export default function App() {
                 {dashboardView === "summary" && (
                   <>
                     {/* TOP METRIC CARDS */}
-                     <div className="bi-grid-cards" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
+                     <div className="bi-grid-cards">
                         <DashboardCard icon={Users} iconBg="#dbeafe" iconColor="#2563eb" className="people"
                           label="Força de Trabalho" value={dPersons.length + sPersons.length}
                           subtitle={`Direto: ${dPersons.length} | Indireto: ${sPersons.length}`} />
@@ -3736,7 +3736,7 @@ export default function App() {
             }}>
               <div /> {/* Spacer */}
               <div style={{ textAlign: "center" }}>
-                Desenvolvido por <span>&nbsp;{"Fábio Bühler"} - {"Versão"} 1.0.2026.04270956</span>
+                Desenvolvido por <span>&nbsp;{"Fábio Bühler"} - {"Versão"} 1.0.2026.05081734</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--n600)", justifyContent: "flex-end" }}>
                 <div className="pulse-dot" style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }}></div>
@@ -3833,7 +3833,7 @@ export default function App() {
                 <Settings size={16} />
                 <span>Escolha os campos desejados:</span>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, background: "var(--n50)", padding: 15, borderRadius: 12, border: "1px solid var(--n200)" }}>
+              <div className="form-grid two" style={{ background: "var(--n50)", padding: 15, borderRadius: 12, border: "1px solid var(--n200)" }}>
                 <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
                   <input type="checkbox" checked={printFields.responsavel} onChange={e => setPrintFields({...printFields, responsavel: e.target.checked})} /> Responsável
                 </label>

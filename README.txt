@@ -1,7 +1,7 @@
 DMAE ORGANOGRAMA - SISTEMA DE GOVERNANÇA OPERACIONAL
 ==================================================
 
-Versão: 1.0.2026.04270956
+Versão: 1.0.2026.05081734
 Desenvolvedor: Fábio Bühler
 
 Este sistema consolidado gerencia a estrutura organizacional do DMAE, 
