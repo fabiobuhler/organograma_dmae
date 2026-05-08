@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { ChevronDown, ChevronUp, ChevronsDown, Plus, Pencil, Siren, AlertTriangle } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronsDown, Plus, Pencil, Siren, AlertTriangle, Rows3, Columns3 } from "lucide-react";
 import { initials, computeNodeColor, connectorColor } from "../utils/helpers";
 
 /* ──── Individual Card ──── */
@@ -7,6 +7,7 @@ const OrgNodeCard = ({
   node, person, selected, childCount, assetCount, emergencyCount, maintenanceCount, emergencyMaintenanceCount,
   onSelect, onAddChild, onEditNode, canEdit, isProtected,
   bgColor, borderColor, collapsed, onToggleCollapse, onExpand, onExpandAll,
+  isVerticalLayout, onToggleLayoutDirection,
 }) => {
   const isApoio = node.subtipo === "apoio";
   const displayPhoto = person?.foto || node.foto;
@@ -98,7 +99,7 @@ const OrgNodeCard = ({
             onToggleCollapse(next);
             if (!next && onExpand) onExpand(node.id);
           }}
-          title={collapsed ? "Expandir pr\u00f3ximo n\u00edvel" : "Recolher"}
+          title={collapsed ? "Expandir próximo nível" : "Recolher"}
         >
           {collapsed ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
         </button>
@@ -112,24 +113,40 @@ const OrgNodeCard = ({
             e.stopPropagation();
             onExpandAll(node.id);
           }}
-          title="Expandir todos os n\u00edveis abaixo"
+          title="Expandir todos os níveis abaixo"
         >
           <ChevronsDown size={12} />
+        </button>
+      )}
+
+      {/* Layout direction toggle — only visible when expanded and has children */}
+      {childCount > 0 && !collapsed && typeof onToggleLayoutDirection === "function" && (
+        <button
+          className="layout-toggle-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleLayoutDirection(node.id);
+          }}
+          title={isVerticalLayout ? "Exibir subordinadas horizontalmente" : "Empilhar subordinadas verticalmente"}
+        >
+          {isVerticalLayout ? <Columns3 size={11} /> : <Rows3 size={11} />}
         </button>
       )}
     </div>
   );
 };
 
-/* ─€─€─€ Apoio Branch (recursive) ─€─€─€ */
+/* ─── Apoio Branch (recursive) ─── */
 const ApoioBranch = ({
   node, getChildren, personMap, selectedId, onSelect, onAddChild, onEditNode,
-  onExpand, onExpandAll, canEdit, isProtected, directAssetCount, directEmergencyCount, directMaintenanceCount, directEmergencyMaintenanceCount, parentHex, depth = 0, expandedSet
+  onExpand, onExpandAll, canEdit, isProtected, directAssetCount, directEmergencyCount, directMaintenanceCount, directEmergencyMaintenanceCount, parentHex, depth = 0, expandedSet,
+  verticalLayoutSet, onToggleLayoutDirection,
 }) => {
   const [collapsed, setCollapsed] = useState(depth >= 1);
   const childCh = getChildren(node.id);
   const nodeColor = computeNodeColor(node, parentHex);
   const connColor = connectorColor(nodeColor.baseHex);
+  const isVerticalLayout = verticalLayoutSet?.has(node.id);
 
   useEffect(() => {
     if (expandedSet?.has(node.id)) setCollapsed(false);
@@ -152,10 +169,12 @@ const ApoioBranch = ({
           bgColor={nodeColor.bg} borderColor={nodeColor.baseHex}
           collapsed={collapsed} onToggleCollapse={setCollapsed}
           onExpand={onExpand} onExpandAll={onExpandAll}
+          isVerticalLayout={isVerticalLayout}
+          onToggleLayoutDirection={onToggleLayoutDirection}
         />
       </div>
       {!collapsed && childCh.length > 0 && (
-        <ul className="tree tree-apoio" style={{ "--connector-color": connColor }}>
+        <ul className={`tree tree-apoio${isVerticalLayout ? " tree-children-vertical" : ""}`} style={{ "--connector-color": connColor }}>
           {childCh.map((child) => (
             <OrgBranch
               key={child.id} node={child} getChildren={getChildren} personMap={personMap}
@@ -169,6 +188,8 @@ const ApoioBranch = ({
               directEmergencyMaintenanceCount={directEmergencyMaintenanceCount}
               parentHex={nodeColor.hex}
               expandedSet={expandedSet}
+              verticalLayoutSet={verticalLayoutSet}
+              onToggleLayoutDirection={onToggleLayoutDirection}
             />
           ))}
         </ul>
@@ -177,19 +198,19 @@ const ApoioBranch = ({
   );
 };
 
-/* ─€─€─€ Main Branch (recursive) ─€─€─€ */
+/* ─── Main Branch (recursive) ─── */
 const OrgBranch = ({
   node, getChildren, personMap, selectedId, onSelect, onAddChild, onEditNode,
   onExpand, onExpandAll, directAssetCount, directEmergencyCount, directMaintenanceCount, directEmergencyMaintenanceCount, canEdit, isProtected, parentHex,
-  depth = 0, expandedSet
+  depth = 0, expandedSet, verticalLayoutSet, onToggleLayoutDirection,
 }) => {
-  const [collapsed, setCollapsed] = useState(depth >= 3
-  );
+  const [collapsed, setCollapsed] = useState(depth >= 3);
   const allChildren = useMemo(() => getChildren(node.id), [node.id, getChildren]);
   const apoioChildren = useMemo(() => allChildren.filter((c) => c.subtipo === "apoio"), [allChildren]);
   const subChildren = useMemo(() => allChildren.filter((c) => c.subtipo !== "apoio"), [allChildren]);
   const nodeColor = computeNodeColor(node, parentHex);
   const connColor = connectorColor(nodeColor.baseHex);
+  const isVerticalLayout = verticalLayoutSet?.has(node.id);
 
   useEffect(() => {
     if (expandedSet?.has(node.id)) setCollapsed(false);
@@ -213,6 +234,8 @@ const OrgBranch = ({
           bgColor={nodeColor.bg} borderColor={nodeColor.baseHex}
           collapsed={collapsed} onToggleCollapse={setCollapsed}
           onExpand={onExpand} onExpandAll={onExpandAll}
+          isVerticalLayout={isVerticalLayout}
+          onToggleLayoutDirection={onToggleLayoutDirection}
         />
       </div>
 
@@ -238,6 +261,8 @@ const OrgBranch = ({
                     directEmergencyMaintenanceCount={directEmergencyMaintenanceCount}
                     parentHex={nodeColor.hex}
                     expandedSet={expandedSet}
+                    verticalLayoutSet={verticalLayoutSet}
+                    onToggleLayoutDirection={onToggleLayoutDirection}
                   />
                 ))}
               </ul>
@@ -247,7 +272,7 @@ const OrgBranch = ({
       )}
 
       {!collapsed && subChildren.length > 0 && (
-        <ul className="tree-sub" style={{ "--connector-color": connColor }}>
+        <ul className={`tree-sub${isVerticalLayout ? " tree-children-vertical" : ""}`} style={{ "--connector-color": connColor }}>
           {subChildren.map((child) => (
             <OrgBranch
               key={child.id} node={child} getChildren={getChildren} personMap={personMap}
@@ -260,6 +285,8 @@ const OrgBranch = ({
               directEmergencyMaintenanceCount={directEmergencyMaintenanceCount}
               canEdit={canEdit} isProtected={isProtected} parentHex={nodeColor.hex}
               expandedSet={expandedSet}
+              verticalLayoutSet={verticalLayoutSet}
+              onToggleLayoutDirection={onToggleLayoutDirection}
             />
           ))}
         </ul>

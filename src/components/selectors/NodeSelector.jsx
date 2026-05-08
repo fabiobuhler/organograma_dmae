@@ -4,8 +4,6 @@ import { useState, useEffect, useMemo } from "react";
  * NodeSelector - Seletor hierárquico para Unidades (Estruturas)
  */
 export default function NodeSelector({ value, nodes, onChange }) {
-  const nodeMap = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes]);
-  
   const currentNode = nodes.find(n => n.id === value);
   const [search, setSearch] = useState(currentNode?.name || "");
   const [open, setOpen] = useState(false);

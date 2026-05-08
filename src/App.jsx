@@ -592,6 +592,7 @@ export default function App() {
 
   const [pendingPersonNodeForm, setPendingPersonNodeForm] = useState(null);
   const [expandedSet, setExpandedSet] = useState(new Set()); // IDs forced to expand-all
+  const [verticalLayoutSet, setVerticalLayoutSet] = useState(new Set()); // IDs with vertical child layout
   const [loginUser, setLoginUser] = useState("");
   const [loginPass, setLoginPass] = useState("");
   const [loginErr, setLoginErr] = useState("");
@@ -2030,30 +2031,57 @@ export default function App() {
     });
   }, [getChildren, centerNodeInView]);
 
+  const toggleNodeLayoutDirection = useCallback((nodeId) => {
+    setVerticalLayoutSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) next.delete(nodeId); else next.add(nodeId);
+      return next;
+    });
+  }, []);
+
   const handleExportPdf = useCallback(async () => {
     const el = document.querySelector(".tree-viewport-inner");
     if (!el) return;
     flash("Gerando PDF...");
+
+    // Salva transform original e neutraliza antes da captura para evitar caixas fantasmas
+    const originalTransform = el.style.transform;
+    const originalTransition = el.style.transition;
+    el.style.transition = "none";
+    el.style.transform = "scale(1) translate(0,0)";
+
+    // Oculta elementos de UI que podem sangrar na captura (overlays, header, botões)
+    const uiSelectors = [
+      ".modal-overlay", ".detail-overlay", ".app-header", ".fab-edit",
+      ".app-footer", ".zoom-ctrls", ".toast", ".dropdown-menu",
+      ".export-options-modal", ".no-print",
+    ];
+    const hiddenEls = [];
+    uiSelectors.forEach((sel) => {
+      document.querySelectorAll(sel).forEach((e) => {
+        hiddenEls.push({ el: e, prev: e.style.visibility });
+        e.style.visibility = "hidden";
+      });
+    });
+
     try {
-      const padding = 48; // px of white space around content
+      const padding = 48;
       const canvas = await html2canvas(el, {
         scale: 2,
         useCORS: true,
         backgroundColor: "#f8fafd",
-        scrollX: 0, scrollY: 0,
+        scrollX: 0,
+        scrollY: 0,
         width: el.scrollWidth,
         height: el.scrollHeight,
-        windowWidth: el.scrollWidth,
-        windowHeight: el.scrollHeight,
       });
-      // Create padded canvas
+
       const padded = document.createElement("canvas");
-      padded.width  = canvas.width  + padding * 2 * 2; // scale=2 so double padding
+      padded.width  = canvas.width  + padding * 2 * 2;
       padded.height = canvas.height + padding * 2 * 2;
       const ctx = padded.getContext("2d");
       ctx.fillStyle = "#f8fafd";
       ctx.fillRect(0, 0, padded.width, padded.height);
-
       ctx.drawImage(canvas, padding * 2, padding * 2);
 
       const imgData = padded.toDataURL("image/png");
@@ -2067,10 +2095,15 @@ export default function App() {
       pdf.addImage(imgData, "PNG", 0, 0, pdfW, pdfH);
       const label = rootNode?.name || focused?.name || "organograma";
       pdf.save(`${label.replace(/[^a-z0-9]/gi, "_")}_organograma.pdf`);
-            flash("PDF exportado!");
+      flash("PDF exportado!");
     } catch (e) {
       console.error(e);
       flash("Erro ao gerar PDF.");
+    } finally {
+      // Restaura transform e elementos ocultos
+      el.style.transform = originalTransform;
+      el.style.transition = originalTransition;
+      hiddenEls.forEach(({ el: e, prev }) => { e.style.visibility = prev; });
     }
   }, [rootNode, focused, flash]);
 
@@ -2328,6 +2361,8 @@ export default function App() {
                       directEmergencyMaintenanceCount={directEmergencyMaintenanceCount}
                       canEdit={canEdit} isProtected={isProtected} parentHex={null}
                       expandedSet={expandedSet}
+                      verticalLayoutSet={verticalLayoutSet}
+                      onToggleLayoutDirection={toggleNodeLayoutDirection}
                       isFocusRoot={!!focusId && focusId !== rootNode?.id}
                       onReturnFromFocus={handleReturnFromFocus}
                       onOpenDashboard={setDashboardNodeId}
@@ -2534,7 +2569,7 @@ export default function App() {
                 {(() => {
                   const respObj = persons.find(p => p.id === selected.personId);
                   const showEmail = selected.email || respObj?.email || "";
-                  const showPhone = selected.telefone || respObj?.telefone || "";
+                  const showPhone = (selected.personId ? respObj?.telefone : null) || selected.telefone || "";
                   return (
                     <>
                       <div className="dg-item">
