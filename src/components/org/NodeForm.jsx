@@ -1,5 +1,6 @@
 import { X, Save, Trash2 } from "lucide-react";
 import PersonSelector from "../selectors/PersonSelector";
+import NodeSelector from "../selectors/NodeSelector";
 import { DEFAULT_ROOT_COLOR } from "../../utils/helpers";
 
 /**
@@ -44,6 +45,15 @@ export default function NodeForm({
                 <option value="apoio">Apoio (Lateral)</option>
               </select>
             </div>
+          </div>
+
+          <div className="fg">
+            <label className="fl">Unidade Superior (Subordinação)</label>
+            <NodeSelector
+              value={nodeForm.parentId}
+              nodes={nodes.filter(n => n.id !== (editNodeId || nodeForm.id))}
+              onChange={(parentId) => setNodeForm({ ...nodeForm, parentId })}
+            />
           </div>
 
           {nodeForm.tipo === "estrutura" ? (
@@ -159,7 +169,18 @@ export default function NodeForm({
           )}
 
           <div className="fr">
-            <div className="fg"><label className="fl">Função/Cargo na Caixa</label><input className="fi" value={nodeForm.funcao || ""} onChange={(e) => setNodeForm({ ...nodeForm, funcao: e.target.value.toUpperCase() })} placeholder="Ex.: Coordenador-Geral, Diretor, Gerente, Chefe de Equipe" /></div>
+            <div className="fg">
+              <label className="fl">Função nesta Caixa (Exibida no Organograma)</label>
+              <input
+                className="fi"
+                value={nodeForm.funcao || ""}
+                onChange={(e) => setNodeForm({ ...nodeForm, funcao: e.target.value.toUpperCase() })}
+                placeholder="Ex.: Coordenador-Geral, Diretor, Gerente, Chefe de Equipe"
+              />
+              <div style={{ fontSize: 10, color: "var(--n400)", marginTop: 4 }}>
+                {nodeForm.tipo === "pessoa" ? "Esta é a função exercida, que pode ser diferente do cargo oficial do servidor." : "Papel do responsável nesta estrutura."}
+              </div>
+            </div>
             <div className="fg"><label className="fl">Cor de Destaque (Hex)</label>
               <div className="color-row">
                 <input type="color" className="color-sw" value={nodeForm.color || DEFAULT_ROOT_COLOR} onChange={(e) => setNodeForm({ ...nodeForm, color: e.target.value })} />

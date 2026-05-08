@@ -614,6 +614,31 @@ body {
   color: #fff;
   transform: scale(1.15)
 }
+/* Layout direction toggle button: shown when node is expanded and has children */
+.layout-toggle-btn {
+  position: absolute;
+  bottom: -10px;
+  left: calc(50% + 52px);
+  z-index: 10;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--n300);
+  box-shadow: var(--sh-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--n600);
+  transition: all .15s
+}
+.layout-toggle-btn:hover {
+  background: var(--n900);
+  border-color: var(--n900);
+  color: #fff;
+  transform: scale(1.15)
+}
 .add-btn {
   position: absolute;
   bottom: 6px;
@@ -1375,8 +1400,13 @@ li.apoio-card-box:last-child:before {
   }
 }
 @media print {
-  .app-header, .fab-edit, .toast, .app-footer {
-    display: none!important
+  .app-header, .fab-edit, .toast, .app-footer,
+  .zoom-ctrls, .coll-btn, .expand-all-btn, .layout-toggle-btn,
+  .add-btn, .card-edit-btn, .card-dash-btn,
+  .modal-overlay, .detail-overlay, .export-options-modal,
+  .floating-actions, .list-toolbar, .list-view-controls,
+  .dropdown-menu, .no-print {
+    display: none !important;
   }
   body {
     background: #fff
@@ -1387,6 +1417,10 @@ li.apoio-card-box:last-child:before {
   .tree-viewport {
     min-height: auto;
     overflow: visible
+  }
+  .tree-viewport-inner {
+    transform: none !important;
+    transition: none !important;
   }
 }
 .app-footer {
@@ -1636,3 +1670,45 @@ li.apoio-card-box:last-child:before {
 .asset-badge.compact { padding: 3px 5px; }
 .asset-badge-contingency { color: #991b1b; background: #fee2e2; border: 1px solid #fecaca; }
 .asset-badge-maintenance { color: #92400e; background: #fef3c7; border: 1px solid #fde68a; }
+
+/* ─── VERTICAL TREE LAYOUT ─── */
+/* Quando a caixa está no modo vertical, seus filhos diretos ficam empilhados */
+.tree-children-vertical {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  width: auto !important;
+  min-width: 0 !important;
+  gap: 6px !important;
+  padding-top: 20px !important;
+  position: relative;
+}
+.tree-children-vertical::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 20px;
+  border-left: 2px solid var(--connector-color);
+}
+.tree-children-vertical > li {
+  padding: 6px 8px 0 !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+.tree-children-vertical > li::before,
+.tree-children-vertical > li::after {
+  display: none !important;
+}
+.tree-children-vertical > li + li::before {
+  display: block !important;
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 0;
+  height: 6px;
+  border-left: 2px solid var(--connector-color);
+}

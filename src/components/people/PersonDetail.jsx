@@ -155,8 +155,11 @@ export default function PersonDetail({
                 style={{ cursor: "pointer" }} 
                 onClick={() => onSelectNode && onSelectNode(n.id)}
               >
-                <div className="asset-mini-name">{n.name} - {n.description || n.cargo}</div>
-                <div className="asset-mini-meta">Função: {n.funcao || "—"}</div>
+                <div className="asset-mini-name">{n.name}</div>
+                <div className="asset-mini-meta"><b>Função:</b> {n.funcao || n.description || n.cargo || "—"}</div>
+                {n.description && n.description !== n.name && n.description !== n.funcao && (
+                  <div className="asset-mini-meta" style={{ opacity: 0.7 }}>{n.description}</div>
+                )}
               </div>
             ))}
           </div>
