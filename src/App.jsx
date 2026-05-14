@@ -607,6 +607,15 @@ export default function App() {
 
   // Persist
   useEffect(() => {
+    if (supabase) {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch (e) {
+        console.warn("Falha não crítica ao limpar cache local antigo:", e);
+      }
+      return;
+    }
+
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) return;
     try {
@@ -627,7 +636,18 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes, assets, persons, contracts, users, logs })); }, [nodes, assets, persons, contracts, users, logs]);
+  useEffect(() => {
+    if (supabase) return;
+
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ nodes, assets, persons, contracts, users, logs })
+      );
+    } catch (e) {
+      console.warn("LocalStorage indisponível ou quota excedida. Persistência local ignorada:", e);
+    }
+  }, [nodes, assets, persons, contracts, users, logs]);
 
   useEffect(() => {
     const handleOpenPhoto = (e) => setExpandedImage(e.detail);
