@@ -3756,7 +3756,7 @@ export default function App() {
             }}>
               <div /> {/* Spacer */}
               <div style={{ textAlign: "center" }}>
-                Desenvolvido por <span>&nbsp;{"Fábio Bühler"} - {"Versão"} 1.0.2026.05081734</span>
+                Desenvolvido por <span>&nbsp;{"Fábio Bühler"} - {"Versão"} 1.0.2026.05141655</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--n600)", justifyContent: "flex-end" }}>
                 <div className="pulse-dot" style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }}></div>
