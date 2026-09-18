@@ -54,7 +54,12 @@ export async function fetchContracts(supabase) {
 }
 
 export async function fetchUsers(supabase) {
-  return await fetchAll(supabase, 'users');
+  try {
+    return await fetchAll(supabase, 'users');
+  } catch (err) {
+    console.warn('Não foi possível buscar usuários do Supabase (RLS ou tabela vazia):', err);
+    return [];
+  }
 }
 
 export async function fetchAssetTypes(supabase) {
