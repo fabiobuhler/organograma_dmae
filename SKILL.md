@@ -26,5 +26,5 @@ Esta skill resume as diretrizes críticas para atuação no sistema. Para detalh
 3. Registrar arquivos alterados e validar com o usuário via prints.
 4. Atualizar versão em: `App.jsx`, `README.md`, `README.txt`, `GOVERNANCE.md`.
 
-**Versão de Trabalho:** 1.0.2026.09181234
+**Versão de Trabalho:** 1.0.2026.09211720
 **Estável de Referência:** 1.0.2026.04270145

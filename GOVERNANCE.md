@@ -69,4 +69,4 @@ Os elementos abaixo são a "alma" visual do sistema e só devem ser alterados so
 
 ---
 **Desenvolvido por:** Fábio Bühler  
-**Versão Atual:** 1.0.2026.09181234 (Fix Admin Login & RLS Contingency)
+**Versão Atual:** 1.0.2026.09211720 (Fix RLS Row-Level Security Policies)

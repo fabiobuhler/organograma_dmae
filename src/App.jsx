@@ -1113,7 +1113,11 @@ export default function App() {
 
     } catch (err) {
       console.error("Erro ao salvar caixa:", err);
-      flash("\u274c Erro ao salvar a caixa: " + (err?.message || "Verifique o banco de dados."));
+      const isRls = err?.message?.includes("row-level security") || err?.message?.includes("RLS");
+      const msg = isRls
+        ? "Bloqueio de RLS (Row Level Security) no Supabase.\n\nPara liberar a gravação no banco de dados, execute o script SQL de correção (supabase_migration_fix_all_rls.sql) no SQL Editor do Supabase."
+        : (err?.message || "Verifique o banco de dados.");
+      flash("❌ Erro ao salvar a caixa: " + msg);
     }
   }, [nodeForm, editNodeId, nodes, logAction]);
 
@@ -3783,7 +3787,7 @@ export default function App() {
             }}>
               <div /> {/* Spacer */}
               <div style={{ textAlign: "center" }}>
-                Desenvolvido por <span>&nbsp;{"Fábio Bühler"} - {"Versão"} 1.0.2026.09181234</span>
+                Desenvolvido por <span>&nbsp;{"Fábio Bühler"} - {"Versão"} 1.0.2026.09211720</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--n600)", justifyContent: "flex-end" }}>
                 <div className="pulse-dot" style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }}></div>
